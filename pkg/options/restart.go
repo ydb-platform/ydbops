@@ -10,15 +10,13 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-ops/internal/util"
 	"google.golang.org/protobuf/types/known/durationpb"
-
-	cmsOptions "github.com/ydb-platform/ydb-rolling-restart/pkg/options"
 )
 
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
 type RestartOptions struct {
-	CMS     *cmsOptions.CMS
-	GRPC    *cmsOptions.GRPC
+	CMS     *CMS
+	GRPC    *GRPC
 
 	AvailabilityMode   string
 	Tenants            []string
@@ -31,8 +29,8 @@ type RestartOptions struct {
 }
 
 var RestartOptionsInstance = &RestartOptions{
-	CMS: &cmsOptions.CMS{},
-	GRPC: &cmsOptions.GRPC{},
+	CMS: &CMS{},
+	GRPC: &GRPC{},
 }
 
 func (o *RestartOptions) Validate() error {

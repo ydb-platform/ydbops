@@ -9,6 +9,7 @@ import (
 
 func NewStorageCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
+	rootOpts := options.RootOptionsInstance
 	restarter := storage_baremetal.New()
 
 	cmd := &cobra.Command{
@@ -19,7 +20,7 @@ func NewStorageCmd() *cobra.Command {
 			return restartOpts.Validate()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			rolling.PrepareRolling(restartOpts, options.Logger, restarter)
+			rolling.PrepareRolling(restartOpts, rootOpts, options.Logger, restarter)
 		},
 	}
 

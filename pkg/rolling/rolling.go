@@ -9,17 +9,17 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/pkg/cms"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
-	"github.com/ydb-platform/ydb-rolling-restart/pkg/cms"
 
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
 type Rolling struct {
-	logger *zap.SugaredLogger
-	cms    *cms.CMSClient
-	state  *state
-	opts   *options.RestartOptions
+	logger    *zap.SugaredLogger
+	cms       *cms.CMSClient
+	state     *state
+	opts      *options.RestartOptions
 	restarter restarters.RestarterInterface
 }
 
@@ -29,31 +29,31 @@ type state struct {
 }
 
 const (
-	RestartTaskPrefix = "rolling_restart"
-	RestartTaskUid    = RestartTaskPrefix + "_001"
+	RestartTaskPrefix  = "rolling_restart"
+	RestartTaskUid     = RestartTaskPrefix + "_001"
 	RollingRestartUser = "rolling-restart"
 )
 
-func PrepareRolling(opts *options.RestartOptions, lf *zap.Logger, restarter restarters.RestarterInterface) {
+func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootOptions, lf *zap.Logger, restarter restarters.RestarterInterface) {
 	var err error
 	logger := lf.Sugar()
 
 	cmsClient := cms.NewCMSClient(logger,
 		cms.NewConnectionFactory(
-			*opts.GRPC,
-			opts.CMS.Auth,
+			*restartOpts.GRPC, // TODO gain deep understanding, why dereferencing is necessary
+			*rootOpts,
 			RollingRestartUser,
 		),
 	)
 
 	r := &Rolling{
-		cms:    cmsClient,
-		logger: logger,
-		opts:   opts,
+		cms:       cmsClient,
+		logger:    logger,
+		opts:      restartOpts,
 		restarter: restarter,
 	}
 
-	if opts.Continue {
+	if restartOpts.Continue {
 		logger.Info("Continue previous rolling restart")
 		err = r.DoRestartPrevious()
 	} else {

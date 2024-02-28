@@ -8,14 +8,15 @@ import (
 )
 
 func NewK8sCmd() *cobra.Command {
-	opts := options.RestartOptionsInstance
+	restartOpts := options.RestartOptionsInstance
+	rootOpts := options.RootOptionsInstance
 
 	cmd := &cobra.Command{
 		Use:   "k8s",
 		Short: "k8s short description",
 		Long:  `k8s long description`,
 		Run: func(cmd *cobra.Command, args []string) {
-			rolling.PrepareRolling(opts, options.Logger, &storage_k8s.Restarter{})
+			rolling.PrepareRolling(restartOpts, rootOpts, options.Logger, &storage_k8s.Restarter{})
 		},
 	}
 
