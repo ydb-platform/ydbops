@@ -29,6 +29,16 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 	return atom, logger
 }
 
+func registerAllSubcommands(root *cobra.Command) {
+	k8sCmd := storage.NewK8sCmd()
+	storageCmd := restart.NewStorageCmd()
+	restartCmd := cmd.NewRestartCmd()
+
+	storageCmd.AddCommand(k8sCmd)
+	restartCmd.AddCommand(storageCmd)
+	root.AddCommand(restartCmd)
+}
+
 func main() {
 	logLevel := "info"
 	logLevelSetter, logger := createLogger(logLevel)
@@ -44,24 +54,22 @@ func main() {
 			}
 			logLevelSetter.SetLevel(lvc)
 		},
+		// TODO decide if we need to hide this, for more compact --help
+		CompletionOptions: cobra.CompletionOptions{
+			DisableDefaultCmd: true,
+		},
 	}
+
 	defer util.IgnoreError(logger.Sync)
 
 	options.Logger = logger
 
 	root.PersistentFlags().StringVarP(&logLevel, "log-level", "", logLevel, "Logging level")
 
-	k8sCmd := storage.NewK8sCmd()
-	storageCmd := restart.NewStorageCmd()
-	restartCmd := cmd.NewRestartCommand()
-
-	storageCmd.AddCommand(k8sCmd)
-
-	restartCmd.AddCommand(storageCmd)
-
-	root.AddCommand(restartCmd)
+	registerAllSubcommands(root)
 
 	if err := root.Execute(); err != nil {
 		logger.Fatal("failed to execute restart", zap.Error(err))
 	}
+
 }

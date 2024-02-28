@@ -8,17 +8,22 @@ import (
 )
 
 func NewStorageCmd() *cobra.Command {
-	opts := options.RestartOptionsInstance
+	restartOpts := options.RestartOptionsInstance
+	restarter := storage_baremetal.New()
 
 	cmd := &cobra.Command{
 		Use:   "storage",
 		Short: "storage short description",
 		Long:  `storage long description`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return restartOpts.Validate()
+		},
 		Run: func(cmd *cobra.Command, args []string) {
-			rolling.PrepareRolling(opts, options.Logger, &storage_baremetal.Restarter{})
+			rolling.PrepareRolling(restartOpts, options.Logger, restarter)
 		},
 	}
 
+	restarter.Opts.DefineFlags(cmd.Flags())
 	return cmd
 }
 

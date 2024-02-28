@@ -9,19 +9,18 @@ import (
 )
 
 type Restarter struct {
-	opts *opts
+	Opts *Opts
 }
 
 func (r Restarter) RestartNode(node *Ydb_Maintenance.Node) error {
   fmt.Println("Restarting baremetal", node.Host)
-	fmt.Println("By the way, ssh args are", r.opts.SSHArgs)
+	fmt.Println("By the way, ssh args are", r.Opts.SSHArgs)
 	return nil
 }
 
-// TODO After the refactoring, this `New` function got a bit outdated
-// func New(opts *opts) restarters.RestarterInterface {
-// 	return Restarter{ opts: opts }
-// }
+func New() *Restarter {
+	return &Restarter{ Opts: &Opts{} }
+}
 
 func (r Restarter) Filter(spec restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
 	nodes := util.FilterBy(spec.AllNodes,

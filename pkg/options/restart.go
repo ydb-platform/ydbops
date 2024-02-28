@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-ops/internal/util"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	cmsOptions "github.com/ydb-platform/ydb-rolling-restart/pkg/options"
@@ -29,8 +28,6 @@ type RestartOptions struct {
 	RestartRetryNumber int
 
 	Continue bool
-
-	Restarter restarters.RestarterInterface
 }
 
 var RestartOptionsInstance = &RestartOptions{
@@ -52,6 +49,13 @@ func (o *RestartOptions) Validate() error {
 	}
 
 	if _, err := o.GetNodeIds(); err != nil {
+		return err
+	}
+
+	if err := o.CMS.Validate(); err != nil {
+		return err
+	}
+	if err := o.GRPC.Validate(); err != nil {
 		return err
 	}
 

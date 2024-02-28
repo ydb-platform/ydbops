@@ -5,7 +5,7 @@ import (
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
-func NewRestartCommand() *cobra.Command {
+func NewRestartCmd() *cobra.Command {
 	opts := options.RestartOptionsInstance
 	cmd := &cobra.Command{
 		Use:   "restart",

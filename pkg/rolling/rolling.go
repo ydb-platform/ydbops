@@ -20,10 +20,10 @@ type Rolling struct {
 	cms    *cms.CMSClient
 	state  *state
 	opts   *options.RestartOptions
+	restarter restarters.RestarterInterface
 }
 
 type state struct {
-	service restarters.RestarterInterface
 	nodes   map[uint32]*Ydb_Maintenance.Node
 	tenants []string
 }
@@ -31,28 +31,34 @@ type state struct {
 const (
 	RestartTaskPrefix = "rolling_restart"
 	RestartTaskUid    = RestartTaskPrefix + "_001"
+	RollingRestartUser = "rolling-restart"
 )
 
 func PrepareRolling(opts *options.RestartOptions, lf *zap.Logger, restarter restarters.RestarterInterface) {
 	var err error
 	logger := lf.Sugar()
 
-	client := cms.NewCMSClient(logger,
+	cmsClient := cms.NewCMSClient(logger,
 		cms.NewConnectionFactory(
 			*opts.GRPC,
 			opts.CMS.Auth,
-			opts.CMS.User,
+			RollingRestartUser,
 		),
 	)
 
-	r := New(client, logger, opts)
+	r := &Rolling{
+		cms:    cmsClient,
+		logger: logger,
+		opts:   opts,
+		restarter: restarter,
+	}
 
 	if opts.Continue {
 		logger.Info("Continue previous rolling restart")
-		err = r.RestartPrevious()
+		err = r.DoRestartPrevious()
 	} else {
 		logger.Info("Start rolling restart")
-		err = r.Restart()
+		err = r.DoRestart()
 	}
 
 	if err != nil {
@@ -62,15 +68,7 @@ func PrepareRolling(opts *options.RestartOptions, lf *zap.Logger, restarter rest
 	}
 }
 
-func New(cms *cms.CMSClient, logger *zap.SugaredLogger, opts *options.RestartOptions) *Rolling {
-	return &Rolling{
-		cms:    cms,
-		logger: logger,
-		opts:   opts,
-	}
-}
-
-func (r *Rolling) Restart() error {
+func (r *Rolling) DoRestart() error {
 	state, err := r.prepareState()
 	if err != nil {
 		return err
@@ -78,7 +76,7 @@ func (r *Rolling) Restart() error {
 	r.state = state
 
 	nodeIds, _ := r.opts.GetNodeIds()
-	nodesToRestart := r.state.service.Filter(
+	nodesToRestart := r.restarter.Filter(
 		restarters.FilterNodeParams{
 			AllTenants:      r.state.tenants,
 			AllNodes:        util.Values(r.state.nodes),
@@ -98,10 +96,10 @@ func (r *Rolling) Restart() error {
 	}
 
 	r.logger.Infof("Maintenance task id: %s", task.GetTaskUid())
-	return r.loop(task)
+	return r.cmsWaitingLoop(task)
 }
 
-func (r *Rolling) RestartPrevious() error {
+func (r *Rolling) DoRestartPrevious() error {
 	state, err := r.prepareState()
 	if err != nil {
 		return err
@@ -113,10 +111,10 @@ func (r *Rolling) RestartPrevious() error {
 		return fmt.Errorf("failed to get maintenance task with id: %s, err: %+v", RestartTaskUid, err)
 	}
 
-	return r.loop(result)
+	return r.cmsWaitingLoop(result)
 }
 
-func (r *Rolling) loop(task cms.MaintenanceTask) error {
+func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 	const (
 		defaultDelay = time.Second * 30
 	)
@@ -171,7 +169,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	)
 
 	if len(performed) == 0 {
-		r.logger.Info("No ActionGroupStates can be performed")
+		r.logger.Info("No unprocessed ActionGroupStates moved to Performed state yet.")
 		return false
 	}
 
@@ -186,10 +184,10 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		)
 
 		r.logger.Debugf("Drain node with id: %d", node.NodeId)
-		// todo: drain node
+		// TODO: drain node
 
 		r.logger.Debugf("Restart node with id: %d", node.NodeId)
-		if err := r.state.service.RestartNode(node); err != nil {
+		if err := r.restarter.RestartNode(node); err != nil {
 			r.logger.Warnf("Failed to restart node with id: %d", node.NodeId)
 		}
 
@@ -208,37 +206,20 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 }
 
 func (r *Rolling) prepareState() (*state, error) {
-	service, err := r.createService()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create restart service: %+v", err)
-	}
-
 	tenants, err := r.cms.Tenants()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list avaialble tenants: %+v", err)
+		return nil, fmt.Errorf("failed to list available tenants: %+v", err)
 	}
 
 	nodes, err := r.cms.Nodes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list avaialble nodes: %+v", err)
+		return nil, fmt.Errorf("failed to list available nodes: %+v", err)
 	}
 
 	return &state{
-		service: service,
 		tenants: tenants,
 		nodes:   util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
 	}, nil
-}
-
-func (r *Rolling) createService() (restarters.RestarterInterface, error) {
-	service := r.state.service
-
-	// TODO not sure that Prepare needs to be the part of the interface
-	// if err := service.Prepare(); err != nil {
-	// 	return nil, err
-	// }
-
-	return service, nil
 }
 
 func (r *Rolling) logTask(task cms.MaintenanceTask) {
