@@ -39,14 +39,22 @@ func registerAllSubcommands(root *cobra.Command) {
 	root.AddCommand(restartCmd)
 }
 
+func registerRootOptions(root *cobra.Command) {
+	options.RootOptionsInstance.DefineFlags(root.PersistentFlags())
+}
+
 func main() {
-	logLevel := "info"
-	logLevelSetter, logger := createLogger(logLevel)
+	logLevelSetter, logger := createLogger("info")
 	root := &cobra.Command{
 		Use:   "ydb-ops",
 		Short: "TODO ydb-ops short description",
 		Long:  "TODO ydb-ops long description",
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			logLevel := "info"
+			if (options.RootOptionsInstance.Verbose) {
+				logLevel = "debug"
+			}
+
 			lvc, err := zapcore.ParseLevel(logLevel)
 			if err != nil {
 				logger.Warn("Failed to set level")
@@ -63,13 +71,10 @@ func main() {
 	defer util.IgnoreError(logger.Sync)
 
 	options.Logger = logger
-
-	root.PersistentFlags().StringVarP(&logLevel, "log-level", "", logLevel, "Logging level")
-
+	registerRootOptions(root)
 	registerAllSubcommands(root)
 
 	if err := root.Execute(); err != nil {
 		logger.Fatal("failed to execute restart", zap.Error(err))
 	}
-
 }

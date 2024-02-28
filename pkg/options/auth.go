@@ -67,8 +67,8 @@ func (an *AuthNone) Validate() error              { return nil }
 func (an *AuthNone) Token() (AuthToken, error)    { return AuthToken{}, nil }
 
 func (ae *AuthEnv) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&ae.Name, "cms-auth-env-name", "", DefaultCMSAuthEnvVar,
-		"CMS Authentication environment variable name (type: env)")
+	fs.StringVarP(&ae.Name, "auth-env-name", "", DefaultCMSAuthEnvVar,
+		"Authentication environment variable name (type: env)")
 }
 
 func (ae *AuthEnv) Validate() error {
@@ -95,8 +95,8 @@ func (ae *AuthEnv) Token() (AuthToken, error) {
 }
 
 func (af *AuthFile) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&af.Filename, "cms-auth-file-token", "", "",
-		"CMS Authentication file token name (type: file)")
+	fs.StringVarP(&af.Filename, "auth-file-token", "", "",
+		"Authentication file token name (type: file)")
 }
 
 func (af *AuthFile) Validate() error {
@@ -125,10 +125,10 @@ func (af *AuthFile) Token() (AuthToken, error) {
 }
 
 func (at *AuthIAM) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&at.KeyFilename, "cms-auth-iam-key-file", "", "",
-		"CMS Authentication iam key file path (type: iam)")
-	fs.StringVarP(&at.Endpoint, "cms-auth-iam-endpoint", "", DefaultCMSAuthIAMEndpoint,
-		"CMS Authentication iam endpoint (type: iam)")
+	fs.StringVarP(&at.KeyFilename, "auth-iam-key-file", "", "",
+		"Authentication iam key file path (type: iam)")
+	fs.StringVarP(&at.Endpoint, "auth-iam-endpoint", "", DefaultCMSAuthIAMEndpoint,
+		"Authentication iam endpoint (type: iam)")
 }
 
 func (at *AuthIAM) Validate() error {

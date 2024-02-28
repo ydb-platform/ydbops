@@ -40,7 +40,7 @@ func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootO
 
 	cmsClient := cms.NewCMSClient(logger,
 		cms.NewConnectionFactory(
-			*restartOpts.GRPC, // TODO gain deep understanding, why dereferencing is necessary
+			*restartOpts.CMS, // TODO gain deep understanding, why dereferencing is necessary
 			*rootOpts,
 			RollingRestartUser,
 		),

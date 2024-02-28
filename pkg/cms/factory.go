@@ -21,26 +21,26 @@ const (
 )
 
 type Factory struct {
-	grpc     options.GRPC
 	auth     options.Auth
 	rootOpts options.RootOptions
+	cms      options.CMS
 	user     string
 }
 
 func NewConnectionFactory(
-	grpc options.GRPC,
+	cms options.CMS,
 	rootOpts options.RootOptions,
 	user string,
 ) *Factory {
 	return &Factory{
-		grpc:     grpc,
+		cms:      cms,
 		rootOpts: rootOpts,
 		user:     user,
 	}
 }
 
 func (f Factory) Context() (context.Context, context.CancelFunc) {
-	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
+	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.cms.TimeoutSeconds))
 
 	t, err := f.auth.Token()
 	if err != nil {
@@ -56,14 +56,14 @@ func (f Factory) Context() (context.Context, context.CancelFunc) {
 func (f Factory) OperationParams() *Ydb_Operations.OperationParams {
 	return &Ydb_Operations.OperationParams{
 		OperationMode:    Ydb_Operations.OperationParams_SYNC,
-		OperationTimeout: durationpb.New(time.Duration(f.grpc.TimeoutSeconds) * time.Second),
-		CancelAfter:      durationpb.New(time.Duration(f.grpc.TimeoutSeconds) * time.Second),
+		OperationTimeout: durationpb.New(time.Duration(f.cms.TimeoutSeconds) * time.Second),
+		CancelAfter:      durationpb.New(time.Duration(f.cms.TimeoutSeconds) * time.Second),
 	}
 }
 
 func (f Factory) Connection() (*grpc.ClientConn, error) {
-  // TODO somewhere here the rootOpts.Auth needs to be used to 
-  // supply the necessary credentials and headers to a grpc call
+	// TODO somewhere here the rootOpts.Auth needs to be used to
+	// supply the necessary credentials and headers to a grpc call
 	cr, err := f.Credentials()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load credentials: %v", err)
@@ -77,7 +77,7 @@ func (f Factory) Connection() (*grpc.ClientConn, error) {
 }
 
 func (f Factory) Credentials() (credentials.TransportCredentials, error) {
-	if !f.grpc.Secure {
+	if !f.rootOpts.GRPCSecure {
 		return insecure.NewCredentials(), nil
 	}
 
@@ -85,9 +85,9 @@ func (f Factory) Credentials() (credentials.TransportCredentials, error) {
 }
 
 func (f Factory) Endpoint() string {
-  // TODO decide if we want to support multiple endpoints or just one
-  // Endpoint in rootOpts will turn from string -> []string in this case
-	return fmt.Sprintf("%s:%d", f.rootOpts.Endpoint, f.grpc.Port)
+	// TODO decide if we want to support multiple endpoints or just one
+	// Endpoint in rootOpts will turn from string -> []string in this case
+	return fmt.Sprintf("%s:%d", f.rootOpts.Endpoint, f.rootOpts.GRPCPort)
 }
 
 func (f Factory) User() string {
