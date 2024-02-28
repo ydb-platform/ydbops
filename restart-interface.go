@@ -1,5 +1,0 @@
-
-
-type Restarter interface {
-
-}
