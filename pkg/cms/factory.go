@@ -21,7 +21,7 @@ const (
 )
 
 type Factory struct {
-	auth     options.Auth
+	creds    options.Creds
 	rootOpts options.RootOptions
 	cms      options.CMS
 	user     string
@@ -33,6 +33,7 @@ func NewConnectionFactory(
 	user string,
 ) *Factory {
 	return &Factory{
+		creds:    rootOpts.Auth.Creds,
 		cms:      cms,
 		rootOpts: rootOpts,
 		user:     user,
@@ -42,7 +43,7 @@ func NewConnectionFactory(
 func (f Factory) Context() (context.Context, context.CancelFunc) {
 	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.cms.TimeoutSeconds))
 
-	t, err := f.auth.Token()
+	t, err := f.creds.Token()
 	if err != nil {
 		zap.S().Warnf("Failed to load auth token: %v", err)
 		return ctx, cf
@@ -80,6 +81,11 @@ func (f Factory) Credentials() (credentials.TransportCredentials, error) {
 	if !f.rootOpts.GRPCSecure {
 		return insecure.NewCredentials(), nil
 	}
+
+  if f.rootOpts.CaFile == "" {
+    // TODO verify that this will use system pool
+    return credentials.NewClientTLSFromCert(nil, ""), nil
+  }
 
 	return credentials.NewClientTLSFromFile(f.rootOpts.CaFile, "")
 }

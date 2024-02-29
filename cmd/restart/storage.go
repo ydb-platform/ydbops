@@ -2,6 +2,7 @@ package restart
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters/storage_baremetal"
@@ -16,9 +17,11 @@ func NewStorageCmd() *cobra.Command {
 		Use:   "storage",
 		Short: "storage short description",
 		Long:  `storage long description`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return restartOpts.Validate()
-		},
+		PersistentPreRunE: util.MakePersistentPreRunE(
+			func(cmd *cobra.Command, args []string) error {
+				return restartOpts.Validate()
+			},
+		),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.PrepareRolling(restartOpts, rootOpts, options.Logger, restarter)
 		},

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
@@ -11,9 +12,11 @@ func NewRestartCmd() *cobra.Command {
 		Use:   "restart",
 		Short: "restart short description",
 		Long:  `restart long description`,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return opts.Validate()
-		},
+		PersistentPreRunE: util.MakePersistentPreRunE(
+			func(cmd *cobra.Command, args []string) error {
+				return opts.Validate()
+			},
+		),
 	}
 
 	opts.DefineFlags(cmd.PersistentFlags())

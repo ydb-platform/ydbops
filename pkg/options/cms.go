@@ -30,7 +30,7 @@ func (cms *CMS) DefineFlags(fs *pflag.FlagSet) {
 		fmt.Sprintf("CMS Availability mode (%+v)", CMSAvailabilityModes))
 	fs.IntVarP(&cms.RetryWaitSeconds, "cms-wait-time-seconds", "", CMSDefaultRetryWaitTime,
 		"CMS retry time in seconds")
-	fs.IntVarP(&cms.TimeoutSeconds, "cms-timeout-seconds", "", GRPCDefaultTimeoutSeconds,
+	fs.IntVarP(&cms.TimeoutSeconds, "cms-timeout-seconds", "", CMSDefaultTimeoutSeconds,
 		"CMS API response timeout in seconds")
 }
 

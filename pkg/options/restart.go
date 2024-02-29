@@ -2,6 +2,7 @@ package options
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -15,8 +16,7 @@ import (
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
 type RestartOptions struct {
-	CMS     *CMS
-	GRPC    *GRPC
+	CMS *CMS
 
 	AvailabilityMode   string
 	Tenants            []string
@@ -30,7 +30,6 @@ type RestartOptions struct {
 
 var RestartOptionsInstance = &RestartOptions{
 	CMS: &CMS{},
-	GRPC: &GRPC{},
 }
 
 func (o *RestartOptions) Validate() error {
@@ -46,14 +45,17 @@ func (o *RestartOptions) Validate() error {
 		return fmt.Errorf("specified invalid restart retry number: %d. Must be positive", o.RestartRetryNumber)
 	}
 
-	if _, err := o.GetNodeIds(); err != nil {
-		return err
+	_, errFromIds := o.GetNodeIds()
+	_, errFromFQDNs := o.GetNodeFQDNs()
+	if errFromIds != nil && errFromFQDNs != nil {
+		return fmt.Errorf(
+			"failed to parse --hosts argument as node ids (%w) or host fqdns (%w)",
+			errFromIds,
+			errFromFQDNs,
+		)
 	}
 
 	if err := o.CMS.Validate(); err != nil {
-		return err
-	}
-	if err := o.GRPC.Validate(); err != nil {
 		return err
 	}
 
@@ -61,7 +63,7 @@ func (o *RestartOptions) Validate() error {
 }
 
 func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&o.Continue, "continue", /* TODO: false??? */ false, "TODO Continue previous rolling restart")
+	fs.BoolVar(&o.Continue, "continue" /* TODO: false??? */, false, "TODO Continue previous rolling restart")
 
 	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{}, "TODO Never restart these hosts")
 
@@ -77,11 +79,10 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringArrayVarP(&o.Tenants, "tenants", "", o.Tenants,
 		"Restart only specified tenants")
 
-	fs.StringArrayVarP(&o.Hosts, "nodes", "", o.Hosts,
-		"Restart only specified nodes")
+	fs.StringArrayVarP(&o.Hosts, "hosts", "", o.Hosts,
+		"Restart only specified hosts")
 
 	o.CMS.DefineFlags(fs)
-	o.GRPC.DefineFlags(fs)
 }
 
 func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
@@ -93,6 +94,21 @@ func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode 
 
 func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {
 	return durationpb.New(time.Second * time.Duration(o.RestartDuration) * time.Duration(o.RestartRetryNumber))
+}
+
+func (o *RestartOptions) GetNodeFQDNs() ([]string, error) {
+	hosts := make([]string, 0, len(o.Hosts))
+
+	for _, hostFqdn := range o.Hosts {
+		_, err := url.Parse(hostFqdn)
+		if err != nil {
+			return nil, fmt.Errorf("invalid host fqdn specified: %s", hostFqdn)
+		}
+
+		hosts = append(hosts, hostFqdn)
+	}
+
+	return hosts, nil
 }
 
 func (o *RestartOptions) GetNodeIds() ([]uint32, error) {

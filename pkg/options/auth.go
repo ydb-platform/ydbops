@@ -16,16 +16,16 @@ const (
 )
 
 var (
-	Auths = map[string]Auth{
-		"none": &AuthNone{},
-		"env":  &AuthEnv{},
-		"file": &AuthFile{},
-		"iam":  &AuthIAM{},
+	Auths = map[string]Creds{
+		"none": &CredsNone{},
+		"env":  &CredsEnv{},
+		"file": &CredsFile{},
+		"iam":  &CredsIAM{},
 	}
 )
 
 type (
-	Auth interface {
+	Creds interface {
 		Options
 		Token() (AuthToken, error)
 	}
@@ -33,25 +33,25 @@ type (
 		Type   string
 		Secret string
 	}
-	AuthNone struct{}
-	AuthEnv  struct {
+	CredsNone struct{}
+	CredsEnv  struct {
 		Name string
 
 		t AuthToken
 	}
-	AuthFile struct {
+	CredsFile struct {
 		Filename string
 
 		t AuthToken
 	}
-	AuthIAM struct {
+	CredsIAM struct {
 		KeyFilename string
 		Endpoint    string
 	}
 )
 
 type AuthOptions struct {
-	Auth     Auth
+	Creds    Creds
 	AuthType string
 }
 
@@ -62,23 +62,23 @@ func (t AuthToken) Token() string {
 	return fmt.Sprintf("%s %s", t.Type, t.Secret)
 }
 
-func (an *AuthNone) DefineFlags(_ *pflag.FlagSet) {}
-func (an *AuthNone) Validate() error              { return nil }
-func (an *AuthNone) Token() (AuthToken, error)    { return AuthToken{}, nil }
+func (an *CredsNone) DefineFlags(_ *pflag.FlagSet) {}
+func (an *CredsNone) Validate() error              { return nil }
+func (an *CredsNone) Token() (AuthToken, error)    { return AuthToken{}, nil }
 
-func (ae *AuthEnv) DefineFlags(fs *pflag.FlagSet) {
+func (ae *CredsEnv) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&ae.Name, "auth-env-name", "", DefaultCMSAuthEnvVar,
 		"Authentication environment variable name (type: env)")
 }
 
-func (ae *AuthEnv) Validate() error {
+func (ae *CredsEnv) Validate() error {
 	if len(ae.Name) == 0 {
 		return fmt.Errorf("auth env variable name empty")
 	}
 	return nil
 }
 
-func (ae *AuthEnv) Token() (AuthToken, error) {
+func (ae *CredsEnv) Token() (AuthToken, error) {
 	if ae.t.Secret != "" {
 		return ae.t, nil
 	}
@@ -94,12 +94,12 @@ func (ae *AuthEnv) Token() (AuthToken, error) {
 	}, nil
 }
 
-func (af *AuthFile) DefineFlags(fs *pflag.FlagSet) {
+func (af *CredsFile) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&af.Filename, "auth-file-token", "", "",
 		"Authentication file token name (type: file)")
 }
 
-func (af *AuthFile) Validate() error {
+func (af *CredsFile) Validate() error {
 	if len(af.Filename) != 0 {
 		if _, err := os.Stat(af.Filename); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("auth password file not exists: %v", err)
@@ -108,7 +108,7 @@ func (af *AuthFile) Validate() error {
 	return nil
 }
 
-func (af *AuthFile) Token() (AuthToken, error) {
+func (af *CredsFile) Token() (AuthToken, error) {
 	if af.t.Secret != "" {
 		return af.t, nil
 	}
@@ -124,14 +124,14 @@ func (af *AuthFile) Token() (AuthToken, error) {
 	}, nil
 }
 
-func (at *AuthIAM) DefineFlags(fs *pflag.FlagSet) {
+func (at *CredsIAM) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&at.KeyFilename, "auth-iam-key-file", "", "",
 		"Authentication iam key file path (type: iam)")
 	fs.StringVarP(&at.Endpoint, "auth-iam-endpoint", "", DefaultCMSAuthIAMEndpoint,
 		"Authentication iam endpoint (type: iam)")
 }
 
-func (at *AuthIAM) Validate() error {
+func (at *CredsIAM) Validate() error {
 	if len(at.KeyFilename) != 0 {
 		if _, err := os.Stat(at.KeyFilename); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("auth iam key file %s not exists: %v", at.KeyFilename, err)
@@ -143,7 +143,7 @@ func (at *AuthIAM) Validate() error {
 	return nil
 }
 
-func (at *AuthIAM) Token() (AuthToken, error) {
+func (at *CredsIAM) Token() (AuthToken, error) {
 	return AuthToken{}, nil
 }
 
@@ -152,12 +152,12 @@ func (o *AuthOptions) Validate() error {
 		return fmt.Errorf("invalid auth type specified: %s, use one of: %+v", o.AuthType, util.Keys(Auths))
 	}
 
-	o.Auth = Auths[o.AuthType]
-	if err := o.Auth.Validate(); err != nil {
+	o.Creds = Auths[o.AuthType]
+	if err := o.Creds.Validate(); err != nil {
 		return err
 	}
 
-  return nil
+	return nil
 }
 
 func (o *AuthOptions) DefineFlags(fs *pflag.FlagSet) {
@@ -166,5 +166,5 @@ func (o *AuthOptions) DefineFlags(fs *pflag.FlagSet) {
 
 	for _, auth := range Auths {
 		auth.DefineFlags(fs)
-  }
+	}
 }

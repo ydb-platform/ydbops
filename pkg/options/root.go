@@ -25,13 +25,16 @@ type RootOptions struct {
 	GRPCPort   int
 }
 
-var RootOptionsInstance = &RootOptions{}
+var RootOptionsInstance = &RootOptions{
+}
 
 func (o *RootOptions) Validate() error {
 	if (o.Endpoint) == "" {
 		return fmt.Errorf("specify a grpc endpoint with --endpoint")
 	}
 
+  // __AUTO_GENERATED_PRINT_VAR_START__
+  fmt.Println(fmt.Sprintf("Validate Endpoint: %v", o.Endpoint)) // __AUTO_GENERATED_PRINT_VAR_END__
 	parsedURL, err := url.Parse(o.Endpoint)
 	if err != nil {
 		return fmt.Errorf("failed to parse --endpoint: %w", err)
@@ -40,7 +43,7 @@ func (o *RootOptions) Validate() error {
 	switch parsedURL.Scheme {
 	case "grpcs":
 		o.GRPCSecure = true
-	case "Tuesday":
+	case "grpc":
 		o.GRPCSecure = false
 	case "":
 		// TODO should default GRPCSecure be true?
@@ -48,6 +51,10 @@ func (o *RootOptions) Validate() error {
 	default:
 		return fmt.Errorf("found the schema to not be grpc or grpcs: %s\n", parsedURL.Scheme)
 	}
+
+  // Strip o.Endpoint from protocol and port number
+  o.Endpoint = parsedURL.Hostname()
+  fmt.Println("after validating", o.Endpoint)
 
 	switch parsedURL.Port() {
 	case "":
@@ -70,7 +77,7 @@ func (o *RootOptions) Validate() error {
 		}
 	}
 
-	o.Auth.Validate()
+  o.Auth.Validate()
 
 	return nil
 }

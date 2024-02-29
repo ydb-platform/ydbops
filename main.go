@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -49,19 +50,24 @@ func main() {
 		Use:   "ydb-ops",
 		Short: "TODO ydb-ops short description",
 		Long:  "TODO ydb-ops long description",
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+			fmt.Println("some debug info from PersistentPreRunE")
 			logLevel := "info"
-			if (options.RootOptionsInstance.Verbose) {
+			if options.RootOptionsInstance.Verbose {
 				logLevel = "debug"
 			}
 
 			lvc, err := zapcore.ParseLevel(logLevel)
 			if err != nil {
 				logger.Warn("Failed to set level")
-				return
+				return err
 			}
 			logLevelSetter.SetLevel(lvc)
+
+			return options.RootOptionsInstance.Validate()
 		},
+		// Run: func(_ *cobra.Command, _ []string) {
+		// },
 		// TODO decide if we need to hide this, for more compact --help
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
