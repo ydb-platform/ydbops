@@ -221,7 +221,7 @@ func (c *CMSClient) ExecuteMaintenanceMethod(
 		return nil, err
 	}
 
-	ctx, cancel := c.f.Context()
+	ctx, cancel := c.f.ContextWithAuth()
 	defer cancel()
 
 	cl := Ydb_Maintenance_V1.NewMaintenanceServiceClient(cc)
@@ -257,7 +257,7 @@ func (c *CMSClient) ExecuteCMSMethod(
 		return nil, err
 	}
 
-	ctx, cancel := c.f.Context()
+	ctx, cancel := c.f.ContextWithAuth()
 	defer cancel()
 
 	cl := Ydb_Cms_V1.NewCmsServiceClient(cc)

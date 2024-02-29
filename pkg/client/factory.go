@@ -44,7 +44,7 @@ func NewConnectionFactory(
 	}
 }
 
-func (f Factory) Context() (context.Context, context.CancelFunc) {
+func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc) {
 	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
 
 	t, err := f.auth.Creds.Token()

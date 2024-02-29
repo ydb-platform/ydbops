@@ -228,7 +228,7 @@ func (r *Rolling) prepareState() (*state, error) {
 		return nil, fmt.Errorf("failed to list available nodes: %+v", err)
 	}
 
-	ctx, _ := r.factory.Context()
+	ctx, _ := r.factory.ContextWithAuth()
 	userSID, err := r.discovery.WhoAmI(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("whoami failed: %+v", err)
