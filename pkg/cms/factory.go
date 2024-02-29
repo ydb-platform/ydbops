@@ -21,29 +21,26 @@ const (
 )
 
 type Factory struct {
-	creds    options.Creds
+	auth     options.AuthOptions
 	rootOpts options.RootOptions
 	cms      options.CMS
-	user     string
 }
 
 func NewConnectionFactory(
 	cms options.CMS,
 	rootOpts options.RootOptions,
-	user string,
 ) *Factory {
 	return &Factory{
-		creds:    rootOpts.Auth.Creds,
+		auth:     rootOpts.Auth,
 		cms:      cms,
 		rootOpts: rootOpts,
-		user:     user,
 	}
 }
 
 func (f Factory) Context() (context.Context, context.CancelFunc) {
 	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.cms.TimeoutSeconds))
 
-	t, err := f.creds.Token()
+	t, err := f.auth.Creds.Token()
 	if err != nil {
 		zap.S().Warnf("Failed to load auth token: %v", err)
 		return ctx, cf
@@ -82,10 +79,10 @@ func (f Factory) Credentials() (credentials.TransportCredentials, error) {
 		return insecure.NewCredentials(), nil
 	}
 
-  if f.rootOpts.CaFile == "" {
-    // TODO verify that this will use system pool
-    return credentials.NewClientTLSFromCert(nil, ""), nil
-  }
+	if f.rootOpts.CaFile == "" {
+		// TODO verify that this will use system pool
+		return credentials.NewClientTLSFromCert(nil, ""), nil
+	}
 
 	return credentials.NewClientTLSFromFile(f.rootOpts.CaFile, "")
 }
@@ -96,6 +93,6 @@ func (f Factory) Endpoint() string {
 	return fmt.Sprintf("%s:%d", f.rootOpts.Endpoint, f.rootOpts.GRPCPort)
 }
 
-func (f Factory) User() string {
-	return f.user
+func (f Factory) UserId() string {
+	return f.auth.UserId
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -51,7 +50,6 @@ func main() {
 		Short: "TODO ydb-ops short description",
 		Long:  "TODO ydb-ops long description",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("some debug info from PersistentPreRunE")
 			logLevel := "info"
 			if options.RootOptionsInstance.Verbose {
 				logLevel = "debug"
@@ -66,8 +64,6 @@ func main() {
 
 			return options.RootOptionsInstance.Validate()
 		},
-		// Run: func(_ *cobra.Command, _ []string) {
-		// },
 		// TODO decide if we need to hide this, for more compact --help
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,

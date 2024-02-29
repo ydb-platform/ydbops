@@ -81,7 +81,7 @@ func (c *CMSClient) MaintenanceTasks() ([]string, error) {
 			return cl.ListMaintenanceTasks(ctx,
 				&Ydb_Maintenance.ListMaintenanceTasksRequest{
 					OperationParams: c.f.OperationParams(),
-					User:            util.Pointer(c.f.User()),
+					User:            util.Pointer(c.f.UserId()),
 				},
 			)
 		},

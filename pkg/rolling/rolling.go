@@ -31,7 +31,6 @@ type state struct {
 const (
 	RestartTaskPrefix  = "rolling_restart"
 	RestartTaskUid     = RestartTaskPrefix + "_001"
-	RollingRestartUser = "rolling-restart"
 )
 
 func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootOptions, lf *zap.Logger, restarter restarters.RestarterInterface) {
@@ -42,7 +41,6 @@ func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootO
 		cms.NewConnectionFactory(
 			*restartOpts.CMS, // TODO gain deep understanding, why dereferencing is necessary
 			*rootOpts,
-			RollingRestartUser,
 		),
 	)
 
