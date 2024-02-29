@@ -52,7 +52,6 @@ type (
 
 type AuthOptions struct {
 	Creds    Creds
-	UserId   string
 	AuthType string
 }
 
@@ -149,10 +148,6 @@ func (at *CredsIAM) Token() (AuthToken, error) {
 }
 
 func (o *AuthOptions) Validate() error {
-  if len(o.UserId) == 0 {
-    return fmt.Errorf("specify non-empty --user-id")
-  }
-
 	if !util.Contains(util.Keys(Auths), o.AuthType) {
 		return fmt.Errorf("invalid auth type specified: %s, use one of: %+v", o.AuthType, util.Keys(Auths))
 	}
@@ -168,8 +163,6 @@ func (o *AuthOptions) Validate() error {
 func (o *AuthOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.AuthType, "auth-type", "", DefaultAuthType,
 		fmt.Sprintf("Authentication types: %+v", util.Keys(Auths)))
-
-	fs.StringVar(&o.UserId, "user-id", "", "TODO user-id, this should be removed")
 
 	for _, auth := range Auths {
 		auth.DefineFlags(fs)

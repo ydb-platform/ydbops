@@ -1,10 +1,12 @@
-package cms
+package client
 
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -13,6 +15,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
@@ -20,25 +23,29 @@ const (
 	BufferSize = 32 << 20
 )
 
+type OperationResponse interface {
+	GetOperation() *Ydb_Operations.Operation
+}
+
 type Factory struct {
-	auth     options.AuthOptions
-	rootOpts options.RootOptions
-	cms      options.CMS
+	auth               options.AuthOptions
+	rootOpts           options.RootOptions
+	grpcTimeoutSeconds int
 }
 
 func NewConnectionFactory(
-	cms options.CMS,
+	grpcTimeoutSeconds int,
 	rootOpts options.RootOptions,
 ) *Factory {
 	return &Factory{
-		auth:     rootOpts.Auth,
-		cms:      cms,
-		rootOpts: rootOpts,
+		auth:               rootOpts.Auth,
+		grpcTimeoutSeconds: grpcTimeoutSeconds,
+		rootOpts:           rootOpts,
 	}
 }
 
 func (f Factory) Context() (context.Context, context.CancelFunc) {
-	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.cms.TimeoutSeconds))
+	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
 
 	t, err := f.auth.Creds.Token()
 	if err != nil {
@@ -54,8 +61,8 @@ func (f Factory) Context() (context.Context, context.CancelFunc) {
 func (f Factory) OperationParams() *Ydb_Operations.OperationParams {
 	return &Ydb_Operations.OperationParams{
 		OperationMode:    Ydb_Operations.OperationParams_SYNC,
-		OperationTimeout: durationpb.New(time.Duration(f.cms.TimeoutSeconds) * time.Second),
-		CancelAfter:      durationpb.New(time.Duration(f.cms.TimeoutSeconds) * time.Second),
+		OperationTimeout: durationpb.New(time.Duration(f.grpcTimeoutSeconds) * time.Second),
+		CancelAfter:      durationpb.New(time.Duration(f.grpcTimeoutSeconds) * time.Second),
 	}
 }
 
@@ -93,6 +100,20 @@ func (f Factory) Endpoint() string {
 	return fmt.Sprintf("%s:%d", f.rootOpts.Endpoint, f.rootOpts.GRPCPort)
 }
 
-func (f Factory) UserId() string {
-	return f.auth.UserId
+func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("Operation status: %s", op.Status))
+
+	if len(op.Issues) > 0 {
+		sb.WriteString(
+			fmt.Sprintf("\nIssues:\n%s",
+				strings.Join(util.Convert(op.Issues,
+					func(issue *Ydb_Issue.IssueMessage) string {
+						return fmt.Sprintf("  Severity: %d, code: %d, message: %s", issue.Severity, issue.IssueCode, issue.Message)
+					},
+				), "\n"),
+			))
+	}
+
+	logger.Debugf("Invocation result:\n%s", sb.String())
 }

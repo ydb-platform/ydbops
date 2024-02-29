@@ -9,15 +9,20 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/pkg/client"
 	"github.com/ydb-platform/ydb-ops/pkg/cms"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 
+	"github.com/ydb-platform/ydb-ops/pkg/discovery"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
 type Rolling struct {
-	logger    *zap.SugaredLogger
 	cms       *cms.CMSClient
+	discovery *discovery.DiscoveryClient
+	factory *client.Factory
+
+	logger    *zap.SugaredLogger
 	state     *state
 	opts      *options.RestartOptions
 	restarter restarters.RestarterInterface
@@ -26,29 +31,38 @@ type Rolling struct {
 type state struct {
 	nodes   map[uint32]*Ydb_Maintenance.Node
 	tenants []string
+	userSID string
 }
 
 const (
-	RestartTaskPrefix  = "rolling_restart"
-	RestartTaskUid     = RestartTaskPrefix + "_001"
+	RestartTaskPrefix = "rolling_restart"
+	RestartTaskUid    = RestartTaskPrefix + "_001"
 )
 
 func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootOptions, lf *zap.Logger, restarter restarters.RestarterInterface) {
 	var err error
 	logger := lf.Sugar()
 
-	cmsClient := cms.NewCMSClient(logger,
-		cms.NewConnectionFactory(
-			*restartOpts.CMS, // TODO gain deep understanding, why dereferencing is necessary
-			*rootOpts,
-		),
+	factory := client.NewConnectionFactory(
+		restartOpts.CMS.TimeoutSeconds,
+		*rootOpts, // TODO gain deep understanding, why dereferencing is necessary
+	)
+
+	cmsClient := cms.NewCMSClient(logger, factory)
+
+	discoveryClient := discovery.NewDiscoveryClient(
+		rootOpts.Endpoint,
+		rootOpts.GRPCPort,
+		rootOpts.GRPCSecure,
 	)
 
 	r := &Rolling{
 		cms:       cmsClient,
+		discovery: discoveryClient,
 		logger:    logger,
 		opts:      restartOpts,
 		restarter: restarter,
+		factory: factory,
 	}
 
 	if restartOpts.Continue {
@@ -214,8 +228,15 @@ func (r *Rolling) prepareState() (*state, error) {
 		return nil, fmt.Errorf("failed to list available nodes: %+v", err)
 	}
 
+	ctx, _ := r.factory.Context()
+	userSID, err := r.discovery.WhoAmI(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("whoami failed: %+v", err)
+	}
+
 	return &state{
 		tenants: tenants,
+		userSID: userSID,
 		nodes:   util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
 	}, nil
 }
