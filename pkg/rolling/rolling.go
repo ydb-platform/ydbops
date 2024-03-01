@@ -20,7 +20,7 @@ import (
 type Rolling struct {
 	cms       *cms.CMSClient
 	discovery *discovery.DiscoveryClient
-	factory *client.Factory
+	factory   *client.Factory
 
 	logger    *zap.SugaredLogger
 	state     *state
@@ -62,7 +62,7 @@ func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootO
 		logger:    logger,
 		opts:      restartOpts,
 		restarter: restarter,
-		factory: factory,
+		factory:   factory,
 	}
 
 	if restartOpts.Continue {
@@ -87,13 +87,23 @@ func (r *Rolling) DoRestart() error {
 	}
 	r.state = state
 
-	nodeIds, _ := r.opts.GetNodeIds()
+	nodeIds, errIds := r.opts.GetNodeIds()
+	nodeFQDNs, errFqdns := r.opts.GetNodeFQDNs()
+	if errIds != nil && errFqdns != nil {
+		return fmt.Errorf(
+			"TODO parsing both in id mode and in fqdn mode failed: (%w), (%w)",
+			errIds,
+			errFqdns,
+		)
+	}
+
 	nodesToRestart := r.restarter.Filter(
 		restarters.FilterNodeParams{
-			AllTenants:      r.state.tenants,
-			AllNodes:        util.Values(r.state.nodes),
-			SelectedTenants: r.opts.Tenants,
-			SelectedNodeIds: nodeIds,
+			AllTenants:        r.state.tenants,
+			AllNodes:          util.Values(r.state.nodes),
+			SelectedTenants:   r.opts.Tenants,
+			SelectedNodeIds:   nodeIds,
+			SelectedHostFQDNs: nodeFQDNs,
 		},
 	)
 	taskParams := cms.MaintenanceTaskParams{

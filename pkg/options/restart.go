@@ -80,7 +80,7 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 		"Restart only specified tenants")
 
 	fs.StringArrayVarP(&o.Hosts, "hosts", "", o.Hosts,
-		"Restart only specified hosts")
+		"Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, but you can not mix host FQDNs and node ids in this option.")
 
 	o.CMS.DefineFlags(fs)
 }

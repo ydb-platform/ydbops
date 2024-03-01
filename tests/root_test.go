@@ -2,34 +2,23 @@ package tests
 
 import (
 	"bytes"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/ydb-platform/ydb-ops/cmd"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
-func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
+func createTestingLogger(level string) (zap.AtomicLevel, *zap.Logger, *observer.ObservedLogs) {
 	atom, _ := zap.ParseAtomicLevel(level)
-	encoderCfg := zap.NewProductionEncoderConfig()
-	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	logger := zap.New(
-		zapcore.NewCore(
-			zapcore.NewConsoleEncoder(encoderCfg),
-			zapcore.Lock(os.Stdout),
-			atom,
-		),
-	)
-
-	_ = zap.ReplaceGlobals(logger)
-	return atom, logger
+	core, logs := observer.New(zap.InfoLevel)
+	return atom, zap.New(core), logs
 }
 
 func TestYdbOpsHelp(t *testing.T) {
 	actual := new(bytes.Buffer)
-	logLevelSetter, logger := createLogger("info")
+	logLevelSetter, logger, _ := createTestingLogger("info")
 	cmd.InitRootCmd(logLevelSetter, logger)
 	cmd.RootCmd.SetOut(actual)
 	cmd.RootCmd.SetErr(actual)

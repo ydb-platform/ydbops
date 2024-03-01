@@ -23,19 +23,29 @@ func New() *Restarter {
 }
 
 func (r Restarter) Filter(spec restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
-	nodes := util.FilterBy(spec.AllNodes,
+	allStorageNodes := util.FilterBy(spec.AllNodes,
 		func(node *Ydb_Maintenance.Node) bool {
 			return node.GetStorage() != nil
 		},
 	)
 
+	selectedNodes := []*Ydb_Maintenance.Node{}
+
 	if len(spec.SelectedNodeIds) > 0 {
-		nodes = util.FilterBy(nodes,
+		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
 			func(node *Ydb_Maintenance.Node) bool {
 				return util.Contains(spec.SelectedNodeIds, node.NodeId)
 			},
-		)
+		)...)
 	}
 
-	return nodes
+	if len(spec.SelectedHostFQDNs) > 0 {
+		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
+			func(node *Ydb_Maintenance.Node) bool {
+				return util.Contains(spec.SelectedHostFQDNs, node.Host)
+			},
+		)...)
+	}
+
+	return selectedNodes
 }
