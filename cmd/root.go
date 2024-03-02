@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydb-ops/cmd/restart"
 	"github.com/ydb-platform/ydb-ops/cmd/restart/storage"
@@ -43,6 +45,8 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
 				return err
 			}
 			logLevelSetter.SetLevel(lvc)
+
+			logger.Debug(fmt.Sprintf("Current logging level enabled: %s", logLevel))
 
 			return options.RootOptionsInstance.Validate()
 		},

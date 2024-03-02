@@ -50,11 +50,7 @@ func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootO
 
 	cmsClient := cms.NewCMSClient(logger, factory)
 
-	discoveryClient := discovery.NewDiscoveryClient(
-		rootOpts.Endpoint,
-		rootOpts.GRPCPort,
-		rootOpts.GRPCSecure,
-	)
+	discoveryClient := discovery.NewDiscoveryClient(logger, factory)
 
 	r := &Rolling{
 		cms:       cmsClient,
@@ -98,6 +94,7 @@ func (r *Rolling) DoRestart() error {
 	}
 
 	nodesToRestart := r.restarter.Filter(
+		r.logger,
 		restarters.FilterNodeParams{
 			AllTenants:        r.state.tenants,
 			AllNodes:          util.Values(r.state.nodes),
@@ -209,7 +206,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		// TODO: drain node
 
 		r.logger.Debugf("Restart node with id: %d", node.NodeId)
-		if err := r.restarter.RestartNode(node); err != nil {
+		if err := r.restarter.RestartNode(r.logger, node); err != nil {
 			r.logger.Warnf("Failed to restart node with id: %d", node.NodeId)
 		}
 
@@ -238,8 +235,7 @@ func (r *Rolling) prepareState() (*state, error) {
 		return nil, fmt.Errorf("failed to list available nodes: %+v", err)
 	}
 
-	ctx, _ := r.factory.ContextWithAuth()
-	userSID, err := r.discovery.WhoAmI(ctx)
+	userSID, err := r.discovery.WhoAmI()
 	if err != nil {
 		return nil, fmt.Errorf("whoami failed: %+v", err)
 	}

@@ -9,7 +9,7 @@ type Opts struct {
 }
 
 func (o *Opts) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringArrayVarP(&o.SSHArgs, "ssh-args", "", nil, "TODO SSH command arguments")
+	fs.StringSliceVarP(&o.SSHArgs, "ssh-args", "", nil, "TODO SSH command arguments")
 }
 
 func (o *Opts) Validate() error {
