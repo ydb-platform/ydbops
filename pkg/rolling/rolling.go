@@ -99,7 +99,6 @@ func (r *Rolling) DoRestart() error {
 		)
 	}
 
-	zap.S().Debugf("nodes: %v", nodeFQDNs)
 	nodesToRestart := r.restarter.Filter(
 		r.logger,
 		&restarters.FilterNodeParams{
@@ -197,7 +196,7 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 }
 
 func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
-	r.logger.Debugf("Every action: %v", actions)
+	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
 	performed := util.FilterBy(actions,
 		func(gs *Ydb_Maintenance.ActionGroupStates) bool {
 			return gs.ActionStates[0].Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED
@@ -217,8 +216,6 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			lock = as.Action.GetLockAction()
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
-
-		r.logger.Debugf("TODO %v %v", r.state.unreportedButFinishedActionIds, as.ActionUid)
 
 		for _, completedActionId := range r.state.unreportedButFinishedActionIds {
 			if as.ActionUid.ActionId == completedActionId {

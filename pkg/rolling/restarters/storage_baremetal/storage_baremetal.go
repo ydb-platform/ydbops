@@ -119,10 +119,6 @@ func (r Restarter) Filter(logger *zap.SugaredLogger, spec *restarters.FilterNode
 	)
 
 	selectedNodes := []*Ydb_Maintenance.Node{}
-	logger.Debugf("spec.SelectedNodeFQDNs %v", spec.SelectedHostFQDNs)
-	for _, node := range spec.SelectedHostFQDNs {
-		logger.Debugf("*%s*\n", node)
-	}
 
 	if len(spec.SelectedNodeIds) > 0 {
 		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
@@ -133,11 +129,6 @@ func (r Restarter) Filter(logger *zap.SugaredLogger, spec *restarters.FilterNode
 	}
 
 	if len(spec.SelectedHostFQDNs) > 0 {
-		logger.Debugf("Selecting...")
-		logger.Debugf("%v\n", spec.SelectedHostFQDNs)
-		for _, node := range allStorageNodes {
-			logger.Debugf("*%s* %v", node.Host, util.Contains(spec.SelectedHostFQDNs, node.Host))
-		}
 		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
 			func(node *Ydb_Maintenance.Node) bool {
 				return util.Contains(spec.SelectedHostFQDNs, node.Host)
