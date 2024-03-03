@@ -44,18 +44,18 @@ func NewConnectionFactory(
 	}
 }
 
-func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc) {
+func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
 	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
 
 	t, err := f.auth.Creds.Token()
 	if err != nil {
 		zap.S().Warnf("Failed to load auth token: %v", err)
-		return ctx, cf
+		return nil, cf, err
 	}
 
 	return metadata.AppendToOutgoingContext(ctx,
 		"x-ydb-auth-ticket", t.Secret,
-		"authorization", t.Token()), cf
+		"authorization", t.Token()), cf, nil
 }
 
 func (f Factory) OperationParams() *Ydb_Operations.OperationParams {

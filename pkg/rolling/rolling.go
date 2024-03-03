@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
 
@@ -29,19 +30,24 @@ type Rolling struct {
 }
 
 type state struct {
-	nodes   map[uint32]*Ydb_Maintenance.Node
-	tenants []string
-	userSID string
+	nodes                        map[uint32]*Ydb_Maintenance.Node
+	tenants                      []string
+	userSID                      string
+	unreportedButFinishedActionIds []string
+	restartTaskUID               string
 }
 
 const (
-	RestartTaskPrefix = "rolling_restart"
-	RestartTaskUid    = RestartTaskPrefix + "_001"
+	RestartTaskPrefix = "rolling-restart-"
 )
 
-func PrepareRolling(restartOpts *options.RestartOptions, rootOpts *options.RootOptions, lf *zap.Logger, restarter restarters.RestarterInterface) {
+func PrepareRolling(
+	restartOpts *options.RestartOptions,
+	rootOpts *options.RootOptions,
+	logger *zap.SugaredLogger,
+	restarter restarters.RestarterInterface,
+) {
 	var err error
-	logger := lf.Sugar()
 
 	factory := client.NewConnectionFactory(
 		restartOpts.CMS.TimeoutSeconds,
@@ -93,9 +99,10 @@ func (r *Rolling) DoRestart() error {
 		)
 	}
 
+	zap.S().Debugf("nodes: %v", nodeFQDNs)
 	nodesToRestart := r.restarter.Filter(
 		r.logger,
-		restarters.FilterNodeParams{
+		&restarters.FilterNodeParams{
 			AllTenants:        r.state.tenants,
 			AllNodes:          util.Values(r.state.nodes),
 			SelectedTenants:   r.opts.Tenants,
@@ -103,8 +110,9 @@ func (r *Rolling) DoRestart() error {
 			SelectedHostFQDNs: nodeFQDNs,
 		},
 	)
+
 	taskParams := cms.MaintenanceTaskParams{
-		TaskUid:          RestartTaskUid,
+		TaskUID:          r.state.restartTaskUID,
 		AvailAbilityMode: r.opts.GetAvailabilityMode(),
 		Duration:         r.opts.GetRestartDuration(),
 		Nodes:            nodesToRestart,
@@ -125,17 +133,24 @@ func (r *Rolling) DoRestartPrevious() error {
 	}
 	r.state = state
 
-	result, err := r.cms.GetMaintenanceTask(RestartTaskUid)
+	previousTasks, err := r.cms.MaintenanceTasks(state.userSID)
 	if err != nil {
-		return fmt.Errorf("failed to get maintenance task with id: %s, err: %+v", RestartTaskUid, err)
+		return fmt.Errorf("failed to list maintenance tasks with user id %v: %w", state.userSID, err)
 	}
 
-	return r.cmsWaitingLoop(result)
+	for _, previousTaskUID := range previousTasks {
+		_, err := r.cms.DropMaintenanceTask(previousTaskUID)
+		if err != nil {
+			return fmt.Errorf("failed to drop maintenance task: %w", err)
+		}
+	}
+
+	return r.DoRestart()
 }
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 	const (
-		defaultDelay = time.Second * 30
+		defaultDelay = time.Second * 10
 	)
 
 	var (
@@ -161,6 +176,7 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 			}
 
 			r.logger.Info("Processing task action group states")
+			r.logger.Debug(r.state.unreportedButFinishedActionIds)
 			if completed := r.processActionGroupStates(task.GetActionGroupStates()); completed {
 				break
 			}
@@ -181,6 +197,7 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 }
 
 func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
+	r.logger.Debugf("Every action: %v", actions)
 	performed := util.FilterBy(actions,
 		func(gs *Ydb_Maintenance.ActionGroupStates) bool {
 			return gs.ActionStates[0].Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED
@@ -188,13 +205,12 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	)
 
 	if len(performed) == 0 {
-		r.logger.Info("No unprocessed ActionGroupStates moved to Performed state yet.")
+		r.logger.Info("No actions can be taken yet, waiting for CMS to allow some actions...")
 		return false
 	}
 
-	ids := make([]*Ydb_Maintenance.ActionUid, 0, len(performed))
-
 	r.logger.Infof("Perform next %d ActionGroupStates", len(performed))
+	actionsCompletedThisStep := []*Ydb_Maintenance.ActionUid{}
 	for _, gs := range performed {
 		var (
 			as   = gs.ActionStates[0]
@@ -202,23 +218,40 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
 
+		r.logger.Debugf("TODO %v %v", r.state.unreportedButFinishedActionIds, as.ActionUid)
+
+		for _, completedActionId := range r.state.unreportedButFinishedActionIds {
+			if as.ActionUid.ActionId == completedActionId {
+				actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
+				r.logger.Debugf(
+					"Node id %v already restarted, but CompleteAction on last iteration, so CMS does not know it is complete yet.",
+					node.NodeId,
+				)
+				continue
+			}
+		}
+
 		r.logger.Debugf("Drain node with id: %d", node.NodeId)
-		// TODO: drain node
+		r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
+		// TODO: drain node, but public draining api is not available yet
 
 		r.logger.Debugf("Restart node with id: %d", node.NodeId)
 		if err := r.restarter.RestartNode(r.logger, node); err != nil {
 			r.logger.Warnf("Failed to restart node with id: %d", node.NodeId)
+		} else {
+			r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
+			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
+			r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
 		}
-
-		ids = append(ids, as.ActionUid)
 	}
 
-	result, err := r.cms.CompleteAction(ids)
+	result, err := r.cms.CompleteAction(actionsCompletedThisStep)
 	if err != nil {
 		r.logger.Warnf("Failed to complete action: %+v", err)
 		return false
 	}
 	r.logCompleteResult(result)
+	r.state.unreportedButFinishedActionIds = []string{}
 
 	// completed when all actions marked as completed
 	return len(actions) == len(result.ActionStatuses)
@@ -241,9 +274,11 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
-		tenants: tenants,
-		userSID: userSID,
-		nodes:   util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		tenants:                      tenants,
+		userSID:                      userSID,
+		nodes:                        util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		unreportedButFinishedActionIds: []string{},
+		restartTaskUID:               RestartTaskPrefix + uuid.New().String(),
 	}, nil
 }
 
@@ -261,7 +296,7 @@ func (r *Rolling) logTask(task cms.MaintenanceTask) {
 		if as.Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED {
 			sb.WriteString(fmt.Sprintf("PERFORMED, until: %s", as.Deadline.AsTime().Format(time.DateTime)))
 		} else {
-			sb.WriteString("PENDING")
+			sb.WriteString(fmt.Sprintf("PENDING, %s", as.GetReason().String()))
 		}
 		sb.WriteString("\n")
 	}

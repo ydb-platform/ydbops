@@ -15,6 +15,11 @@ type Restarter struct {
 	Opts *Opts
 }
 
+const (
+	DefaultSystemdUnit  = "ydb-server-storage.service"
+	InternalSystemdUnit = "kikimr"
+)
+
 func stripCommandFromArgs(args []string) (string, []string) {
 	remainingSshArgs := []string{}
 	command := "ssh"
@@ -48,17 +53,27 @@ func streamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
 	logger.Info(fmt.Sprintf("Restarting %s with ssh-args %v", node.Host, r.Opts.SSHArgs))
 
+	// It is theoretically possible to guess the systemd-unit, but it is a fragile
+	// solution. tarasov-egor@ will keep it here during development time for reference:
+	//
+	// YDBD_PORT=2135
+	// YDBD_PID=$(sudo lsof -i :$YDBD_PORT | grep LISTEN | awk '{print $2}' | head -n 1)
+	// YDBD_UNIT=$(sudo ps -A -o'pid,unit' | grep $YDBD_PID | awk '{print $2}')
+	// sudo systemctl restart $YDBD_UNIT
+
+	systemdUnitName := DefaultSystemdUnit
+	if r.Opts.IsOldSystemdKikimr {
+		systemdUnitName = InternalSystemdUnit
+	}
+
+	logger.Debug(fmt.Sprintf("Restarting %s systemd unit", systemdUnitName))
+
+	remoteRestartCommand := fmt.Sprintf(
+		`(test -x /bin/systemctl && sudo systemctl restart %s)`,
+		systemdUnitName,
+	)
+
 	sshCommand, remainingSshArgs := stripCommandFromArgs(r.Opts.SSHArgs)
-
-// YDBD_PID=$(sudo lsof -i :2135 | grep LISTEN | awk '{print $2}' | head -n 1)
-// YDBD_UNIT=$(sudo ps -A -o'pid,unit' | grep $YDBD_PID | awk '{print $2}')
-// sudo systemctl restart $YDBD_UNIT
-
-// YDBD_PID=$(sudo lsof -t -a -i :2135 -u ydb)
-// YDBD_UNIT=$(sudo ps -A -o'pid,unit' | grep $YDBD_PID | awk '{print $2}')
-// sudo systemctl restart $YDBD_UNIT
-
-	remoteRestartCommand := `(test -x /bin/systemctl && sudo systemctl restart ydb-server-storage.service)`
 
 	fullSSHArgs := []string{"run"}
 	fullSSHArgs = append(fullSSHArgs, remainingSshArgs...)
@@ -77,7 +92,7 @@ func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.
 	stderr, _ := cmd.StderrPipe()
 
 	if err := cmd.Start(); err != nil {
-		fmt.Println("Error on cmd.Start():", err)
+		fmt.Println("TODO Error on cmd.Start():", err)
 		return err
 	}
 
@@ -85,7 +100,7 @@ func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.
 	go streamPipeIntoLogger(stderr, logger)
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Println("Error on cmd.Wait():", err)
+		fmt.Println("TODO Error on cmd.Wait():", err)
 		return err
 	}
 
@@ -96,7 +111,7 @@ func New() *Restarter {
 	return &Restarter{Opts: &Opts{}}
 }
 
-func (r Restarter) Filter(_ *zap.SugaredLogger, spec restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
+func (r Restarter) Filter(logger *zap.SugaredLogger, spec *restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
 	allStorageNodes := util.FilterBy(spec.AllNodes,
 		func(node *Ydb_Maintenance.Node) bool {
 			return node.GetStorage() != nil
@@ -104,6 +119,10 @@ func (r Restarter) Filter(_ *zap.SugaredLogger, spec restarters.FilterNodeParams
 	)
 
 	selectedNodes := []*Ydb_Maintenance.Node{}
+	logger.Debugf("spec.SelectedNodeFQDNs %v", spec.SelectedHostFQDNs)
+	for _, node := range spec.SelectedHostFQDNs {
+		logger.Debugf("*%s*\n", node)
+	}
 
 	if len(spec.SelectedNodeIds) > 0 {
 		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
@@ -114,12 +133,19 @@ func (r Restarter) Filter(_ *zap.SugaredLogger, spec restarters.FilterNodeParams
 	}
 
 	if len(spec.SelectedHostFQDNs) > 0 {
+		logger.Debugf("Selecting...")
+		logger.Debugf("%v\n", spec.SelectedHostFQDNs)
+		for _, node := range allStorageNodes {
+			logger.Debugf("*%s* %v", node.Host, util.Contains(spec.SelectedHostFQDNs, node.Host))
+		}
 		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
 			func(node *Ydb_Maintenance.Node) bool {
 				return util.Contains(spec.SelectedHostFQDNs, node.Host)
 			},
 		)...)
 	}
+
+	logger.Debugf("storage_baremetal.Restarter selected following nodes for restart: %v", selectedNodes)
 
 	return selectedNodes
 }

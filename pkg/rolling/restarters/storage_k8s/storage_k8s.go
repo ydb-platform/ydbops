@@ -12,7 +12,7 @@ type Restarter struct {
 
 }
 
-func (r Restarter) Filter(_ *zap.SugaredLogger, spec restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
+func (r Restarter) Filter(_ *zap.SugaredLogger, spec *restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
   return spec.AllNodes
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 type MaintenanceTaskParams struct {
-	TaskUid          string
+	TaskUID          string
 	AvailAbilityMode Ydb_Maintenance.AvailabilityMode
 	Duration         *durationpb.Duration
 	Nodes            []*Ydb_Maintenance.Node
@@ -20,7 +20,7 @@ type MaintenanceTask interface {
 }
 
 type maintenanceTaskResult struct {
-	TaskUid           string
+	TaskUID           string
 	ActionGroupStates []*Ydb_Maintenance.ActionGroupStates
 }
 
@@ -28,4 +28,4 @@ func (g *maintenanceTaskResult) GetRetryAfter() *timestamppb.Timestamp { return 
 func (g *maintenanceTaskResult) GetActionGroupStates() []*Ydb_Maintenance.ActionGroupStates {
 	return g.ActionGroupStates
 }
-func (g *maintenanceTaskResult) GetTaskUid() string { return g.TaskUid }
+func (g *maintenanceTaskResult) GetTaskUid() string { return g.TaskUID }

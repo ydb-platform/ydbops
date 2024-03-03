@@ -6,7 +6,7 @@ import (
 )
 
 type RestarterInterface interface {
-	Filter(logger *zap.SugaredLogger, spec FilterNodeParams) []*Ydb_Maintenance.Node
+	Filter(logger *zap.SugaredLogger, spec *FilterNodeParams) []*Ydb_Maintenance.Node
 	RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error
 }
 

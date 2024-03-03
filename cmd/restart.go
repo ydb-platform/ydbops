@@ -10,8 +10,8 @@ func NewRestartCmd() *cobra.Command {
 	opts := options.RestartOptionsInstance
 	cmd := &cobra.Command{
 		Use:   "restart",
-		Short: "restart short description",
-		Long:  `restart long description`,
+		Short: "TODO restart short description",
+		Long:  `TODO restart long description`,
 		PersistentPreRunE: util.MakePersistentPreRunE(
 			func(cmd *cobra.Command, args []string) error {
 				return opts.Validate()

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydb-ops/cmd/restart"
 	"github.com/ydb-platform/ydb-ops/cmd/restart/storage"
@@ -12,14 +10,22 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func registerAllSubcommands(root *cobra.Command) {
-	k8sCmd := storage.NewK8sCmd()
-	storageCmd := restart.NewStorageCmd()
-	restartCmd := NewRestartCmd()
+func addAndReturn(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {
+	for _, subCmd := range rest {
+		cmd.AddCommand(subCmd)
+	}
+	return cmd
+}
 
-	storageCmd.AddCommand(k8sCmd)
-	restartCmd.AddCommand(storageCmd)
-	root.AddCommand(restartCmd)
+func registerAllSubcommands(root *cobra.Command) {
+	_ = addAndReturn(root,
+		addAndReturn(NewRestartCmd(),
+			addAndReturn(restart.NewStorageCmd(),
+				storage.NewK8sCmd(),
+				storage.NewBaremetalCmd(),
+			),
+		),
+	)
 }
 
 func registerRootOptions(root *cobra.Command) {
@@ -46,7 +52,7 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
 			}
 			logLevelSetter.SetLevel(lvc)
 
-			logger.Debug(fmt.Sprintf("Current logging level enabled: %s", logLevel))
+			zap.S().Debugf("Current logging level enabled: %s", logLevel)
 
 			return options.RootOptionsInstance.Validate()
 		},
@@ -58,7 +64,7 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
 
 	defer util.IgnoreError(logger.Sync)
 
-	options.Logger = logger
+	options.Logger = logger.Sugar()
 	registerRootOptions(RootCmd)
 	registerAllSubcommands(RootCmd)
 }

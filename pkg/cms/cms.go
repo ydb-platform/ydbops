@@ -105,7 +105,7 @@ func (c *CMSClient) GetMaintenanceTask(taskId string) (MaintenanceTask, error) {
 	}
 
 	return &maintenanceTaskResult{
-		TaskUid:           taskId,
+		TaskUID:           taskId,
 		ActionGroupStates: result.ActionGroupStates,
 	}, nil
 }
@@ -114,7 +114,7 @@ func (c *CMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (Mainten
 	request := &Ydb_Maintenance.CreateMaintenanceTaskRequest{
 		OperationParams: c.f.OperationParams(),
 		TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
-			TaskUid:          params.TaskUid,
+			TaskUid:          params.TaskUID,
 			AvailabilityMode: params.AvailAbilityMode,
 			Description:      "Rolling restart maintenance task",
 		},
@@ -221,7 +221,10 @@ func (c *CMSClient) ExecuteMaintenanceMethod(
 		return nil, err
 	}
 
-	ctx, cancel := c.f.ContextWithAuth()
+	ctx, cancel, err := c.f.ContextWithAuth()
+	if err != nil {
+		return nil, err
+	}
 	defer cancel()
 
 	cl := Ydb_Maintenance_V1.NewMaintenanceServiceClient(cc)
@@ -257,7 +260,10 @@ func (c *CMSClient) ExecuteCMSMethod(
 		return nil, err
 	}
 
-	ctx, cancel := c.f.ContextWithAuth()
+	ctx, cancel, err := c.f.ContextWithAuth()
+	if err != nil {
+		return nil, err
+	}
 	defer cancel()
 
 	cl := Ydb_Cms_V1.NewCmsServiceClient(cc)

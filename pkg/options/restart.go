@@ -13,6 +13,11 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
+const (
+	DefaultRetryCount      = 3
+	DefaultRestartDuration = 3
+)
+
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
 type RestartOptions struct {
@@ -70,16 +75,15 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.AvailabilityMode, "availability-mode", "", AvailabilityModes[0],
 		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(AvailabilityModes, ", ")))
 
-	fs.IntVarP(&o.RestartDuration, "restart-duration", "", 60,
-		"Restart duration in seconds")
+	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDuration, `CMS will release the node for maintenance for restart-duration * restart-retry-number seconds. Any maintenance
+after that would be considered a regular cluster failure`)
 
-	fs.IntVarP(&o.RestartRetryNumber, "restart-retry-number", "", 3,
-		"Retry number of restart")
+	fs.IntVarP(&o.RestartRetryNumber, "restart-retry-number", "", DefaultRetryCount,
+		fmt.Sprintf("How many times every node should be retried on error, default %v", DefaultRetryCount))
 
-	fs.StringArrayVarP(&o.Tenants, "tenants", "", o.Tenants,
-		"Restart only specified tenants")
+	fs.StringSliceVar(&o.Tenants, "tenants", o.Tenants, "Restart only specified tenants")
 
-	fs.StringArrayVarP(&o.Hosts, "hosts", "", o.Hosts,
+	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
 		"Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, but you can not mix host FQDNs and node ids in this option.")
 
 	o.CMS.DefineFlags(fs)

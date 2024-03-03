@@ -48,7 +48,10 @@ func (c *DiscoveryClient) ExecuteDiscoveryMethod(
 		return nil, err
 	}
 
-	ctx, cancel := c.f.ContextWithAuth()
+	ctx, cancel, err := c.f.ContextWithAuth()
+	if err != nil {
+		return nil, err
+	}
 	defer cancel()
 
 	cl := Ydb_Discovery_V1.NewDiscoveryServiceClient(cc)

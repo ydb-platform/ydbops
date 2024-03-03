@@ -144,6 +144,7 @@ func (at *CredsIAM) Validate() error {
 }
 
 func (at *CredsIAM) Token() (AuthToken, error) {
+	// TODO support IAM authorizaion
 	return AuthToken{}, nil
 }
 
