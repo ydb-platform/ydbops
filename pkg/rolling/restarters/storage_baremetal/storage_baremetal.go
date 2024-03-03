@@ -2,11 +2,9 @@ package storage_baremetal
 
 import (
 	"fmt"
-	"io"
 	"os/exec"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 	"go.uber.org/zap"
 )
@@ -32,22 +30,6 @@ func stripCommandFromArgs(args []string) (string, []string) {
 	}
 
 	return command, remainingSshArgs
-}
-
-func streamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
-	buf := make([]byte, 1024)
-	for {
-		n, err := p.Read(buf)
-		if n > 0 {
-			logger.Info(string(buf[:n]))
-		}
-		if err != nil {
-			if err != io.EOF {
-				logger.Error("Error reading from pipe", zap.Error(err))
-			}
-			break
-		}
-	}
 }
 
 func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
@@ -96,8 +78,8 @@ func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.
 		return err
 	}
 
-	go streamPipeIntoLogger(stdout, logger)
-	go streamPipeIntoLogger(stderr, logger)
+	go restarters.StreamPipeIntoLogger(stdout, logger)
+	go restarters.StreamPipeIntoLogger(stderr, logger)
 
 	if err := cmd.Wait(); err != nil {
 		fmt.Println("TODO Error on cmd.Wait():", err)
@@ -112,29 +94,18 @@ func New() *Restarter {
 }
 
 func (r Restarter) Filter(logger *zap.SugaredLogger, spec *restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
-	allStorageNodes := util.FilterBy(spec.AllNodes,
-		func(node *Ydb_Maintenance.Node) bool {
-			return node.GetStorage() != nil
-		},
-	)
+	allStorageNodes := restarters.FilterStorageNodes(spec.AllNodes)
 
 	selectedNodes := []*Ydb_Maintenance.Node{}
 
-	if len(spec.SelectedNodeIds) > 0 {
-		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
-			func(node *Ydb_Maintenance.Node) bool {
-				return util.Contains(spec.SelectedNodeIds, node.NodeId)
-			},
-		)...)
-	}
+	selectedNodes = append(
+		selectedNodes,
+		restarters.FilterByNodeIds(allStorageNodes, spec.SelectedNodeIds)...,
+	)
 
-	if len(spec.SelectedHostFQDNs) > 0 {
-		selectedNodes = append(selectedNodes, util.FilterBy(allStorageNodes,
-			func(node *Ydb_Maintenance.Node) bool {
-				return util.Contains(spec.SelectedHostFQDNs, node.Host)
-			},
-		)...)
-	}
+	selectedNodes = append(
+		selectedNodes, restarters.FilterByHostFQDN(allStorageNodes, spec.SelectedHostFQDNs)...,
+	)
 
 	logger.Debugf("storage_baremetal.Restarter selected following nodes for restart: %v", selectedNodes)
 

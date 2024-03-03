@@ -11,8 +11,10 @@ type RestarterInterface interface {
 }
 
 type FilterNodeParams struct {
-	AllTenants        []string
-	AllNodes          []*Ydb_Maintenance.Node
+	AllTenants []string
+	AllNodes   []*Ydb_Maintenance.Node
+
+	Version           string
 	SelectedTenants   []string
 	SelectedNodeIds   []uint32
 	SelectedHostFQDNs []string

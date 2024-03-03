@@ -1,22 +1,22 @@
-package storage
+package restart
 
 import (
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters/storage_baremetal"
+	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters/run"
 )
 
-func NewBaremetalCmd() *cobra.Command {
+func NewRunCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := storage_baremetal.New()
+	restarter := run.New()
 
 	cmd := &cobra.Command{
-		Use:   "baremetal",
-		Short: "TODO baremetal short description",
-		Long:  `TODO baremetal long description`,
+		Use:   "run",
+		Short: "TODO run short description",
+		Long:  `TODO run long description`,
 		PersistentPreRunE: util.MakePersistentPreRunE(
 			func(cmd *cobra.Command, args []string) error {
 				return restarter.Opts.Validate()

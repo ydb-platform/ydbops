@@ -229,6 +229,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		}
 
 		r.logger.Debugf("Drain node with id: %d", node.NodeId)
+
 		r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
 		// TODO: drain node, but public draining api is not available yet
 
