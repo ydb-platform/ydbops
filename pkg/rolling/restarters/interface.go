@@ -5,15 +5,17 @@ import (
 	"go.uber.org/zap"
 )
 
-type RestarterInterface interface {
-	Filter(logger *zap.SugaredLogger, spec *FilterNodeParams) []*Ydb_Maintenance.Node
+type Restarter interface {
+	Filter(logger *zap.SugaredLogger, spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node
 	RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error
 }
 
-type FilterNodeParams struct {
+type ClusterNodesInfo struct {
 	AllTenants []string
 	AllNodes   []*Ydb_Maintenance.Node
+}
 
+type FilterNodeParams struct {
 	Version           string
 	SelectedTenants   []string
 	SelectedNodeIds   []uint32

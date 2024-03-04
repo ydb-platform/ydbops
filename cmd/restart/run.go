@@ -5,13 +5,13 @@ import (
 	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters/run"
+	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 )
 
 func NewRunCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := run.New()
+	restarter := restarters.NewRunRestarter()
 
 	cmd := &cobra.Command{
 		Use:   "run",

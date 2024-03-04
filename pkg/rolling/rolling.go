@@ -26,7 +26,7 @@ type Rolling struct {
 	logger    *zap.SugaredLogger
 	state     *state
 	opts      *options.RestartOptions
-	restarter restarters.RestarterInterface
+	restarter restarters.Restarter
 }
 
 type state struct {
@@ -45,7 +45,7 @@ func PrepareRolling(
 	restartOpts *options.RestartOptions,
 	rootOpts *options.RootOptions,
 	logger *zap.SugaredLogger,
-	restarter restarters.RestarterInterface,
+	restarter restarters.Restarter,
 ) {
 	var err error
 
@@ -101,12 +101,14 @@ func (r *Rolling) DoRestart() error {
 
 	nodesToRestart := r.restarter.Filter(
 		r.logger,
-		&restarters.FilterNodeParams{
-			AllTenants:        r.state.tenants,
-			AllNodes:          util.Values(r.state.nodes),
+		restarters.FilterNodeParams{
 			SelectedTenants:   r.opts.Tenants,
 			SelectedNodeIds:   nodeIds,
 			SelectedHostFQDNs: nodeFQDNs,
+		},
+		restarters.ClusterNodesInfo {
+			AllTenants:        r.state.tenants,
+			AllNodes:          util.Values(r.state.nodes),
 		},
 	)
 

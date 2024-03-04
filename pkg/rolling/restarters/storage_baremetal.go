@@ -1,16 +1,15 @@
-package storage_baremetal
+package restarters
 
 import (
 	"fmt"
 	"os/exec"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 	"go.uber.org/zap"
 )
 
-type Restarter struct {
-	Opts *Opts
+type StorageBaremetalRestarter struct {
+	Opts *StorageBaremetalOpts
 }
 
 const (
@@ -32,7 +31,7 @@ func stripCommandFromArgs(args []string) (string, []string) {
 	return command, remainingSshArgs
 }
 
-func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
+func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
 	logger.Info(fmt.Sprintf("Restarting %s with ssh-args %v", node.Host, r.Opts.SSHArgs))
 
 	// It is theoretically possible to guess the systemd-unit, but it is a fragile
@@ -78,8 +77,8 @@ func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.
 		return err
 	}
 
-	go restarters.StreamPipeIntoLogger(stdout, logger)
-	go restarters.StreamPipeIntoLogger(stderr, logger)
+	go StreamPipeIntoLogger(stdout, logger)
+	go StreamPipeIntoLogger(stderr, logger)
 
 	if err := cmd.Wait(); err != nil {
 		fmt.Println("TODO Error on cmd.Wait():", err)
@@ -89,22 +88,26 @@ func (r Restarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.
 	return nil
 }
 
-func New() *Restarter {
-	return &Restarter{Opts: &Opts{}}
+func NewBaremetalRestarter() *StorageBaremetalRestarter {
+	return &StorageBaremetalRestarter{Opts: &StorageBaremetalOpts{}}
 }
 
-func (r Restarter) Filter(logger *zap.SugaredLogger, spec *restarters.FilterNodeParams) []*Ydb_Maintenance.Node {
-	allStorageNodes := restarters.FilterStorageNodes(spec.AllNodes)
+func (r StorageBaremetalRestarter) Filter(
+	logger *zap.SugaredLogger,
+	spec FilterNodeParams,
+	cluster ClusterNodesInfo,
+) []*Ydb_Maintenance.Node {
+	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
 
 	selectedNodes := []*Ydb_Maintenance.Node{}
 
 	selectedNodes = append(
 		selectedNodes,
-		restarters.FilterByNodeIds(allStorageNodes, spec.SelectedNodeIds)...,
+		FilterByNodeIds(allStorageNodes, spec.SelectedNodeIds)...,
 	)
 
 	selectedNodes = append(
-		selectedNodes, restarters.FilterByHostFQDN(allStorageNodes, spec.SelectedHostFQDNs)...,
+		selectedNodes, FilterByHostFQDN(allStorageNodes, spec.SelectedHostFQDNs)...,
 	)
 
 	logger.Debugf("storage_baremetal.Restarter selected following nodes for restart: %v", selectedNodes)

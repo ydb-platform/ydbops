@@ -1,4 +1,4 @@
-package run
+package restarters
 
 import (
 	"errors"
@@ -9,11 +9,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type Opts struct {
+type RunOpts struct {
 	PayloadFilepath string
 }
 
-func (o *Opts) DefineFlags(fs *pflag.FlagSet) {
+func (o *RunOpts) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVar(
 		&o.PayloadFilepath,
 		"payload",
@@ -22,7 +22,7 @@ func (o *Opts) DefineFlags(fs *pflag.FlagSet) {
 	)
 }
 
-func (o *Opts) Validate() error {
+func (o *RunOpts) Validate() error {
 	if o.PayloadFilepath == "" {
 		return fmt.Errorf("empty --payload specified")
 	}

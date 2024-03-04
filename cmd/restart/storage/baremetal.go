@@ -5,13 +5,13 @@ import (
 	"github.com/ydb-platform/ydb-ops/internal/util"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters/storage_baremetal"
+	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 )
 
 func NewBaremetalCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := storage_baremetal.New()
+	restarter := restarters.NewBaremetalRestarter()
 
 	cmd := &cobra.Command{
 		Use:   "baremetal",
