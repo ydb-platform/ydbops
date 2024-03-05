@@ -2,10 +2,15 @@ package restarters
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
+)
+
+const (
+	HostnameEnvVar = "HOSTNAME"
 )
 
 type RunRestarter struct {
@@ -14,6 +19,8 @@ type RunRestarter struct {
 
 func (r RunRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
 	cmd := exec.Command(r.Opts.PayloadFilepath)
+
+	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", HostnameEnvVar, node.Host))
 
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
@@ -47,7 +54,7 @@ func (r RunRestarter) Filter(logger *zap.SugaredLogger, spec FilterNodeParams, c
 		selectedNodes, FilterByHostFQDN(cluster.AllNodes, spec.SelectedHostFQDNs)...,
 	)
 
-	logger.Debugf("storage_baremetal.Restarter selected following nodes for restart: %v", selectedNodes)
+	logger.Debugf("Run restarter selected following nodes for restart: %v", selectedNodes)
 
 	return selectedNodes
 }

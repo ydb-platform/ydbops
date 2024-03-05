@@ -43,7 +43,7 @@ func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *
 	// sudo systemctl restart $YDBD_UNIT
 
 	systemdUnitName := DefaultSystemdUnit
-	if r.Opts.IsOldSystemdKikimr {
+	if r.Opts.IsSystemdInternalKikimr {
 		systemdUnitName = InternalSystemdUnit
 	}
 

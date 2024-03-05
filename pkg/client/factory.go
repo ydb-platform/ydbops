@@ -31,6 +31,7 @@ type Factory struct {
 	auth               options.AuthOptions
 	rootOpts           options.RootOptions
 	grpcTimeoutSeconds int
+	token              string
 }
 
 func NewConnectionFactory(
@@ -44,21 +45,24 @@ func NewConnectionFactory(
 	}
 }
 
-func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
-	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
-
-	t, err := f.auth.Creds.Token()
-	if err != nil {
-		zap.S().Warnf("Failed to load auth token: %v", err)
-		return nil, cf, err
-	}
-
-	return metadata.AppendToOutgoingContext(ctx,
-		"x-ydb-auth-ticket", t.Secret,
-		"authorization", t.Token()), cf, nil
+func (f *Factory) SetAuthToken(t string) {
+	f.token = t
 }
 
-func (f Factory) OperationParams() *Ydb_Operations.OperationParams {
+func (f *Factory) Connection() (*grpc.ClientConn, error) {
+	cr, err := f.makeCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load credentials: %v", err)
+	}
+
+	return grpc.Dial(f.endpoint(),
+		grpc.WithTransportCredentials(cr),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallSendMsgSize(BufferSize),
+			grpc.MaxCallRecvMsgSize(BufferSize)))
+}
+
+func (f *Factory) OperationParams() *Ydb_Operations.OperationParams {
 	return &Ydb_Operations.OperationParams{
 		OperationMode:    Ydb_Operations.OperationParams_SYNC,
 		OperationTimeout: durationpb.New(time.Duration(f.grpcTimeoutSeconds) * time.Second),
@@ -66,38 +70,35 @@ func (f Factory) OperationParams() *Ydb_Operations.OperationParams {
 	}
 }
 
-func (f Factory) Connection() (*grpc.ClientConn, error) {
-	// TODO somewhere here the rootOpts.Auth needs to be used to
-	// supply the necessary credentials and headers to a grpc call
-	cr, err := f.Credentials()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load credentials: %v", err)
-	}
-
-	return grpc.Dial(f.Endpoint(),
-		grpc.WithTransportCredentials(cr),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallSendMsgSize(BufferSize),
-			grpc.MaxCallRecvMsgSize(BufferSize)))
-}
-
-func (f Factory) Credentials() (credentials.TransportCredentials, error) {
-	if !f.rootOpts.GRPCSecure {
+func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
+	opts := f.rootOpts.GRPC
+	if !opts.GRPCSecure {
 		return insecure.NewCredentials(), nil
 	}
 
-	if f.rootOpts.CaFile == "" {
+	if opts.CaFile == "" {
 		// TODO verify that this will use system pool
 		return credentials.NewClientTLSFromCert(nil, ""), nil
 	}
 
-	return credentials.NewClientTLSFromFile(f.rootOpts.CaFile, "")
+	return credentials.NewClientTLSFromFile(opts.CaFile, "")
 }
 
-func (f Factory) Endpoint() string {
+func (f *Factory) endpoint() string {
 	// TODO decide if we want to support multiple endpoints or just one
 	// Endpoint in rootOpts will turn from string -> []string in this case
-	return fmt.Sprintf("%s:%d", f.rootOpts.Endpoint, f.rootOpts.GRPCPort)
+	return fmt.Sprintf("%s:%d", f.rootOpts.GRPC.Endpoint, f.rootOpts.GRPC.GRPCPort)
+}
+
+func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
+	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
+
+	return metadata.AppendToOutgoingContext(ctx,
+		"x-ydb-auth-ticket", f.token), cf, nil
+}
+
+func (f Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
 }
 
 func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {

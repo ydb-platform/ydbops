@@ -6,8 +6,15 @@ import (
 )
 
 type Restarter interface {
-	Filter(logger *zap.SugaredLogger, spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node
-	RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error
+	Filter(
+		logger *zap.SugaredLogger,
+		spec FilterNodeParams,
+		cluster ClusterNodesInfo,
+	) []*Ydb_Maintenance.Node
+	RestartNode(
+		logger *zap.SugaredLogger,
+		node *Ydb_Maintenance.Node,
+	) error
 }
 
 type ClusterNodesInfo struct {

@@ -68,7 +68,9 @@ func (o *RestartOptions) Validate() error {
 }
 
 func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&o.Continue, "continue" /* TODO: false??? */, false, "TODO Continue previous rolling restart")
+	fs.BoolVar(&o.Continue, "continue", false, `Use at your own risk. Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
+for this invocation must be the same as for the previous invocation. This can not be validated at runtime, 
+so use at your own risk.`)
 
 	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{}, "TODO Never restart these hosts")
 
@@ -84,7 +86,8 @@ after that would be considered a regular cluster failure`)
 	fs.StringSliceVar(&o.Tenants, "tenants", o.Tenants, "Restart only specified tenants")
 
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
-		"Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, but you can not mix host FQDNs and node ids in this option.")
+		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
+but you can not mix host FQDNs and node ids in this option.`)
 
 	o.CMS.DefineFlags(fs)
 }

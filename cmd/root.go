@@ -24,6 +24,7 @@ func registerAllSubcommands(root *cobra.Command) {
 				storage.NewK8sCmd(),
 				storage.NewBaremetalCmd(),
 			),
+			restart.NewRunCmd(),
 		),
 	)
 }

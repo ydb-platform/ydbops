@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/pkg/auth"
 	"github.com/ydb-platform/ydb-ops/pkg/client"
 	"github.com/ydb-platform/ydb-ops/pkg/cms"
 	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
@@ -21,7 +22,8 @@ import (
 type Rolling struct {
 	cms       *cms.CMSClient
 	discovery *discovery.DiscoveryClient
-	factory   *client.Factory
+
+	factory *client.Factory
 
 	logger    *zap.SugaredLogger
 	state     *state
@@ -30,16 +32,47 @@ type Rolling struct {
 }
 
 type state struct {
-	nodes                        map[uint32]*Ydb_Maintenance.Node
-	tenants                      []string
-	userSID                      string
+	nodes                          map[uint32]*Ydb_Maintenance.Node
+	tenants                        []string
+	userSID                        string
 	unreportedButFinishedActionIds []string
-	restartTaskUID               string
+	restartTaskUID                 string
 }
 
 const (
 	RestartTaskPrefix = "rolling-restart-"
 )
+
+func initAuthToken(
+	rootOpts *options.RootOptions,
+	restartOpts *options.RestartOptions,
+	logger *zap.SugaredLogger,
+	factory *client.Factory,
+) error {
+
+	switch rootOpts.Auth.Type {
+	case options.Static:
+		authClient := auth.NewAuthClient(logger, factory)
+		staticCreds := rootOpts.Auth.Creds.(*options.AuthStatic)
+		user := staticCreds.User
+		password := staticCreds.Password
+		token, err := authClient.Auth(rootOpts.GRPC, restartOpts.CMS.TimeoutSeconds, user, password)
+		if err != nil {
+			return fmt.Errorf("Failed to initialize static auth token: %w", err)
+		}
+		factory.SetAuthToken(token)
+	case options.IamToken:
+		factory.SetAuthToken(rootOpts.Auth.Creds.(*options.AuthIAMToken).Token)
+	case options.IamCreds:
+		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
+	case options.None:
+		factory.SetAuthToken("")
+	default: 
+		return fmt.Errorf("Internal error: authorization type not recognized after options validation, this should never happen")
+	}
+
+	return nil
+}
 
 func PrepareRolling(
 	restartOpts *options.RestartOptions,
@@ -47,16 +80,19 @@ func PrepareRolling(
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 ) {
-	var err error
-
 	factory := client.NewConnectionFactory(
 		restartOpts.CMS.TimeoutSeconds,
 		*rootOpts, // TODO gain deep understanding, why dereferencing is necessary
 	)
 
-	cmsClient := cms.NewCMSClient(logger, factory)
+	logger.Debugf("rootOpts.Auth.Type %v", rootOpts.Auth.Type)
+	err := initAuthToken(rootOpts, restartOpts, logger, factory)
+	if err != nil {
+		logger.Errorf("Failed to begin restart loop: %+v", err)
+	}
 
 	discoveryClient := discovery.NewDiscoveryClient(logger, factory)
+	cmsClient := cms.NewCMSClient(logger, factory)
 
 	r := &Rolling{
 		cms:       cmsClient,
@@ -89,6 +125,10 @@ func (r *Rolling) DoRestart() error {
 	}
 	r.state = state
 
+	if err := r.cleanupOldRollingRestarts(); err != nil {
+		return err
+	}
+
 	nodeIds, errIds := r.opts.GetNodeIds()
 	nodeFQDNs, errFqdns := r.opts.GetNodeFQDNs()
 	if errIds != nil && errFqdns != nil {
@@ -106,9 +146,9 @@ func (r *Rolling) DoRestart() error {
 			SelectedNodeIds:   nodeIds,
 			SelectedHostFQDNs: nodeFQDNs,
 		},
-		restarters.ClusterNodesInfo {
-			AllTenants:        r.state.tenants,
-			AllNodes:          util.Values(r.state.nodes),
+		restarters.ClusterNodesInfo{
+			AllTenants: r.state.tenants,
+			AllNodes:   util.Values(r.state.nodes),
 		},
 	)
 
@@ -128,25 +168,7 @@ func (r *Rolling) DoRestart() error {
 }
 
 func (r *Rolling) DoRestartPrevious() error {
-	state, err := r.prepareState()
-	if err != nil {
-		return err
-	}
-	r.state = state
-
-	previousTasks, err := r.cms.MaintenanceTasks(state.userSID)
-	if err != nil {
-		return fmt.Errorf("failed to list maintenance tasks with user id %v: %w", state.userSID, err)
-	}
-
-	for _, previousTaskUID := range previousTasks {
-		_, err := r.cms.DropMaintenanceTask(previousTaskUID)
-		if err != nil {
-			return fmt.Errorf("failed to drop maintenance task: %w", err)
-		}
-	}
-
-	return r.DoRestart()
+	return fmt.Errorf("--continue behaviour not implemented yet.")
 }
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
@@ -237,7 +259,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 		r.logger.Debugf("Restart node with id: %d", node.NodeId)
 		if err := r.restarter.RestartNode(r.logger, node); err != nil {
-			r.logger.Warnf("Failed to restart node with id: %d", node.NodeId)
+			r.logger.Warnf("Failed to restart node with id: %d, because of: %w", node.NodeId, err)
 		} else {
 			r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
 			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
@@ -274,12 +296,27 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
-		tenants:                      tenants,
-		userSID:                      userSID,
-		nodes:                        util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		tenants:                        tenants,
+		userSID:                        userSID,
+		nodes:                          util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
 		unreportedButFinishedActionIds: []string{},
-		restartTaskUID:               RestartTaskPrefix + uuid.New().String(),
+		restartTaskUID:                 RestartTaskPrefix + uuid.New().String(),
 	}, nil
+}
+
+func (r *Rolling) cleanupOldRollingRestarts() error {
+	previousTasks, err := r.cms.MaintenanceTasks(r.state.userSID)
+	if err != nil {
+		return fmt.Errorf("failed to list maintenance tasks with user id %v: %w", r.state.userSID, err)
+	}
+
+	for _, previousTaskUID := range previousTasks {
+		_, err := r.cms.DropMaintenanceTask(previousTaskUID)
+		if err != nil {
+			return fmt.Errorf("failed to drop maintenance task: %w", err)
+		}
+	}
+	return nil
 }
 
 func (r *Rolling) logTask(task cms.MaintenanceTask) {

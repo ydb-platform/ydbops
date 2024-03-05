@@ -26,8 +26,18 @@ func (o *RunOpts) Validate() error {
 	if o.PayloadFilepath == "" {
 		return fmt.Errorf("empty --payload specified")
 	}
-	if _, err := os.Stat(o.PayloadFilepath); errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("file '%s' does not exist", o.PayloadFilepath)
+	fileInfo, err := os.Stat(o.PayloadFilepath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("payload file '%s' does not exist", o.PayloadFilepath)
+	}
+
+	// Apologies, this is really an idiomatic way to check the permission in Go.
+	// Just run some bitmagic. 0100 is octal, in binary it would be equivalent to:
+	// 000001000000
+	//   drwxrwxrwx
+	executableByOwner := 0100
+	if fileInfo.Mode()&fs.FileMode(executableByOwner) != fs.FileMode(executableByOwner) {
+		return fmt.Errorf("payload file '%s' is not executable by the owner", o.PayloadFilepath)
 	}
 
 	return nil
