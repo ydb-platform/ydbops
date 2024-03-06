@@ -67,7 +67,7 @@ func initAuthToken(
 		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
 	case options.None:
 		factory.SetAuthToken("")
-	default: 
+	default:
 		return fmt.Errorf("Internal error: authorization type not recognized after options validation, this should never happen")
 	}
 
@@ -241,15 +241,13 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
 
-		for _, completedActionId := range r.state.unreportedButFinishedActionIds {
-			if as.ActionUid.ActionId == completedActionId {
-				actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
-				r.logger.Debugf(
-					"Node id %v already restarted, but CompleteAction on last iteration, so CMS does not know it is complete yet.",
-					node.NodeId,
-				)
-				continue
-			}
+		if util.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
+			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
+			r.logger.Debugf(
+				"Node id %v already restarted, but CompleteAction failed on last iteration, so CMS does not know it is complete yet.",
+				node.NodeId,
+			)
+			continue
 		}
 
 		r.logger.Debugf("Drain node with id: %d", node.NodeId)
