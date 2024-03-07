@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/internal/collections"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -21,8 +21,6 @@ const (
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
 type RestartOptions struct {
-	CMS *CMS
-
 	AvailabilityMode   string
 	Tenants            []string
 	Hosts              []string
@@ -33,12 +31,10 @@ type RestartOptions struct {
 	Continue bool
 }
 
-var RestartOptionsInstance = &RestartOptions{
-	CMS: &CMS{},
-}
+var RestartOptionsInstance = &RestartOptions{}
 
 func (o *RestartOptions) Validate() error {
-	if !util.Contains(AvailabilityModes, o.AvailabilityMode) {
+	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
 		return fmt.Errorf("specified not supported availability mode: %s", o.AvailabilityMode)
 	}
 
@@ -60,36 +56,33 @@ func (o *RestartOptions) Validate() error {
 		)
 	}
 
-	if err := o.CMS.Validate(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&o.Continue, "continue", false, `Use at your own risk. Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
-for this invocation must be the same as for the previous invocation. This can not be validated at runtime, 
-so use at your own risk.`)
+	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
+		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
+but you can not mix host FQDNs and node ids in this option.`)
 
-	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{}, "TODO Never restart these hosts")
+	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{},
+		`Never restart these hosts, even if they are also explicitly specified in --hosts.`)
 
-	fs.StringVarP(&o.AvailabilityMode, "availability-mode", "", AvailabilityModes[0],
+	fs.StringSliceVar(&o.Tenants, "tenants", o.Tenants, "Restart only specified tenants")
+
+	fs.StringVar(&o.AvailabilityMode, "availability-mode", "strong",
 		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(AvailabilityModes, ", ")))
 
-	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDuration, `CMS will release the node for maintenance for restart-duration * restart-retry-number seconds. Any maintenance
+	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDuration,
+		`CMS will release the node for maintenance for restart-duration * restart-retry-number seconds. Any maintenance
 after that would be considered a regular cluster failure`)
 
 	fs.IntVarP(&o.RestartRetryNumber, "restart-retry-number", "", DefaultRetryCount,
 		fmt.Sprintf("How many times every node should be retried on error, default %v", DefaultRetryCount))
 
-	fs.StringSliceVar(&o.Tenants, "tenants", o.Tenants, "Restart only specified tenants")
-
-	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
-		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
-but you can not mix host FQDNs and node ids in this option.`)
-
-	o.CMS.DefineFlags(fs)
+	fs.BoolVar(&o.Continue, "continue", false,
+		`Use at your own risk. Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
+for this invocation must be the same as for the previous invocation. This can not be validated at runtime, 
+so use at your own risk.`)
 }
 
 func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {

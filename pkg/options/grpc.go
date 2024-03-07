@@ -11,16 +11,25 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	GRPCDefaultTimeoutSeconds = 60
+	GRPCDefaultPort = 2135
+)
+
 type GRPC struct {
-	Endpoint   string
-	CaFile     string
-	GRPCSecure bool
-	GRPCPort   int
+	Endpoint       string
+	CaFile         string
+	GRPCSecure     bool
+	GRPCPort       int
+	TimeoutSeconds int
 }
 
 func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.Endpoint, "endpoint", "",
+	fs.StringVarP(&o.Endpoint, "endpoint", "e", "",
 		"A GRPC address to connect to the YDB cluster")
+
+	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
+		"Wait this much before timing out any GRPC requests")
 
 	fs.StringVar(&o.CaFile, "ca-file", "", "Path to root ca file, overrides system pool")
 }
@@ -54,7 +63,10 @@ func (o *GRPC) Validate() error {
 		// TODO should default GRPCSecure be true?
 		o.GRPCSecure = true
 	default:
-    return fmt.Errorf("Please specify the protocol in the endpoint explicitly: grpc or grpcs. Currently specified: %s\n", parsedURL.Scheme)
+		return fmt.Errorf(
+			"Please specify the protocol in the endpoint explicitly: grpc or grpcs. Currently specified: %s\n",
+			parsedURL.Scheme,
+		)
 	}
 
 	// Strip o.Endpoint from protocol and port number
@@ -69,6 +81,10 @@ func (o *GRPC) Validate() error {
 			return fmt.Errorf("invalid port specified: %d, must be in range: (%d,%d)", port, 1, 65536)
 		}
 		o.GRPCPort = port
+	}
+
+	if o.TimeoutSeconds < 0 {
+		return fmt.Errorf("invalid grpc timeout value specified: %d", o.TimeoutSeconds)
 	}
 
 	return nil

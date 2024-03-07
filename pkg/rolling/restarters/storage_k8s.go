@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/internal/collections"
+	"github.com/ydb-platform/ydb-ops/pkg/options"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +18,6 @@ import (
 )
 
 const (
-	DefaultPodRestartTimeout       = time.Second * 60
 	DefaultPodPhasePollingInterval = time.Second * 10
 )
 
@@ -88,12 +88,12 @@ func (r *StorageK8sRestarter) Filter(
 	)
 
 	for _, node := range allStorageNodes {
-		if util.Contains(spec.SelectedHostFQDNs, node.Host) {
+		if collections.Contains(spec.SelectedHostFQDNs, node.Host) {
 			selectedNodes = append(selectedNodes, node)
 			continue
 		}
 
-		if util.Contains(spec.SelectedHostFQDNs, r.hostnameToPod[node.Host]) {
+		if collections.Contains(spec.SelectedHostFQDNs, r.hostnameToPod[node.Host]) {
 			selectedNodes = append(selectedNodes, node)
 			continue
 		}
@@ -107,12 +107,12 @@ func (r StorageK8sRestarter) waitPodRunning(
 	logger *zap.SugaredLogger,
 	podName string,
 	oldUID types.UID,
-	podTimeout time.Duration,
+	podRestartTimeout time.Duration,
 ) error {
 	checkInterval := DefaultPodPhasePollingInterval
 	start := time.Now()
 	for {
-		if time.Since(start) >= podTimeout {
+		if time.Since(start) >= podRestartTimeout {
 			return fmt.Errorf("Timed out waiting for a pod %s to start", podName)
 		}
 
@@ -125,7 +125,7 @@ func (r StorageK8sRestarter) waitPodRunning(
 		}
 
 		if errors.IsNotFound(err) {
-			remainingTime := podTimeout - time.Since(start)
+			remainingTime := podRestartTimeout - time.Since(start)
 			logger.Debugf(
 				"Pod %s is not found, will wait %v more seconds",
 				podName,
@@ -162,5 +162,10 @@ func (r StorageK8sRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Ma
 		return err
 	}
 
-	return r.waitPodRunning(logger, podName, oldUID, DefaultPodRestartTimeout)
+	return r.waitPodRunning(
+		logger,
+		podName,
+		oldUID,
+		time.Duration(options.RestartOptionsInstance.RestartDuration),
+	)
 }

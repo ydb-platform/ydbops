@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/internal/collections"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
@@ -28,20 +28,15 @@ type OperationResponse interface {
 }
 
 type Factory struct {
-	auth               options.AuthOptions
-	rootOpts           options.RootOptions
-	grpcTimeoutSeconds int
-	token              string
+	auth  options.AuthOptions
+	grpc  options.GRPC
+	token string
 }
 
-func NewConnectionFactory(
-	grpcTimeoutSeconds int,
-	rootOpts options.RootOptions,
-) *Factory {
+func NewConnectionFactory(auth options.AuthOptions, grpc options.GRPC) *Factory {
 	return &Factory{
-		auth:               rootOpts.Auth,
-		grpcTimeoutSeconds: grpcTimeoutSeconds,
-		rootOpts:           rootOpts,
+		auth: auth,
+		grpc: grpc,
 	}
 }
 
@@ -65,40 +60,39 @@ func (f *Factory) Connection() (*grpc.ClientConn, error) {
 func (f *Factory) OperationParams() *Ydb_Operations.OperationParams {
 	return &Ydb_Operations.OperationParams{
 		OperationMode:    Ydb_Operations.OperationParams_SYNC,
-		OperationTimeout: durationpb.New(time.Duration(f.grpcTimeoutSeconds) * time.Second),
-		CancelAfter:      durationpb.New(time.Duration(f.grpcTimeoutSeconds) * time.Second),
+		OperationTimeout: durationpb.New(time.Duration(f.grpc.TimeoutSeconds) * time.Second),
+		CancelAfter:      durationpb.New(time.Duration(f.grpc.TimeoutSeconds) * time.Second),
 	}
 }
 
 func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
-	opts := f.rootOpts.GRPC
-	if !opts.GRPCSecure {
+	if !f.grpc.GRPCSecure {
 		return insecure.NewCredentials(), nil
 	}
 
-	if opts.CaFile == "" {
+	if f.grpc.CaFile == "" {
 		// TODO verify that this will use system pool
 		return credentials.NewClientTLSFromCert(nil, ""), nil
 	}
 
-	return credentials.NewClientTLSFromFile(opts.CaFile, "")
+	return credentials.NewClientTLSFromFile(f.grpc.CaFile, "")
 }
 
 func (f *Factory) endpoint() string {
 	// TODO decide if we want to support multiple endpoints or just one
 	// Endpoint in rootOpts will turn from string -> []string in this case
-	return fmt.Sprintf("%s:%d", f.rootOpts.GRPC.Endpoint, f.rootOpts.GRPC.GRPCPort)
+	return fmt.Sprintf("%s:%d", f.grpc.Endpoint, f.grpc.GRPCPort)
 }
 
 func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
-	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
+	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
 
 	return metadata.AppendToOutgoingContext(ctx,
 		"x-ydb-auth-ticket", f.token), cf, nil
 }
 
 func (f Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpcTimeoutSeconds))
+	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
 }
 
 func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {
@@ -108,7 +102,7 @@ func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {
 	if len(op.Issues) > 0 {
 		sb.WriteString(
 			fmt.Sprintf("\nIssues:\n%s",
-				strings.Join(util.Convert(op.Issues,
+				strings.Join(collections.Convert(op.Issues,
 					func(issue *Ydb_Issue.IssueMessage) string {
 						return fmt.Sprintf("  Severity: %d, code: %d, message: %s", issue.Severity, issue.IssueCode, issue.Message)
 					},

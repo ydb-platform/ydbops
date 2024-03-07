@@ -4,11 +4,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const (
-	DefaultAuthType = "none"
-	GRPCDefaultPort = 2135
-)
-
 type RootOptions struct {
 	Auth     AuthOptions
 	GRPC     GRPC
@@ -30,8 +25,8 @@ func (o *RootOptions) Validate() error {
 }
 
 func (o *RootOptions) DefineFlags(fs *pflag.FlagSet) {
-	fs.BoolVar(&o.Verbose, "verbose", false, "TODO should enable verbose output")
-
 	o.Auth.DefineFlags(fs)
 	o.GRPC.DefineFlags(fs)
+
+	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
 }

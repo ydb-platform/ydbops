@@ -1,7 +1,8 @@
-package util
+package cobra_util
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
 type PersistentPreRunEFunc func(cmd *cobra.Command, args []string) error
@@ -13,8 +14,8 @@ type PersistentPreRunEFunc func(cmd *cobra.Command, args []string) error
 // PersistentPreRun command called, we need to manually call it.
 // This function is a wrapper that can be specified in PersistentPreRun
 // commands of children, look at `ydb-ops restart storage` implementation.
-func MakePersistentPreRunE(original PersistentPreRunEFunc) PersistentPreRunEFunc {
-  wrapped := func(cmd *cobra.Command, args []string) error {
+func makePersistentPreRunE(original PersistentPreRunEFunc) PersistentPreRunEFunc {
+	wrapped := func(cmd *cobra.Command, args []string) error {
 		if parent := cmd.Parent(); parent != nil {
 			if parent.PersistentPreRunE != nil {
 				if err := parent.PersistentPreRunE(parent, args); err != nil {
@@ -26,5 +27,20 @@ func MakePersistentPreRunE(original PersistentPreRunEFunc) PersistentPreRunEFunc
 		return original(cmd, args)
 	}
 
-  return wrapped
+	return wrapped
+}
+
+func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
+	cmd.Flags().SortFlags = false
+	cmd.PersistentFlags().SortFlags = false
+
+	if cmd.PersistentPreRunE != nil {
+		cmd.PersistentPreRunE = makePersistentPreRunE(
+			func(cmd *cobra.Command, args []string) error {
+				return opts.Validate()
+			},
+		)
+	}
+
+	return cmd
 }

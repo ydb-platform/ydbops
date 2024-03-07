@@ -1,4 +1,4 @@
-package storage
+package tenant
 
 import (
 	"github.com/spf13/cobra"
@@ -8,16 +8,16 @@ import (
 	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
 )
 
-func NewStorageK8sCmd() *cobra.Command {
+func NewTenantBaremetalCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := restarters.NewStorageK8sRestarter()
+	restarter := restarters.NewTenantBaremetalRestarter()
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
-		Use:   "k8s",
-		Short: "Restarts a specified subset of YDB storage Pods in a Kubernetes cluster",
-		Long: `ydb-ops restart storage k8s:
-  Restarts a specified subset of YDB storage Pods in a Kubernetes cluster`,
+		Use:   "baremetal",
+		Short: "Restarts a specified subset of storage nodes over SSH",
+		Long: `ydb-ops restart storage barematal:
+  Restarts a specified subset of storage nodes over SSH`,
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.PrepareRolling(restartOpts, rootOpts, options.Logger, restarter)
 		},

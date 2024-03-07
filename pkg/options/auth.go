@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+	"go.uber.org/zap"
 )
 
 const (
@@ -117,7 +118,7 @@ Token search order:
 
 func (a *AuthIAMToken) Validate() error {
 	if len(a.TokenFile) == 0 {
-		if envToken, present := os.LookupEnv(DefaultAuthEnvVar); present {
+		if envToken, present := os.LookupEnv(DefaultAuthEnvVar); present && envToken != "" {
 			a.Token = envToken
 			return nil
 		} else {
@@ -230,7 +231,7 @@ func (o *AuthOptions) Validate() error {
 
 	o.Type = activeAuthType
 	o.Creds = Auths[activeAuthType]
-	Logger.Debugf("Determined auth type: %s", activeAuthType)
+	zap.S().Debugf("Determined auth type: %s", activeAuthType)
 
 	if err := o.Creds.Validate(); err != nil {
 		return err

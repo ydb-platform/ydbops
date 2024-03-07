@@ -4,20 +4,20 @@ import (
 	"io"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/internal/collections"
 	"go.uber.org/zap"
 )
 
 func FilterStorageNodes(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
-	return util.FilterBy(nodes,
+	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
 			return node.GetStorage() != nil
 		},
 	)
 }
 
-func FilterDynnodes(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
-	return util.FilterBy(nodes,
+func FilterTenantNodes(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
+	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
 			return node.GetDynamic() != nil
 		},
@@ -25,17 +25,17 @@ func FilterDynnodes(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
 }
 
 func FilterByNodeIds(nodes []*Ydb_Maintenance.Node, nodeIds []uint32) []*Ydb_Maintenance.Node {
-	return util.FilterBy(nodes,
+	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
-			return util.Contains(nodeIds, node.NodeId)
+			return collections.Contains(nodeIds, node.NodeId)
 		},
 	)
 }
 
 func FilterByHostFQDN(nodes []*Ydb_Maintenance.Node, hostFQDNs []string) []*Ydb_Maintenance.Node {
-	return util.FilterBy(nodes,
+	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
-			return util.Contains(hostFQDNs, node.Host)
+			return collections.Contains(hostFQDNs, node.Host)
 		},
 	)
 }
@@ -55,5 +55,20 @@ func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 			break
 		}
 	}
+}
+
+func FilterByNodeIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
+	selected := []*Ydb_Maintenance.Node{}
+
+	selected = append(
+		selected,
+		FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
+	)
+
+	selected = append(
+		selected, FilterByHostFQDN(nodes, spec.SelectedHostFQDNs)...,
+	)
+
+	return selected
 }
 

@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydb-ops/cmd/restart"
 	"github.com/ydb-platform/ydb-ops/cmd/restart/storage"
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/cmd/restart/tenant"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -21,16 +21,15 @@ func registerAllSubcommands(root *cobra.Command) {
 	_ = addAndReturn(root,
 		addAndReturn(NewRestartCmd(),
 			addAndReturn(restart.NewStorageCmd(),
-				storage.NewK8sCmd(),
-				storage.NewBaremetalCmd(),
+				storage.NewStorageK8sCmd(),
+				storage.NewStorageBaremetalCmd(),
+			),
+			addAndReturn(restart.NewTenantCmd(),
+				tenant.NewTenantBaremetalCmd(),
 			),
 			restart.NewRunCmd(),
 		),
 	)
-}
-
-func registerRootOptions(root *cobra.Command) {
-	options.RootOptionsInstance.DefineFlags(root.PersistentFlags())
 }
 
 var RootCmd *cobra.Command
@@ -38,8 +37,8 @@ var RootCmd *cobra.Command
 func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
 	RootCmd = &cobra.Command{
 		Use:   "ydb-ops",
-		Short: "TODO ydb-ops short description",
-		Long:  "TODO ydb-ops long description",
+		Short: "ydb-ops: a CLI tool with common YDB cluster maintenance operations",
+		Long:  "ydb-ops: a CLI tool with common YDB cluster maintenance operations",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
 			if options.RootOptionsInstance.Verbose {
@@ -63,9 +62,13 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
 		},
 	}
 
-	defer util.IgnoreError(logger.Sync)
+	defer func() {
+		_ = logger.Sync()
+	}()
 
 	options.Logger = logger.Sugar()
-	registerRootOptions(RootCmd)
+
+	options.RootOptionsInstance.DefineFlags(RootCmd.PersistentFlags())
+
 	registerAllSubcommands(RootCmd)
 }

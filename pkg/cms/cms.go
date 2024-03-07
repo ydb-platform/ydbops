@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/internal/collections"
 	"github.com/ydb-platform/ydb-ops/pkg/client"
 )
 
@@ -40,7 +40,7 @@ func (c *CMSClient) Tenants() ([]string, error) {
 		return nil, err
 	}
 
-	s := util.SortBy(result.Paths,
+	s := collections.SortBy(result.Paths,
 		func(l string, r string) bool {
 			return l < r
 		},
@@ -60,7 +60,7 @@ func (c *CMSClient) Nodes() ([]*Ydb_Maintenance.Node, error) {
 		return nil, err
 	}
 
-	nodes := util.SortBy(result.Nodes,
+	nodes := collections.SortBy(result.Nodes,
 		func(l *Ydb_Maintenance.Node, r *Ydb_Maintenance.Node) bool {
 			return l.NodeId < r.NodeId
 		},
@@ -77,7 +77,7 @@ func (c *CMSClient) MaintenanceTasks(userSID string) ([]string, error) {
 			return cl.ListMaintenanceTasks(ctx,
 				&Ydb_Maintenance.ListMaintenanceTasksRequest{
 					OperationParams: c.f.OperationParams(),
-					User:            util.Pointer(userSID),
+					User:            &userSID,
 				},
 			)
 		},

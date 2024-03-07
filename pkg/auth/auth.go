@@ -17,22 +17,17 @@ import (
 
 type AuthClient struct {
 	logger *zap.SugaredLogger
-	f *client.Factory
+	f      *client.Factory
 }
 
 func NewAuthClient(logger *zap.SugaredLogger, f *client.Factory) *AuthClient {
 	return &AuthClient{
 		logger: logger,
-		f: f,
+		f:      f,
 	}
 }
 
-// TODO move grpcTimeoutSeconds from CMS opts to GRPC opts, it makes more sense there
-func (c *AuthClient) Auth(
-	grpcOpts options.GRPC,
-	grpcTimeoutSeconds int,
-	user, password string,
-) (string, error) {
+func (c *AuthClient) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
 	result := Ydb_Auth.LoginResult{}
 
 	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
@@ -42,7 +37,7 @@ func (c *AuthClient) Auth(
 			User:            user,
 			Password:        password,
 		})
-	}, grpcOpts, grpcTimeoutSeconds)
+	}, grpcOpts)
 
 	if err != nil {
 		return "", err
@@ -55,7 +50,6 @@ func (c *AuthClient) ExecuteAuthMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error),
 	grpcOpts options.GRPC,
-	grpcTimeoutSeconds int,
 ) (*Ydb_Operations.Operation, error) {
 	cc, err := c.f.Connection()
 	if err != nil {

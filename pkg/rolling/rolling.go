@@ -9,7 +9,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
 
-	"github.com/ydb-platform/ydb-ops/internal/util"
+	"github.com/ydb-platform/ydb-ops/internal/collections"
 	"github.com/ydb-platform/ydb-ops/pkg/auth"
 	"github.com/ydb-platform/ydb-ops/pkg/client"
 	"github.com/ydb-platform/ydb-ops/pkg/cms"
@@ -45,7 +45,6 @@ const (
 
 func initAuthToken(
 	rootOpts *options.RootOptions,
-	restartOpts *options.RestartOptions,
 	logger *zap.SugaredLogger,
 	factory *client.Factory,
 ) error {
@@ -56,7 +55,7 @@ func initAuthToken(
 		staticCreds := rootOpts.Auth.Creds.(*options.AuthStatic)
 		user := staticCreds.User
 		password := staticCreds.Password
-		token, err := authClient.Auth(rootOpts.GRPC, restartOpts.CMS.TimeoutSeconds, user, password)
+		token, err := authClient.Auth(rootOpts.GRPC, user, password)
 		if err != nil {
 			return fmt.Errorf("Failed to initialize static auth token: %w", err)
 		}
@@ -80,13 +79,10 @@ func PrepareRolling(
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 ) {
-	factory := client.NewConnectionFactory(
-		restartOpts.CMS.TimeoutSeconds,
-		*rootOpts, // TODO gain deep understanding, why dereferencing is necessary
-	)
+	factory := client.NewConnectionFactory(rootOpts.Auth, rootOpts.GRPC)
 
 	logger.Debugf("rootOpts.Auth.Type %v", rootOpts.Auth.Type)
-	err := initAuthToken(rootOpts, restartOpts, logger, factory)
+	err := initAuthToken(rootOpts, logger, factory)
 	if err != nil {
 		logger.Errorf("Failed to begin restart loop: %+v", err)
 	}
@@ -148,7 +144,7 @@ func (r *Rolling) DoRestart() error {
 		},
 		restarters.ClusterNodesInfo{
 			AllTenants: r.state.tenants,
-			AllNodes:   util.Values(r.state.nodes),
+			AllNodes:   collections.Values(r.state.nodes),
 		},
 	)
 
@@ -221,7 +217,7 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 
 func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
 	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
-	performed := util.FilterBy(actions,
+	performed := collections.FilterBy(actions,
 		func(gs *Ydb_Maintenance.ActionGroupStates) bool {
 			return gs.ActionStates[0].Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED
 		},
@@ -241,7 +237,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
 
-		if util.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
+		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
 			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
 			r.logger.Debugf(
 				"Node id %v already restarted, but CompleteAction failed on last iteration, so CMS does not know it is complete yet.",
@@ -296,7 +292,7 @@ func (r *Rolling) prepareState() (*state, error) {
 	return &state{
 		tenants:                        tenants,
 		userSID:                        userSID,
-		nodes:                          util.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		nodes:                          collections.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
 		unreportedButFinishedActionIds: []string{},
 		restartTaskUID:                 RestartTaskPrefix + uuid.New().String(),
 	}, nil
