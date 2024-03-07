@@ -27,20 +27,23 @@ type StorageK8sRestarter struct {
 
 	hostnameToPod  map[string]string
 	hostnameToNode map[string]string
+
+	logger *zap.SugaredLogger
 }
 
-func NewStorageK8sRestarter() *StorageK8sRestarter {
+func NewStorageK8sRestarter(logger *zap.SugaredLogger) *StorageK8sRestarter {
 	return &StorageK8sRestarter{
 		Opts:           &StorageK8sOpts{},
 		hostnameToPod:  make(map[string]string),
 		hostnameToNode: make(map[string]string),
+		logger:         logger,
 	}
 }
 
-func (r *StorageK8sRestarter) prepareK8sState(logger *zap.SugaredLogger) {
+func (r *StorageK8sRestarter) prepareK8sState() {
 	config, err := clientcmd.BuildConfigFromFlags("", r.Opts.KubeconfigPath)
 	if err != nil {
-		logger.Fatalf("Failed to build config from flags %w", err)
+		r.logger.Fatalf("Failed to build config from flags %w", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -61,8 +64,8 @@ func (r *StorageK8sRestarter) prepareK8sState(logger *zap.SugaredLogger) {
 		r.hostnameToNode[pod.Spec.Hostname] = pod.Spec.NodeName
 	}
 
-	logger.Debugf("hostnameToPod: %+v", r.hostnameToPod)
-	logger.Debugf("hostnameToNode: %+v", r.hostnameToNode)
+	r.logger.Debugf("hostnameToPod: %+v", r.hostnameToPod)
+	r.logger.Debugf("hostnameToNode: %+v", r.hostnameToNode)
 
 	if err != nil {
 		panic(err.Error())
@@ -70,15 +73,14 @@ func (r *StorageK8sRestarter) prepareK8sState(logger *zap.SugaredLogger) {
 }
 
 func (r *StorageK8sRestarter) Filter(
-	logger *zap.SugaredLogger,
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
-	r.prepareK8sState(logger)
+	r.prepareK8sState()
 
 	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
 
-	logger.Debugf("%+v", cluster.AllNodes)
+	r.logger.Debugf("%+v", cluster.AllNodes)
 
 	selectedNodes := []*Ydb_Maintenance.Node{}
 
@@ -88,23 +90,24 @@ func (r *StorageK8sRestarter) Filter(
 	)
 
 	for _, node := range allStorageNodes {
-		if collections.Contains(spec.SelectedHostFQDNs, node.Host) {
+		selectedHostFQDNsMap := collections.ToIndexMap(spec.SelectedHostFQDNs)
+
+		if _, present := selectedHostFQDNsMap[node.Host]; present {
 			selectedNodes = append(selectedNodes, node)
 			continue
 		}
 
-		if collections.Contains(spec.SelectedHostFQDNs, r.hostnameToPod[node.Host]) {
+		if _, present := selectedHostFQDNsMap[r.hostnameToPod[node.Host]]; present {
 			selectedNodes = append(selectedNodes, node)
 			continue
 		}
 	}
 
-	logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", selectedNodes)
+	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", selectedNodes)
 	return selectedNodes
 }
 
 func (r StorageK8sRestarter) waitPodRunning(
-	logger *zap.SugaredLogger,
 	podName string,
 	oldUID types.UID,
 	podRestartTimeout time.Duration,
@@ -119,14 +122,14 @@ func (r StorageK8sRestarter) waitPodRunning(
 		pod, err := r.k8sClient.CoreV1().Pods(r.Opts.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 
 		if pod.ObjectMeta.UID == oldUID {
-			logger.Debugf("Old pod %s is still not deleted, old UID found", podName)
+			r.logger.Debugf("Old pod %s is still not deleted, old UID found", podName)
 			time.Sleep(checkInterval)
 			continue
 		}
 
 		if errors.IsNotFound(err) {
 			remainingTime := podRestartTimeout - time.Since(start)
-			logger.Debugf(
+			r.logger.Debugf(
 				"Pod %s is not found, will wait %v more seconds",
 				podName,
 				remainingTime.Seconds(),
@@ -136,15 +139,15 @@ func (r StorageK8sRestarter) waitPodRunning(
 		}
 
 		if pod.Status.Phase == v1.PodRunning {
-			logger.Debugf("Found pod %s to be restarted and running", podName)
+			r.logger.Debugf("Found pod %s to be restarted and running", podName)
 			return nil
 		}
 	}
 }
 
-func (r StorageK8sRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
+func (r StorageK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	podName := r.hostnameToPod[node.Host]
-	logger.Infof("Restarting node %s on the %s pod", node.Host, podName)
+	r.logger.Infof("Restarting node %s on the %s pod", node.Host, podName)
 
 	pod, err := r.k8sClient.CoreV1().Pods(r.Opts.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
@@ -162,10 +165,7 @@ func (r StorageK8sRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Ma
 		return err
 	}
 
-	return r.waitPodRunning(
-		logger,
-		podName,
-		oldUID,
-		time.Duration(options.RestartOptionsInstance.RestartDuration),
-	)
+	return r.waitPodRunning(podName, oldUID, time.Duration(
+		options.RestartOptionsInstance.RestartDuration,
+	))
 }

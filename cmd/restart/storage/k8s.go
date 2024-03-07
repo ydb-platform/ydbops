@@ -11,7 +11,7 @@ import (
 func NewStorageK8sCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := restarters.NewStorageK8sRestarter()
+	restarter := restarters.NewStorageK8sRestarter(options.Logger)
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "k8s",

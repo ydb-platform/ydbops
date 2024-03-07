@@ -2,6 +2,7 @@ package restarters
 
 import (
 	"io"
+	"strconv"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-ops/internal/collections"
@@ -40,7 +41,6 @@ func FilterByHostFQDN(nodes []*Ydb_Maintenance.Node, hostFQDNs []string) []*Ydb_
 	)
 }
 
-
 func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 	buf := make([]byte, 1024)
 	for {
@@ -58,17 +58,28 @@ func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 }
 
 func FilterByNodeIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
-	selected := []*Ydb_Maintenance.Node{}
+	preSelected := []*Ydb_Maintenance.Node{}
 
-	selected = append(
-		selected,
+	preSelected = append(
+		preSelected,
 		FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
 	)
 
-	selected = append(
-		selected, FilterByHostFQDN(nodes, spec.SelectedHostFQDNs)...,
+	preSelected = append(
+		preSelected, FilterByHostFQDN(nodes, spec.SelectedHostFQDNs)...,
 	)
+
+	selected := []*Ydb_Maintenance.Node{}
+	for _, node := range preSelected {
+		if collections.Contains(spec.ExcludeHosts, strconv.Itoa(int(node.NodeId))) {
+			continue
+		}
+
+		if collections.Contains(spec.ExcludeHosts, node.Host) {
+			continue
+		}
+		selected = append(selected, node)
+	}
 
 	return selected
 }
-

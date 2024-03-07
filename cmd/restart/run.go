@@ -11,7 +11,7 @@ import (
 func NewRunCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := restarters.NewRunRestarter()
+	restarter := restarters.NewRunRestarter(options.Logger)
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "run",

@@ -34,6 +34,16 @@ func ToMap[T any, K comparable](items []T, keyF func(T) K) map[K]T {
 	return m
 }
 
+func ToIndexMap[T comparable](items []T) map[T]bool {
+	m := make(map[T]bool, len(items))
+
+	for _, item := range items {
+		m[item] = true
+	}
+
+	return m
+}
+
 func Keys[T any, K comparable](m map[K]T) []K {
 	keys := make([]K, 0, len(m))
 

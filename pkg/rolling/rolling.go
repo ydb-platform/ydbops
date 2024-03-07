@@ -136,7 +136,6 @@ func (r *Rolling) DoRestart() error {
 	}
 
 	nodesToRestart := r.restarter.Filter(
-		r.logger,
 		restarters.FilterNodeParams{
 			SelectedTenants:   r.opts.Tenants,
 			SelectedNodeIds:   nodeIds,
@@ -252,7 +251,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		// TODO: drain node, but public draining api is not available yet
 
 		r.logger.Debugf("Restart node with id: %d", node.NodeId)
-		if err := r.restarter.RestartNode(r.logger, node); err != nil {
+		if err := r.restarter.RestartNode(node); err != nil {
 			r.logger.Warnf("Failed to restart node with id: %d, because of: %w", node.NodeId, err)
 		} else {
 			r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)

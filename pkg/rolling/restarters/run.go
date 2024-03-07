@@ -14,10 +14,11 @@ const (
 )
 
 type RunRestarter struct {
-	Opts *RunOpts
+	Opts   *RunOpts
+	logger *zap.SugaredLogger
 }
 
-func (r RunRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
+func (r RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	cmd := exec.Command(r.Opts.PayloadFilepath)
 
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", HostnameEnvVar, node.Host))
@@ -26,35 +27,29 @@ func (r RunRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenan
 	stderr, _ := cmd.StderrPipe()
 
 	if err := cmd.Start(); err != nil {
-    return fmt.Errorf("Error running payload file: %w", err)
+		return fmt.Errorf("Error running payload file: %w", err)
 	}
 
-	go StreamPipeIntoLogger(stdout, logger)
-	go StreamPipeIntoLogger(stderr, logger)
+	go StreamPipeIntoLogger(stdout, r.logger)
+	go StreamPipeIntoLogger(stderr, r.logger)
 
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("Payload command finished with an error: %w", err)
 	}
-  return nil
+	return nil
 }
 
-func NewRunRestarter() *RunRestarter {
-	return &RunRestarter{Opts: &RunOpts{}}
+func NewRunRestarter(logger *zap.SugaredLogger) *RunRestarter {
+	return &RunRestarter{
+		Opts:   &RunOpts{},
+		logger: logger,
+	}
 }
 
-func (r RunRestarter) Filter(logger *zap.SugaredLogger, spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	selectedNodes := []*Ydb_Maintenance.Node{}
+func (r RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
+	selectedNodes := FilterByNodeIdOrFQDN(cluster.AllNodes, spec)
 
-	selectedNodes = append(
-		selectedNodes,
-		FilterByNodeIds(cluster.AllNodes, spec.SelectedNodeIds)...,
-	)
-
-	selectedNodes = append(
-		selectedNodes, FilterByHostFQDN(cluster.AllNodes, spec.SelectedHostFQDNs)...,
-	)
-
-	logger.Debugf("Run restarter selected following nodes for restart: %v", selectedNodes)
+	r.logger.Debugf("Run Restarter selected following nodes for restart: %v", selectedNodes)
 
 	return selectedNodes
 }

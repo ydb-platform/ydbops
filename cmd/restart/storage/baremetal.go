@@ -11,7 +11,7 @@ import (
 func NewStorageBaremetalCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
-	restarter := restarters.NewStorageBaremetalRestarter()
+	restarter := restarters.NewStorageBaremetalRestarter(options.Logger)
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "baremetal",

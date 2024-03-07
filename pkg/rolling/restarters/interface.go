@@ -2,19 +2,11 @@ package restarters
 
 import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"go.uber.org/zap"
 )
 
 type Restarter interface {
-	Filter(
-		logger *zap.SugaredLogger,
-		spec FilterNodeParams,
-		cluster ClusterNodesInfo,
-	) []*Ydb_Maintenance.Node
-	RestartNode(
-		logger *zap.SugaredLogger,
-		node *Ydb_Maintenance.Node,
-	) error
+	Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node
+	RestartNode(node *Ydb_Maintenance.Node) error
 }
 
 type ClusterNodesInfo struct {
@@ -24,6 +16,7 @@ type ClusterNodesInfo struct {
 
 type FilterNodeParams struct {
 	Version           string
+	ExcludeHosts      []string
 	SelectedTenants   []string
 	SelectedNodeIds   []uint32
 	SelectedHostFQDNs []string

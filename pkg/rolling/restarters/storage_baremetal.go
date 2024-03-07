@@ -9,7 +9,8 @@ import (
 )
 
 type StorageBaremetalRestarter struct {
-	Opts *StorageBaremetalOpts
+	Opts   *StorageBaremetalOpts
+	logger *zap.SugaredLogger
 }
 
 const (
@@ -73,8 +74,8 @@ func restartNodeBySystemdUnit(logger *zap.SugaredLogger, node *Ydb_Maintenance.N
 	return nil
 }
 
-func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
-	logger.Infof("Restarting storage node %s with ssh-args %v", node.Host, r.Opts.sshArgs)
+func (r StorageBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
+	r.logger.Infof("Restarting storage node %s with ssh-args %v", node.Host, r.Opts.sshArgs)
 
 	// It is theoretically possible to guess the systemd-unit, but it is a fragile
 	// solution. tarasov-egor@ will keep it here during development time for reference:
@@ -89,19 +90,19 @@ func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *
 		systemdUnitName = internalStorageSystemdUnit
 	}
 
-	return restartNodeBySystemdUnit(logger, node, systemdUnitName, r.Opts.sshArgs)
+	return restartNodeBySystemdUnit(r.logger, node, systemdUnitName, r.Opts.sshArgs)
 }
 
-func NewStorageBaremetalRestarter() *StorageBaremetalRestarter {
+func NewStorageBaremetalRestarter(logger *zap.SugaredLogger) *StorageBaremetalRestarter {
 	return &StorageBaremetalRestarter{
 		Opts: &StorageBaremetalOpts{
 			baremetalOpts: baremetalOpts{},
 		},
+		logger: logger,
 	}
 }
 
 func (r StorageBaremetalRestarter) Filter(
-	logger *zap.SugaredLogger,
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
@@ -109,7 +110,7 @@ func (r StorageBaremetalRestarter) Filter(
 
 	selectedNodes := FilterByNodeIdOrFQDN(allStorageNodes, spec)
 
-	logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", selectedNodes)
+	r.logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", selectedNodes)
 
 	return selectedNodes
 }
