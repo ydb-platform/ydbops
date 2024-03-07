@@ -32,7 +32,7 @@ func stripCommandFromArgs(args []string) (string, []string) {
 }
 
 func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *Ydb_Maintenance.Node) error {
-	logger.Info(fmt.Sprintf("Restarting %s with ssh-args %v", node.Host, r.Opts.SSHArgs))
+	logger.Infof("Restarting %s with ssh-args %v", node.Host, r.Opts.SSHArgs)
 
 	// It is theoretically possible to guess the systemd-unit, but it is a fragile
 	// solution. tarasov-egor@ will keep it here during development time for reference:
@@ -47,7 +47,7 @@ func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *
 		systemdUnitName = InternalSystemdUnit
 	}
 
-	logger.Debug(fmt.Sprintf("Restarting %s systemd unit", systemdUnitName))
+	logger.Debugf("Restarting %s systemd unit", systemdUnitName)
 
 	remoteRestartCommand := fmt.Sprintf(
 		`(test -x /bin/systemctl && sudo systemctl restart %s)`,
@@ -88,8 +88,10 @@ func (r StorageBaremetalRestarter) RestartNode(logger *zap.SugaredLogger, node *
 	return nil
 }
 
-func NewBaremetalRestarter() *StorageBaremetalRestarter {
-	return &StorageBaremetalRestarter{Opts: &StorageBaremetalOpts{}}
+func NewStorageBaremetalRestarter() *StorageBaremetalRestarter {
+	return &StorageBaremetalRestarter{
+		Opts: &StorageBaremetalOpts{},
+	}
 }
 
 func (r StorageBaremetalRestarter) Filter(
@@ -110,7 +112,7 @@ func (r StorageBaremetalRestarter) Filter(
 		selectedNodes, FilterByHostFQDN(allStorageNodes, spec.SelectedHostFQDNs)...,
 	)
 
-	logger.Debugf("storage_baremetal.Restarter selected following nodes for restart: %v", selectedNodes)
+	logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", selectedNodes)
 
 	return selectedNodes
 }

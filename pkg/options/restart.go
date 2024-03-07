@@ -15,7 +15,7 @@ import (
 
 const (
 	DefaultRetryCount      = 3
-	DefaultRestartDuration = 3
+	DefaultRestartDuration = 60
 )
 
 var AvailabilityModes = []string{"strong", "weak", "force"}

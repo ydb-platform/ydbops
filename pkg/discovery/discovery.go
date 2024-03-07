@@ -35,7 +35,7 @@ func (c *DiscoveryClient) WhoAmI() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	c.logger.Debug(fmt.Sprintf("WhoAmI response: %s", result.User))
+	c.logger.Debugf("WhoAmI response: %s", result.User)
 	return result.User, nil
 }
 

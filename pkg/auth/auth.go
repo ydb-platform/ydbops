@@ -47,7 +47,7 @@ func (c *AuthClient) Auth(
 	if err != nil {
 		return "", err
 	}
-	c.logger.Debug(fmt.Sprintf("Login response: %s", string([]rune(result.Token)[:20])))
+	c.logger.Debugf("Login response: %s", string([]rune(result.Token)[:20]))
 	return result.Token, nil
 }
 

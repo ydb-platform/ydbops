@@ -228,7 +228,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	)
 
 	if len(performed) == 0 {
-		r.logger.Info("No actions can be taken yet, waiting for CMS to allow some actions...")
+		r.logger.Info("No actions can be taken yet, waiting for CMS to move some actions to PERFORMED...")
 		return false
 	}
 
@@ -303,6 +303,8 @@ func (r *Rolling) prepareState() (*state, error) {
 }
 
 func (r *Rolling) cleanupOldRollingRestarts() error {
+	r.logger.Debugf("Will cleanup all previous maintenance tasks...")
+
 	previousTasks, err := r.cms.MaintenanceTasks(r.state.userSID)
 	if err != nil {
 		return fmt.Errorf("failed to list maintenance tasks with user id %v: %w", r.state.userSID, err)

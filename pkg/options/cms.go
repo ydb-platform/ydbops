@@ -10,12 +10,12 @@ const (
 	CMSDefaultRetryWaitTime    = 60
 	CMSDefaultAvailAbilityMode = "max"
 	CMSDefaultAuthType         = "none"
-	CMSDefaultTimeoutSeconds = 60
+	CMSDefaultTimeoutSeconds   = 60
 )
 
 type CMS struct {
 	RetryWaitSeconds int
-	TimeoutSeconds int
+	TimeoutSeconds   int
 }
 
 func (cms *CMS) DefineFlags(fs *pflag.FlagSet) {

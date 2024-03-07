@@ -172,8 +172,11 @@ func (a *AuthIAMCreds) Validate() error {
 func determineExplicitAuthType() AuthType {
 	authType := map[AuthType]bool{}
 
-	if static, ok := Auths[Static]; ok && static.(*AuthStatic).User != "" && static.(*AuthStatic).PasswordFile != "" {
-		authType[Static] = true
+	if static, ok := Auths[Static]; ok && static.(*AuthStatic).User != "" {
+		_, passwordVarPresent := os.LookupEnv(DefaultStaticPasswordEnvVar)
+		if static.(*AuthStatic).PasswordFile != "" || passwordVarPresent {
+			authType[Static] = true
+		}
 	}
 
 	if static, ok := Auths[IamToken]; ok && static.(*AuthIAMToken).TokenFile != "" {
