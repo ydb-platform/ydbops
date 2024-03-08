@@ -27,7 +27,7 @@ type Rolling struct {
 
 	logger    *zap.SugaredLogger
 	state     *state
-	opts      *options.RestartOptions
+	opts      options.RestartOptions
 	restarter restarters.Restarter
 }
 
@@ -44,7 +44,7 @@ const (
 )
 
 func initAuthToken(
-	rootOpts *options.RootOptions,
+	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
 	factory *client.Factory,
 ) error {
@@ -74,12 +74,12 @@ func initAuthToken(
 }
 
 func PrepareRolling(
-	restartOpts *options.RestartOptions,
-	rootOpts *options.RootOptions,
+	restartOpts options.RestartOptions,
+	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 ) {
-	factory := client.NewConnectionFactory(rootOpts.Auth, rootOpts.GRPC)
+	factory := client.NewConnectionFactory(rootOpts.Auth, rootOpts.GRPC, restartOpts)
 
 	logger.Debugf("rootOpts.Auth.Type %v", rootOpts.Auth.Type)
 	err := initAuthToken(rootOpts, logger, factory)
@@ -149,7 +149,7 @@ func (r *Rolling) DoRestart() error {
 
 	taskParams := cms.MaintenanceTaskParams{
 		TaskUID:          r.state.restartTaskUID,
-		AvailAbilityMode: r.opts.GetAvailabilityMode(),
+		AvailabilityMode: r.opts.GetAvailabilityMode(),
 		Duration:         r.opts.GetRestartDuration(),
 		Nodes:            nodesToRestart,
 	}

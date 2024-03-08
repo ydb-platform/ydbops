@@ -19,7 +19,7 @@ func NewTenantBaremetalCmd() *cobra.Command {
 		Long: `ydb-ops restart storage barematal:
   Restarts a specified subset of storage nodes over SSH`,
 		Run: func(cmd *cobra.Command, args []string) {
-			rolling.PrepareRolling(restartOpts, rootOpts, options.Logger, restarter)
+			rolling.PrepareRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
 	}, restarter.Opts)
 

@@ -115,7 +115,7 @@ func (c *CMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (Mainten
 		OperationParams: c.f.OperationParams(),
 		TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
 			TaskUid:          params.TaskUID,
-			AvailabilityMode: params.AvailAbilityMode,
+			AvailabilityMode: params.AvailabilityMode,
 			Description:      "Rolling restart maintenance task",
 		},
 		ActionGroups: make([]*Ydb_Maintenance.ActionGroup, 0, len(params.Nodes)),
@@ -208,33 +208,33 @@ func (c *CMSClient) CompleteAction(actionIds []*Ydb_Maintenance.ActionUid) (*Ydb
 	return &result, nil
 }
 
+
 func (c *CMSClient) ExecuteMaintenanceMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	// todo:
-	// 	 1, error handling ??
-	//   2. retries ??
-
-	cc, err := c.f.Connection()
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, cancel, err := c.f.ContextWithAuth()
 	if err != nil {
 		return nil, err
 	}
 	defer cancel()
 
-	cl := Ydb_Maintenance_V1.NewMaintenanceServiceClient(cc)
-	r, err := method(ctx, cl)
-	if err != nil {
-		c.logger.Debugf("Invocation error: %+v", err)
-		return nil, err
-	}
-	op := r.GetOperation()
-	client.LogOperation(c.logger, op)
+	op, err := client.WrapWithRetries(c.f.GetRetryNumber(), func() (*Ydb_Operations.Operation, error) {
+		cc, err := c.f.Connection()
+		if err != nil {
+			return nil, err
+		}
+
+		cl := Ydb_Maintenance_V1.NewMaintenanceServiceClient(cc)
+		r, err := method(ctx, cl)
+		if err != nil {
+			c.logger.Debugf("Invocation error: %+v", err)
+			return nil, err
+		}
+		op := r.GetOperation()
+		client.LogOperation(c.logger, op)
+		return op, nil
+	})
 
 	if out == nil {
 		return op, nil
@@ -255,25 +255,28 @@ func (c *CMSClient) ExecuteCMSMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Cms_V1.CmsServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	cc, err := c.f.Connection()
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, cancel, err := c.f.ContextWithAuth()
 	if err != nil {
 		return nil, err
 	}
 	defer cancel()
 
-	cl := Ydb_Cms_V1.NewCmsServiceClient(cc)
-	r, err := method(ctx, cl)
-	if err != nil {
-		c.logger.Debugf("Invocation error: %+v", err)
-		return nil, err
-	}
-	op := r.GetOperation()
-	client.LogOperation(c.logger, op)
+	op, err := client.WrapWithRetries(c.f.GetRetryNumber(), func() (*Ydb_Operations.Operation, error) {
+		cc, err := c.f.Connection()
+		if err != nil {
+			return nil, err
+		}
+
+		cl := Ydb_Cms_V1.NewCmsServiceClient(cc)
+		r, err := method(ctx, cl)
+		if err != nil {
+			c.logger.Debugf("Invocation error: %+v", err)
+			return nil, err
+		}
+		op := r.GetOperation()
+		client.LogOperation(c.logger, op)
+		return op, nil
+	})
 
 	if out == nil {
 		return op, nil

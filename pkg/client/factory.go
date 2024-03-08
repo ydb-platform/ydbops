@@ -3,19 +3,15 @@ package client
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/ydb-platform/ydb-ops/internal/collections"
 	"github.com/ydb-platform/ydb-ops/pkg/options"
 )
 
@@ -28,15 +24,17 @@ type OperationResponse interface {
 }
 
 type Factory struct {
-	auth  options.AuthOptions
-	grpc  options.GRPC
-	token string
+	auth    options.AuthOptions
+	grpc    options.GRPC
+	restart options.RestartOptions
+	token   string
 }
 
-func NewConnectionFactory(auth options.AuthOptions, grpc options.GRPC) *Factory {
+func NewConnectionFactory(auth options.AuthOptions, grpc options.GRPC, restart options.RestartOptions) *Factory {
 	return &Factory{
-		auth: auth,
-		grpc: grpc,
+		auth:    auth,
+		grpc:    grpc,
+		restart: restart,
 	}
 }
 
@@ -95,20 +93,6 @@ func (f Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
 }
 
-func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {
-	sb := strings.Builder{}
-	sb.WriteString(fmt.Sprintf("Operation status: %s", op.Status))
-
-	if len(op.Issues) > 0 {
-		sb.WriteString(
-			fmt.Sprintf("\nIssues:\n%s",
-				strings.Join(collections.Convert(op.Issues,
-					func(issue *Ydb_Issue.IssueMessage) string {
-						return fmt.Sprintf("  Severity: %d, code: %d, message: %s", issue.Severity, issue.IssueCode, issue.Message)
-					},
-				), "\n"),
-			))
-	}
-
-	logger.Debugf("Invocation result:\n%s", sb.String())
+func (f Factory) GetRetryNumber() int {
+	return f.restart.RestartRetryNumber
 }

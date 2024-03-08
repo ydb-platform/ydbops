@@ -19,7 +19,7 @@ func NewStorageK8sCmd() *cobra.Command {
 		Long: `ydb-ops restart storage k8s:
   Restarts a specified subset of YDB storage Pods in a Kubernetes cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
-			rolling.PrepareRolling(restartOpts, rootOpts, options.Logger, restarter)
+			rolling.PrepareRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
 	}, restarter.Opts)
 

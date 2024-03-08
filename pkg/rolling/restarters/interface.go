@@ -5,7 +5,10 @@ import (
 )
 
 type Restarter interface {
-	Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node
+	Filter(
+		spec FilterNodeParams,
+		cluster ClusterNodesInfo,
+	) []*Ydb_Maintenance.Node
 	RestartNode(node *Ydb_Maintenance.Node) error
 }
 
