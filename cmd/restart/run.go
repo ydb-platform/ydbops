@@ -26,7 +26,7 @@ func NewRunCmd() *cobra.Command {
 	Certain environment variable will be passed to your executable on each run:
 		$HOSTNAME: the fqdn of the node currently released by CMS.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			rolling.PrepareRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
 	}, restarter.Opts)
 

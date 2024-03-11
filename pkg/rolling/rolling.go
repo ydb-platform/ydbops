@@ -33,6 +33,7 @@ type Rolling struct {
 
 type state struct {
 	nodes                          map[uint32]*Ydb_Maintenance.Node
+	retriesMadeForNode             map[uint32]int
 	tenants                        []string
 	userSID                        string
 	unreportedButFinishedActionIds []string
@@ -55,6 +56,7 @@ func initAuthToken(
 		staticCreds := rootOpts.Auth.Creds.(*options.AuthStatic)
 		user := staticCreds.User
 		password := staticCreds.Password
+		logger.Debugf("Endpoint: %v", rootOpts.GRPC.Endpoint)
 		token, err := authClient.Auth(rootOpts.GRPC, user, password)
 		if err != nil {
 			return fmt.Errorf("Failed to initialize static auth token: %w", err)
@@ -73,7 +75,7 @@ func initAuthToken(
 	return nil
 }
 
-func PrepareRolling(
+func ExecuteRolling(
 	restartOpts options.RestartOptions,
 	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
@@ -81,7 +83,6 @@ func PrepareRolling(
 ) {
 	factory := client.NewConnectionFactory(rootOpts.Auth, rootOpts.GRPC, restartOpts)
 
-	logger.Debugf("rootOpts.Auth.Type %v", rootOpts.Auth.Type)
 	err := initAuthToken(rootOpts, logger, factory)
 	if err != nil {
 		logger.Errorf("Failed to begin restart loop: %+v", err)
@@ -168,8 +169,28 @@ func (r *Rolling) DoRestartPrevious() error {
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 	const (
-		defaultDelay = time.Second * 10
+		defaultDelay = time.Second * 2
 	)
+
+// ^C2024-03-11T22:26:04.236+0300  info    Start rolling restart
+// 2024-03-11T22:26:04.243+0300    info    Maintenance task id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
+// 2024-03-11T22:26:04.243+0300    info    Maintenance task processing loop started
+// 2024-03-11T22:26:04.243+0300    info    Processing task action group states
+// 2024-03-11T22:26:04.243+0300    info    Perform next 1 ActionGroupStates
+// 2024-03-11T22:26:04.243+0300    warn    DRAINING NOT IMPLEMENTED YET
+// 2024-03-11T22:26:04.243+0300    warn    Failed to restart node with id: 1, attempt number 0, because of: %!w(*fmt.wrapError=&{Error running payload file: fork/exec mock/noop-pa
+// yload.sh: permission denied 0xc000543350})
+// 2024-03-11T22:26:04.244+0300    info    Wait next 2s delay
+// 2024-03-11T22:26:06.245+0300    info    Refresh maintenance task with id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
+// 2024-03-11T22:26:06.249+0300    info    Processing task action group states
+// 2024-03-11T22:26:06.249+0300    info    No actions can be taken yet, waiting for CMS to move some actions to PERFORMED...
+// 2024-03-11T22:26:06.249+0300    info    Wait next 2s delay
+// 2024-03-11T22:26:08.250+0300    info    Refresh maintenance task with id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
+// 2024-03-11T22:26:08.254+0300    info    Processing task action group states
+// 2024-03-11T22:26:08.254+0300    info    No actions can be taken yet, waiting for CMS to move some actions to PERFORMED...
+// 2024-03-11T22:26:08.254+0300    info    Wait next 2s delay
+// 2024-03-11T22:26:10.254+0300    info    Refresh maintenance task with id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
+// 2024-03-11T22:26:10.258+0300    info    Processing task action group states
 
 	var (
 		err    error
@@ -252,7 +273,20 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 		r.logger.Debugf("Restart node with id: %d", node.NodeId)
 		if err := r.restarter.RestartNode(node); err != nil {
-			r.logger.Warnf("Failed to restart node with id: %d, because of: %w", node.NodeId, err)
+			r.logger.Warnf(
+				"Failed to restart node with id: %d, attempt number %v, because of: %w",
+				node.NodeId,
+				r.state.retriesMadeForNode[node.NodeId],
+				err,
+			)
+			r.state.retriesMadeForNode[node.NodeId] += 1
+
+			if r.state.retriesMadeForNode[node.NodeId] == r.opts.RestartRetryNumber {
+				// TODO reduce copypaste with literally 5 lines below
+				r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
+				actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
+				r.logger.Warnf("Failed to retry node %v specified number of times %v", node.NodeId, r.opts.RestartRetryNumber)
+			}
 		} else {
 			r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
 			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
@@ -292,6 +326,7 @@ func (r *Rolling) prepareState() (*state, error) {
 		tenants:                        tenants,
 		userSID:                        userSID,
 		nodes:                          collections.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		retriesMadeForNode:             make(map[uint32]int),
 		unreportedButFinishedActionIds: []string{},
 		restartTaskUID:                 RestartTaskPrefix + uuid.New().String(),
 	}, nil

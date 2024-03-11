@@ -27,7 +27,6 @@ func WrapWithRetries(
 	maxAttempts int,
 	f func() (*Ydb_Operations.Operation, error),
 ) (*Ydb_Operations.Operation, error) {
-	zap.S().Debugf("Going to retry %v times", maxAttempts)
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		op, err := f()
 		if err == nil {

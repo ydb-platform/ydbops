@@ -34,7 +34,7 @@ func registerAllSubcommands(root *cobra.Command) {
 
 var RootCmd *cobra.Command
 
-func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
+func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 	RootCmd = &cobra.Command{
 		Use:   "ydb-ops",
 		Short: "ydb-ops: a CLI tool with common YDB cluster maintenance operations",
@@ -66,7 +66,7 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.Logger) {
 		_ = logger.Sync()
 	}()
 
-	options.Logger = logger.Sugar()
+	options.Logger = logger
 
 	options.RootOptionsInstance.DefineFlags(RootCmd.PersistentFlags())
 

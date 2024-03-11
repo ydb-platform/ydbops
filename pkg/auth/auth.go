@@ -42,7 +42,7 @@ func (c *AuthClient) Auth(grpcOpts options.GRPC, user, password string) (string,
 	if err != nil {
 		return "", err
 	}
-	c.logger.Debugf("Login response: %s", string([]rune(result.Token)[:20]))
+	c.logger.Debugf("Login response: %s...[]", string([]rune(result.Token)[:20]))
 	return result.Token, nil
 }
 

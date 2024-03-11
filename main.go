@@ -26,7 +26,7 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 
 func main() {
 	logLevelSetter, logger := createLogger("info")
-  cmd.InitRootCmd(logLevelSetter, logger)
+  cmd.InitRootCmd(logLevelSetter, logger.Sugar())
 
 	if err := cmd.RootCmd.Execute(); err != nil {
 		logger.Fatal("failed to execute restart", zap.Error(err))

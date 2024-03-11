@@ -7,7 +7,6 @@ import (
 type RootOptions struct {
 	Auth     AuthOptions
 	GRPC     GRPC
-	Endpoint string
 	Verbose  bool
 }
 

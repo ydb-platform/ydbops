@@ -245,6 +245,7 @@ func (c *CMSClient) ExecuteMaintenanceMethod(
 	}
 
 	if op.Status != Ydb.StatusIds_SUCCESS {
+
 		return op, fmt.Errorf("unsuccessful status code: %s", op.Status)
 	}
 

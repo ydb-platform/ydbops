@@ -37,7 +37,10 @@ func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 	if cmd.PersistentPreRunE != nil {
 		cmd.PersistentPreRunE = makePersistentPreRunE(
 			func(cmd *cobra.Command, args []string) error {
-				return opts.Validate()
+				if opts != nil {
+					return opts.Validate()
+				}
+        return nil
 			},
 		)
 	}
