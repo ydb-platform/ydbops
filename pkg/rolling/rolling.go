@@ -169,28 +169,8 @@ func (r *Rolling) DoRestartPrevious() error {
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 	const (
-		defaultDelay = time.Second * 2
+		defaultDelay = time.Second * 10
 	)
-
-// ^C2024-03-11T22:26:04.236+0300  info    Start rolling restart
-// 2024-03-11T22:26:04.243+0300    info    Maintenance task id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
-// 2024-03-11T22:26:04.243+0300    info    Maintenance task processing loop started
-// 2024-03-11T22:26:04.243+0300    info    Processing task action group states
-// 2024-03-11T22:26:04.243+0300    info    Perform next 1 ActionGroupStates
-// 2024-03-11T22:26:04.243+0300    warn    DRAINING NOT IMPLEMENTED YET
-// 2024-03-11T22:26:04.243+0300    warn    Failed to restart node with id: 1, attempt number 0, because of: %!w(*fmt.wrapError=&{Error running payload file: fork/exec mock/noop-pa
-// yload.sh: permission denied 0xc000543350})
-// 2024-03-11T22:26:04.244+0300    info    Wait next 2s delay
-// 2024-03-11T22:26:06.245+0300    info    Refresh maintenance task with id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
-// 2024-03-11T22:26:06.249+0300    info    Processing task action group states
-// 2024-03-11T22:26:06.249+0300    info    No actions can be taken yet, waiting for CMS to move some actions to PERFORMED...
-// 2024-03-11T22:26:06.249+0300    info    Wait next 2s delay
-// 2024-03-11T22:26:08.250+0300    info    Refresh maintenance task with id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
-// 2024-03-11T22:26:08.254+0300    info    Processing task action group states
-// 2024-03-11T22:26:08.254+0300    info    No actions can be taken yet, waiting for CMS to move some actions to PERFORMED...
-// 2024-03-11T22:26:08.254+0300    info    Wait next 2s delay
-// 2024-03-11T22:26:10.254+0300    info    Refresh maintenance task with id: rolling-restart-dba71a4e-1399-47de-bb03-ff173275df5f
-// 2024-03-11T22:26:10.258+0300    info    Processing task action group states
 
 	var (
 		err    error

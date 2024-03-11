@@ -16,9 +16,10 @@ func populateFieldMapFor(tp reflect.Type, value reflect.Value) map[string]reflec
 	return fields
 }
 
-// NOTE this is just an experiment! Please don't judge this code yet. This is an experimental matcher
-// to compare two proto messages with a couple nuances, required for comparing e2e test output with
-// an expected, hand-constructed output, type-safely.
+// NOTE this is just an experiment and will be probably gone soon! 
+// Please don't judge this code yet. This is an experimental matcher to compare two proto messages 
+// with a couple nuances, required for comparing e2e test output with an expected, hand-constructed 
+// output, type-safely.
 func DeepEqualOnPresentFields(expected proto.Message, actual proto.Message, values map[string]string) {
 	expectedType := reflect.TypeOf(expected)
 	actualType := reflect.TypeOf(actual)
