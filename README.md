@@ -14,15 +14,12 @@ go build
 
 #### Currently unimplemented, but will be in the nearest future (several days):
 
-1. The tests (`ginkgo test -vvv ./tests`) currently use real `time`, which means they run for a while (10-15 seconds). I will create a fake clock for tests later.
-2. Yandex IAM authorization with SA account key file is currently unsupported.
-   However, you can always issue the token yourself and put it inside the `YDB_TOKEN`
-   variable: `export YDB_TOKEN=$(ycp --profile <profile> iam create-token)`
-3. `restart tenant k8s` is not implemented yet, but soon.
-4. `restart tenant` command in general is LEAST tested. Expect bugs.
-5. All nodes are restarted SEQUENTIALLY at this moment, expect the parallel implementation very soon
-6. For prettiness: The module './pkg/rolling/restarters' will be probably split into
-   multiple modules, one module per restarter.
+1. [FEATURE] last restarting subcommand, `restart tenant k8s` is not implemented yet, but soon.
+1. [FEATURE] All nodes are restarted SEQUENTIALLY at this moment, expect the parallel implementation very soon
+1. [NON-CRITICAL FEATURE] Yandex IAM authorization with SA account key file is currently unsupported. However, you can always issue the token yourself and put it inside the `YDB_TOKEN` variable: `export YDB_TOKEN=$(ycp --profile <profile> iam create-token)`
+1. [NON-CRITICAL FEATURE] `--uptime` has been recently merged into Public Maintenance Api, use it to provide a filter (as artgromov@ asked, for example).
+1. [SMALL REFACTOR]: The module './pkg/rolling/restarters' will be probably split into multiple modules, one module per restarter.
+1. [SMALL REFACTOR]The tests (`ginkgo test -vvv ./tests`) currently use real `time`, which means they run for a while (10-15 seconds). I will create a fake clock for tests later.
 
 #### How to use:
 
