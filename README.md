@@ -12,7 +12,7 @@ No special actions, just do from the repo root:
 go build
 ```
 
-#### Currently unimplemented, but will be in the nearest future:
+#### Currently unimplemented, but will be in the nearest future (several days):
 
 1. The tests (`ginkgo test -vvv ./tests`) currently use real `time`, which means they run for a while (10-15 seconds). I will create a fake clock for tests later.
 2. Yandex IAM authorization with SA account key file is currently unsupported.
@@ -20,7 +20,8 @@ go build
    variable: `export YDB_TOKEN=$(ycp --profile <profile> iam create-token)`
 3. `restart tenant k8s` is not implemented yet, but soon.
 4. `restart tenant` command in general is LEAST tested. Expect bugs.
-5. For prettiness: The module './pkg/rolling/restarters' will be probably split into
+5. All nodes are restarted SEQUENTIALLY at this moment, expect the parallel implementation very soon
+6. For prettiness: The module './pkg/rolling/restarters' will be probably split into
    multiple modules, one module per restarter.
 
 #### How to use:
