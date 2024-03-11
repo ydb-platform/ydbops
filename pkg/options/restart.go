@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/internal/collections"
+	"github.com/ydb-platform/ydbops/internal/collections"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 

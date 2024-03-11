@@ -9,14 +9,14 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
 
-	"github.com/ydb-platform/ydb-ops/internal/collections"
-	"github.com/ydb-platform/ydb-ops/pkg/auth"
-	"github.com/ydb-platform/ydb-ops/pkg/client"
-	"github.com/ydb-platform/ydb-ops/pkg/cms"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
+	"github.com/ydb-platform/ydbops/internal/collections"
+	"github.com/ydb-platform/ydbops/pkg/auth"
+	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/cms"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 
-	"github.com/ydb-platform/ydb-ops/pkg/discovery"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/discovery"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 type Rolling struct {

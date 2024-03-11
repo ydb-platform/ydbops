@@ -2,10 +2,10 @@ package restart
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/internal/cobra_util"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/rolling"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 func NewRunCmd() *cobra.Command {
@@ -16,9 +16,9 @@ func NewRunCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "run",
 		Short: "Run an arbitrary executable (e.g. shell code) in the context of the current host",
-		Long: `ydb-ops restart run:
+		Long: `ydbops restart run:
 	Run an arbitrary executable (e.g. shell code) in the context of the current host.
-	For every host released by CMS, ydb-ops will execute this payload independently.
+	For every host released by CMS, ydbops will execute this payload independently.
 
 	Restart will be treated as successful if your executable finished with a zero 
 	return code.

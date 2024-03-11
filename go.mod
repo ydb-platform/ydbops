@@ -1,4 +1,4 @@
-module github.com/ydb-platform/ydb-ops
+module github.com/ydb-platform/ydbops
 
 go 1.21.6
 

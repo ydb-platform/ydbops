@@ -8,7 +8,7 @@ import (
 
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
-	"github.com/ydb-platform/ydb-ops/internal/collections"
+	"github.com/ydb-platform/ydbops/internal/collections"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

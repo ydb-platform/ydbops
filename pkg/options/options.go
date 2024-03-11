@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/pflag"
 	"go.uber.org/multierr"
 
-	"github.com/ydb-platform/ydb-ops/internal/collections"
+	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 // Options is an interface to defile options flags and validation logic

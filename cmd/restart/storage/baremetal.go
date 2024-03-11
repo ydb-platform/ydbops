@@ -2,10 +2,10 @@ package storage
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/internal/cobra_util"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/rolling"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 func NewStorageBaremetalCmd() *cobra.Command {
@@ -16,7 +16,7 @@ func NewStorageBaremetalCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "baremetal",
 		Short: "Restarts a specified subset of storage nodes over SSH",
-		Long:  `ydb-ops restart storage barematal:
+		Long:  `ydbops restart storage barematal:
   Restarts a specified subset of storage nodes over SSH`,
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)

@@ -10,8 +10,8 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ydb-platform/ydb-ops/pkg/client"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"go.uber.org/zap"
 )
 

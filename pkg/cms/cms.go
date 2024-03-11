@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ydb-platform/ydb-ops/internal/collections"
-	"github.com/ydb-platform/ydb-ops/pkg/client"
+	"github.com/ydb-platform/ydbops/internal/collections"
+	"github.com/ydb-platform/ydbops/pkg/client"
 )
 
 type CMSClient struct {

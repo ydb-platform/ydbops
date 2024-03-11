@@ -2,8 +2,8 @@ package restart
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/internal/cobra_util"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 func NewStorageCmd() *cobra.Command {
@@ -12,7 +12,7 @@ func NewStorageCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "storage",
 		Short: "Restarts a specified subset of tenant nodes",
-    Long:  `ydb-ops restart storage:
+    Long:  `ydbops restart storage:
   Restarts a specified subset of storage nodes`,
 	}, restartOpts)
 

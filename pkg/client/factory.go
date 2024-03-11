@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 const (

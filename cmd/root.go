@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/cmd/restart"
-	"github.com/ydb-platform/ydb-ops/cmd/restart/storage"
-	"github.com/ydb-platform/ydb-ops/cmd/restart/tenant"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/cmd/restart"
+	"github.com/ydb-platform/ydbops/cmd/restart/storage"
+	"github.com/ydb-platform/ydbops/cmd/restart/tenant"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -36,9 +36,9 @@ var RootCmd *cobra.Command
 
 func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 	RootCmd = &cobra.Command{
-		Use:   "ydb-ops",
-		Short: "ydb-ops: a CLI tool with common YDB cluster maintenance operations",
-		Long:  "ydb-ops: a CLI tool with common YDB cluster maintenance operations",
+		Use:   "ydbops",
+		Short: "ydbops: a CLI tool with common YDB cluster maintenance operations",
+		Long:  "ydbops: a CLI tool with common YDB cluster maintenance operations",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
 			if options.RootOptionsInstance.Verbose {

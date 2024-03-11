@@ -13,8 +13,8 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Cms"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
-	blackmagic "github.com/ydb-platform/ydb-ops/tests/black-magic"
-	"github.com/ydb-platform/ydb-ops/tests/mock"
+	blackmagic "github.com/ydb-platform/ydbops/tests/black-magic"
+	"github.com/ydb-platform/ydbops/tests/mock"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -49,7 +49,7 @@ var _ = Describe("Test Rolling", func() {
 		previousEnvVars := prepareEnvVariables()
 		defer revertEnvVariables(previousEnvVars)
 
-		cmd := exec.Command(filepath.Join("..", "ydb-ops"),
+		cmd := exec.Command(filepath.Join("..", "ydbops"),
 			"--endpoint", "grpc://localhost:2135",
 			"--verbose",
 			"restart",

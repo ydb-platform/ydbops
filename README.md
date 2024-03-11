@@ -1,4 +1,4 @@
-## ydb-ops
+## ydbops
 
 #### Disclaimer: heavy work in progress, expect changes until probably March 20th
 

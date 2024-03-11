@@ -2,8 +2,8 @@ package restart
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/internal/cobra_util"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 func NewTenantCmd() *cobra.Command {
@@ -12,7 +12,7 @@ func NewTenantCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "tenant",
 		Short: "Restarts a specified subset of tenant nodes",
-    Long:  `ydb-ops restart tenant:
+    Long:  `ydbops restart tenant:
   Restarts a specified subset of tenant nodes (also known as dynnodes)`,
 	}, restartOpts)
 

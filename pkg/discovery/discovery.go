@@ -8,7 +8,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
-	"github.com/ydb-platform/ydb-ops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/client"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )

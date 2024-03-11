@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/internal/cobra_util"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 func NewRestartCmd() *cobra.Command {
@@ -12,7 +12,7 @@ func NewRestartCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "restart",
 		Short: "Restarts a specified subset of nodes in the cluster",
-		Long: `ydb-ops restart: 
+		Long: `ydbops restart: 
   Restarts a specified subset of nodes in the cluster. 
   Has subcommands for various YDB environments.`,
 	}, opts)

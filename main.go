@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/ydb-platform/ydb-ops/cmd"
+	"github.com/ydb-platform/ydbops/cmd"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

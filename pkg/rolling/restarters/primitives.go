@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-ops/internal/collections"
+	"github.com/ydb-platform/ydbops/internal/collections"
 	"go.uber.org/zap"
 )
 

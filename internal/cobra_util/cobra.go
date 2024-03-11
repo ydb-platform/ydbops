@@ -2,7 +2,7 @@ package cobra_util
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 type PersistentPreRunEFunc func(cmd *cobra.Command, args []string) error
@@ -13,7 +13,7 @@ type PersistentPreRunEFunc func(cmd *cobra.Command, args []string) error
 // If we want to declare PersistentPreRun and also want parent's
 // PersistentPreRun command called, we need to manually call it.
 // This function is a wrapper that can be specified in PersistentPreRun
-// commands of children, look at `ydb-ops restart storage` implementation.
+// commands of children, look at `ydbops restart storage` implementation.
 func makePersistentPreRunE(original PersistentPreRunEFunc) PersistentPreRunEFunc {
 	wrapped := func(cmd *cobra.Command, args []string) error {
 		if parent := cmd.Parent(); parent != nil {

@@ -2,10 +2,10 @@ package storage
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/ydb-platform/ydb-ops/internal/cobra_util"
-	"github.com/ydb-platform/ydb-ops/pkg/options"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling"
-	"github.com/ydb-platform/ydb-ops/pkg/rolling/restarters"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/rolling"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 func NewStorageK8sCmd() *cobra.Command {
@@ -16,7 +16,7 @@ func NewStorageK8sCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "k8s",
 		Short: "Restarts a specified subset of YDB storage Pods in a Kubernetes cluster",
-		Long: `ydb-ops restart storage k8s:
+		Long: `ydbops restart storage k8s:
   Restarts a specified subset of YDB storage Pods in a Kubernetes cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
