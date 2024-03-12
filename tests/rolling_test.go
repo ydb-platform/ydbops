@@ -13,23 +13,18 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Cms"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	blackmagic "github.com/ydb-platform/ydbops/tests/black-magic"
 	"github.com/ydb-platform/ydbops/tests/mock"
 	"google.golang.org/protobuf/proto"
 )
 
-func setupYdbMock(port int) *mock.YdbMock {
-	ydbMock := mock.NewYdbMockServer()
-	ydbMock.StartOn(port)
-	return ydbMock
-}
-
 func prepareEnvVariables() map[string]string {
 	previous := make(map[string]string)
 
 	newValue := mock.TestPassword
-	os.Setenv("YDB_PASSWORD", newValue)
-	previous["YDB_PASSWORD"] = os.Getenv("YDB_PASSWORD")
+	os.Setenv(options.DefaultStaticPasswordEnvVar, newValue)
+	previous[options.DefaultStaticPasswordEnvVar] = os.Getenv(options.DefaultStaticPasswordEnvVar)
 
 	return previous
 }
@@ -41,11 +36,18 @@ func revertEnvVariables(previous map[string]string) {
 }
 
 var _ = Describe("Test Rolling", func() {
-	It("my first rolling emulation", func() {
+	var ydb *mock.YdbMock
+	BeforeEach(func() {
 		port := 2135
-		cms := setupYdbMock(port)
-		defer cms.Teardown()
+		ydb = mock.NewYdbMockServer()
+		ydb.StartOn(port)
+	})
 
+	AfterEach(func() {
+		ydb.Teardown()
+	})
+
+	It("happy path: restart 3 out of 8 nodes, strong mode, no failures", func() {
 		previousEnvVars := prepareEnvVariables()
 		defer revertEnvVariables(previousEnvVars)
 
@@ -126,7 +128,7 @@ var _ = Describe("Test Rolling", func() {
 			},
 		}
 
-		actualRequests := cms.RequestLog
+		actualRequests := ydb.RequestLog
 
 		// for _, req := range actualRequests {
 		// 	fmt.Printf("\n%+v : %+v\n", reflect.TypeOf(req), req)
