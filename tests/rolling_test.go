@@ -37,19 +37,21 @@ func revertEnvVariables(previous map[string]string) {
 
 var _ = Describe("Test Rolling", func() {
 	var ydb *mock.YdbMock
+	var previousEnvVars map[string]string
+
 	BeforeEach(func() {
 		port := 2135
 		ydb = mock.NewYdbMockServer()
 		ydb.StartOn(port)
+		previousEnvVars = prepareEnvVariables()
 	})
 
 	AfterEach(func() {
 		ydb.Teardown()
+		revertEnvVariables(previousEnvVars)
 	})
 
 	It("happy path: restart 3 out of 8 nodes, strong mode, no failures", func() {
-		previousEnvVars := prepareEnvVariables()
-		defer revertEnvVariables(previousEnvVars)
 
 		cmd := exec.Command(filepath.Join("..", "ydbops"),
 			"--endpoint", "grpc://localhost:2135",
