@@ -18,6 +18,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -42,6 +43,8 @@ type YdbMock struct {
 	Ydb_Discovery_V1.UnimplementedDiscoveryServiceServer
 
 	grpcServer *grpc.Server
+	caFile     string
+	keyFile    string
 
 	// This field contains the list of Nodes that is suitable to return
 	// to ListClusterNodes request from rolling restart.
@@ -221,13 +224,29 @@ func NewYdbMockServer() *YdbMock {
 	return server
 }
 
+func (s *YdbMock) SetupSimpleTLS(caFile, keyFile string) {
+	s.caFile = caFile
+	s.keyFile = keyFile
+}
+
 func (s *YdbMock) StartOn(port int) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s.grpcServer = grpc.NewServer()
+	if s.caFile != "" && s.keyFile != "" {
+		creds, err := credentials.NewServerTLSFromFile(s.caFile, s.keyFile)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
+	} else {
+		s.grpcServer = grpc.NewServer()
+	}
+
 	Ydb_Maintenance_V1.RegisterMaintenanceServiceServer(s.grpcServer, s)
 	Ydb_Auth_V1.RegisterAuthServiceServer(s.grpcServer, s)
 	Ydb_Discovery_V1.RegisterDiscoveryServiceServer(s.grpcServer, s)

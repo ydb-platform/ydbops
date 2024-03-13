@@ -85,7 +85,8 @@ func ExecuteRolling(
 
 	err := initAuthToken(rootOpts, logger, factory)
 	if err != nil {
-		logger.Errorf("Failed to begin restart loop: %+v", err)
+		logger.Errorf("Failed to receive an auth token, rolling restart not started: %+v", err)
+		return
 	}
 
 	discoveryClient := discovery.NewDiscoveryClient(logger, factory)

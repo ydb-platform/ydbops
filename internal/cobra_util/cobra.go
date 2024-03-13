@@ -1,9 +1,11 @@
 package cobra_util
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -85,7 +87,7 @@ func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 
 	cmd.SetUsageTemplate(UsageTemplate)
 
-	if cmd.PersistentPreRunE != nil {
+	if cmd.PersistentPreRunE == nil {
 		cmd.PersistentPreRunE = makePersistentPreRunE(
 			func(cmd *cobra.Command, args []string) error {
 				if opts != nil {
@@ -95,6 +97,20 @@ func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 			},
 		)
 	}
+
+	// It is confusing to get messages about unknown flags, when in reality you just forgot to 
+	// specify the necessary subcommand.
+	cmd.SetFlagErrorFunc(func (cmd *cobra.Command, err error) error {
+		if cmd.HasAvailableSubCommands() {
+			return fmt.Errorf("You have not selected a subcommand. Available subcommands are: %v",
+				collections.Convert(cmd.Commands(), func(cmd *cobra.Command) string {
+					return cmd.Name()
+				}),
+			)
+		}
+
+		return err
+	})
 
 	return cmd
 }

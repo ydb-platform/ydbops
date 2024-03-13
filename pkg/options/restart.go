@@ -27,6 +27,8 @@ type RestartOptions struct {
 	ExcludeHosts       []string
 	RestartDuration    int
 	RestartRetryNumber int
+	Version            string
+	Uptime             string
 
 	Continue bool
 }

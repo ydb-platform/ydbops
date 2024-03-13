@@ -42,7 +42,12 @@ var _ = Describe("Test Rolling", func() {
 	BeforeEach(func() {
 		port := 2135
 		ydb = mock.NewYdbMockServer()
+		ydb.SetupSimpleTLS(
+			filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			filepath.Join(".", "test-data", "ssl-data", "ca_unencrypted.key"),
+		)
 		ydb.StartOn(port)
+
 		previousEnvVars = prepareEnvVariables()
 	})
 
@@ -54,7 +59,7 @@ var _ = Describe("Test Rolling", func() {
 	It("happy path: restart 3 out of 8 nodes, strong mode, no failures", func() {
 
 		cmd := exec.Command(filepath.Join("..", "ydbops"),
-			"--endpoint", "grpc://localhost:2135",
+			"--endpoint", "grpcs://localhost:2135",
 			"--verbose",
 			"restart",
 			"--availability-mode", "strong",
@@ -62,10 +67,11 @@ var _ = Describe("Test Rolling", func() {
 			"--user", mock.TestUser,
 			"run",
 			"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+			"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 		)
 
-		_, err := cmd.CombinedOutput()
-		// fmt.Println(string(output))
+		output, err := cmd.CombinedOutput()
+		fmt.Println(string(output))
 
 		Expect(err).To(BeNil())
 
