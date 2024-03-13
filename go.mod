@@ -8,7 +8,7 @@ require (
 	github.com/onsi/gomega v1.31.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
-	github.com/ydb-platform/ydb-go-genproto v0.0.0-20240219184408-1de5f3f077de
+	github.com/ydb-platform/ydb-go-genproto v0.0.0-20240313174312-cec53bca0668
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.62.0
