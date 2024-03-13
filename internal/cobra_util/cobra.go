@@ -1,6 +1,8 @@
 package cobra_util
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
@@ -30,9 +32,58 @@ func makePersistentPreRunE(original PersistentPreRunEFunc) PersistentPreRunEFunc
 	return wrapped
 }
 
+func determinePadding(curCommand, subCommandLineNumber, totalCommands int) string {
+	if curCommand == totalCommands - 1 {
+		if subCommandLineNumber == 0 {
+			return "└─ "
+		} else {
+			return "   "
+		}
+	} else {
+		if subCommandLineNumber == 0 {
+			return "├─ "
+		} else {
+			return "│  "
+		}
+	}
+}
+
+func generateCommandTree(cmd *cobra.Command) []string {
+		result := []string{cmd.Name()}
+		if cmd.HasAvailableSubCommands() {
+			subCommandLen := len(cmd.Commands())
+			for i := 0; i < len(cmd.Commands()); i++ {
+				subCmd := cmd.Commands()[i]
+				if !subCmd.Hidden {
+					subCmdTree := generateCommandTree(subCmd)
+					for j, line := range subCmdTree {
+						result = append(result, determinePadding(i, j, subCommandLen) + line)
+					}
+				}
+			}
+		}
+		return result
+}
+
 func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 	cmd.Flags().SortFlags = false
 	cmd.PersistentFlags().SortFlags = false
+
+	cobra.AddTemplateFunc("drawNiceTree", func(cmd *cobra.Command) string {
+		if cmd.HasAvailableSubCommands() {
+			var builder strings.Builder
+			builder.WriteString("Subcommands:")
+			for _, line := range generateCommandTree(cmd) {
+				builder.WriteString("\n")
+				builder.WriteString(line)
+			}
+			builder.WriteString("\n")
+			return builder.String()
+		}
+		return ""
+	})
+
+	cmd.SetUsageTemplate(UsageTemplate)
 
 	if cmd.PersistentPreRunE != nil {
 		cmd.PersistentPreRunE = makePersistentPreRunE(

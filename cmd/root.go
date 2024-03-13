@@ -5,6 +5,7 @@ import (
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/cmd/restart/storage"
 	"github.com/ydb-platform/ydbops/cmd/restart/tenant"
+	"github.com/ydb-platform/ydbops/internal/cobra_util"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -71,4 +72,6 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 	options.RootOptionsInstance.DefineFlags(RootCmd.PersistentFlags())
 
 	registerAllSubcommands(RootCmd)
+
+	RootCmd.SetUsageTemplate(cobra_util.UsageTemplate)
 }
