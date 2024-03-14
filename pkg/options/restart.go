@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	DefaultRetryCount      = 3
-	DefaultRestartDuration = 60
+	DefaultRetryCount              = 3
+	DefaultRestartDurationSeconds  = 60
+	DefaultCMSQueryIntervalSeconds = 10
 )
 
 var AvailabilityModes = []string{"strong", "weak", "force"}
@@ -29,6 +30,7 @@ type RestartOptions struct {
 	RestartRetryNumber int
 	Version            string
 	Uptime             string
+	CMSQueryInterval   int
 
 	Continue bool
 }
@@ -37,11 +39,15 @@ var RestartOptionsInstance = &RestartOptions{}
 
 func (o *RestartOptions) Validate() error {
 	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
-		return fmt.Errorf("specified not supported availability mode: %s", o.AvailabilityMode)
+		return fmt.Errorf("specified a non-existing availability mode: %s", o.AvailabilityMode)
 	}
 
 	if o.RestartDuration < 0 {
 		return fmt.Errorf("specified invalid restart duration seconds: %d. Must be positive", o.RestartDuration)
+	}
+
+	if o.CMSQueryInterval < 0 {
+		return fmt.Errorf("specified invalid cms query interval seconds: %d. Must be positive", o.RestartDuration)
 	}
 
 	if o.RestartRetryNumber < 0 {
@@ -74,17 +80,20 @@ but you can not mix host FQDNs and node ids in this option.`)
 	fs.StringVar(&o.AvailabilityMode, "availability-mode", "strong",
 		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(AvailabilityModes, ", ")))
 
-	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDuration,
+	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDurationSeconds,
 		`CMS will release the node for maintenance for restart-duration * restart-retry-number seconds. Any maintenance
 after that would be considered a regular cluster failure`)
 
-	fs.IntVarP(&o.RestartRetryNumber, "restart-retry-number", "", DefaultRetryCount,
+	fs.IntVar(&o.RestartRetryNumber, "restart-retry-number", DefaultRetryCount,
 		fmt.Sprintf("How many times every node should be retried on error, default %v", DefaultRetryCount))
 
+	fs.IntVar(&o.CMSQueryInterval, "cms-query-interval", DefaultCMSQueryIntervalSeconds,
+		fmt.Sprintf("How often to query CMS while waiting for new permissions %v", DefaultCMSQueryIntervalSeconds))
+
 	fs.BoolVar(&o.Continue, "continue", false,
-		`Use at your own risk. Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
-for this invocation must be the same as for the previous invocation. This can not be validated at runtime, 
-so use at your own risk.`)
+		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
+for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since 
+the ydbops utility is stateless. Use at your own risk.`)
 }
 
 func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {

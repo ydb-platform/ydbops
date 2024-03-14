@@ -3,6 +3,7 @@ package rolling
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -169,17 +170,14 @@ func (r *Rolling) DoRestartPrevious() error {
 }
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
-	const (
-		defaultDelay = time.Second * 10
-	)
-
 	var (
 		err    error
 		delay  time.Duration
 		taskId = task.GetTaskUid()
+		defaultDelay = time.Duration(r.opts.CMSQueryInterval) * time.Second 
 	)
 
-	r.logger.Infof("Maintenance task processing loop started")
+	r.logger.Infof("Maintenance task %v, processing loop started", taskId)
 	for {
 		delay = defaultDelay
 
@@ -230,7 +228,10 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	}
 
 	r.logger.Infof("Perform next %d ActionGroupStates", len(performed))
+
 	actionsCompletedThisStep := []*Ydb_Maintenance.ActionUid{}
+	wg := new(sync.WaitGroup)
+
 	for _, gs := range performed {
 		var (
 			as   = gs.ActionStates[0]
@@ -248,32 +249,40 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		}
 
 		r.logger.Debugf("Drain node with id: %d", node.NodeId)
+		wg.Add(1)
 
-		r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
-		// TODO: drain node, but public draining api is not available yet
+		go func() {
+			defer wg.Done()
 
-		r.logger.Debugf("Restart node with id: %d", node.NodeId)
-		if err := r.restarter.RestartNode(node); err != nil {
-			r.logger.Warnf(
-				"Failed to restart node with id: %d, attempt number %v, because of: %w",
-				node.NodeId,
-				r.state.retriesMadeForNode[node.NodeId],
-				err,
-			)
-			r.state.retriesMadeForNode[node.NodeId] += 1
+			r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
+			// TODO: drain node, but public draining api is not available yet
 
-			if r.state.retriesMadeForNode[node.NodeId] == r.opts.RestartRetryNumber {
-				// TODO reduce copypaste with literally 5 lines below
+			r.logger.Debugf("Restart node with id: %d", node.NodeId)
+			if err := r.restarter.RestartNode(node); err != nil {
+				r.logger.Warnf(
+					"Failed to restart node with id: %d, attempt number %v, because of: %w",
+					node.NodeId,
+					r.state.retriesMadeForNode[node.NodeId],
+					err,
+				)
+				r.state.retriesMadeForNode[node.NodeId] += 1
+
+				if r.state.retriesMadeForNode[node.NodeId] == r.opts.RestartRetryNumber {
+					// TODO reduce copypaste with literally 5 lines below
+					r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
+					actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
+					r.logger.Warnf("Failed to retry node %v specified number of times %v", node.NodeId, r.opts.RestartRetryNumber)
+				}
+			} else {
 				r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
 				actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
-				r.logger.Warnf("Failed to retry node %v specified number of times %v", node.NodeId, r.opts.RestartRetryNumber)
+				r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
 			}
-		} else {
-			r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId)
-			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
-			r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
-		}
+		}()
+
 	}
+
+	wg.Wait()
 
 	result, err := r.cms.CompleteAction(actionsCompletedThisStep)
 	if err != nil {

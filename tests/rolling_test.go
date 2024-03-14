@@ -57,7 +57,6 @@ var _ = Describe("Test Rolling", func() {
 	})
 
 	It("happy path: restart 3 out of 8 nodes, strong mode, no failures", func() {
-
 		cmd := exec.Command(filepath.Join("..", "ydbops"),
 			"--endpoint", "grpcs://localhost:2135",
 			"--verbose",
@@ -65,6 +64,7 @@ var _ = Describe("Test Rolling", func() {
 			"--availability-mode", "strong",
 			"--hosts=1,2,3",
 			"--user", mock.TestUser,
+			"--cms-query-interval", "1",
 			"run",
 			"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
 			"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
@@ -147,7 +147,7 @@ var _ = Describe("Test Rolling", func() {
 		values := make(map[string]string)
 		for i, expected := range expectedRequests {
 			actual := actualRequests[i]
-			blackmagic.DeepEqualOnPresentFields(expected, actual, values)
+			blackmagic.ExpectPresentFieldsDeepEqual(expected, actual, values)
 		}
 	})
 })
