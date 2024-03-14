@@ -21,6 +21,11 @@ const (
 
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
+type StartedOptions struct {
+	Timestamp time.Time
+	Direction rune
+}
+
 type RestartOptions struct {
 	AvailabilityMode   string
 	Tenants            []string
@@ -29,11 +34,16 @@ type RestartOptions struct {
 	RestartDuration    int
 	RestartRetryNumber int
 	Version            string
-	Uptime             string
 	CMSQueryInterval   int
+
+	StartedOptions StartedOptions
 
 	Continue bool
 }
+
+var (
+	startedFlag string
+)
 
 var RestartOptionsInstance = &RestartOptions{}
 
@@ -52,6 +62,24 @@ func (o *RestartOptions) Validate() error {
 
 	if o.RestartRetryNumber < 0 {
 		return fmt.Errorf("specified invalid restart retry number: %d. Must be positive", o.RestartRetryNumber)
+	}
+
+	if startedFlag != "" {
+		directionRune := []rune(startedFlag)[0]
+		if directionRune != '<' && directionRune != '>' {
+			return fmt.Errorf("the first character of --started value should be < or >.")
+		}
+
+		timestampString, _ := strings.CutPrefix(startedFlag, string(directionRune))
+		timestamp, err := time.Parse(time.RFC3339, timestampString)
+		if err != nil {
+			return fmt.Errorf("failed to parse --started: %w", err)
+		}
+
+		o.StartedOptions = StartedOptions{
+			Timestamp: timestamp,
+			Direction: directionRune,
+		}
 	}
 
 	_, errFromIds := o.GetNodeIds()
@@ -89,6 +117,9 @@ after that would be considered a regular cluster failure`)
 
 	fs.IntVar(&o.CMSQueryInterval, "cms-query-interval", DefaultCMSQueryIntervalSeconds,
 		fmt.Sprintf("How often to query CMS while waiting for new permissions %v", DefaultCMSQueryIntervalSeconds))
+
+	fs.StringVar(&startedFlag, "started", "",
+		fmt.Sprintf("Apply filter by node started time. Format: [<>%%Y-%%m-%%dT%%H:%%M:%%SZ], e.g. >2024-03-13T17:20:06Z"))
 
 	fs.BoolVar(&o.Continue, "continue", false,
 		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydbops/internal/collections"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"go.uber.org/zap"
 )
 
@@ -37,6 +38,19 @@ func FilterByHostFQDN(nodes []*Ydb_Maintenance.Node, hostFQDNs []string) []*Ydb_
 	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
 			return collections.Contains(hostFQDNs, node.Host)
+		},
+	)
+}
+
+func FilterByStartedTime(nodes []*Ydb_Maintenance.Node, startedTime options.StartedOptions) []*Ydb_Maintenance.Node {
+	return collections.FilterBy(nodes,
+		func(node *Ydb_Maintenance.Node) bool {
+			nodeStartTime := node.GetStartTime().AsTime()
+			if startedTime.Direction == '>' {
+				return startedTime.Timestamp.Before(nodeStartTime)
+			} else {
+				return startedTime.Timestamp.After(nodeStartTime)
+			}
 		},
 	)
 }

@@ -260,10 +260,10 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			r.logger.Debugf("Restart node with id: %d", node.NodeId)
 			if err := r.restarter.RestartNode(node); err != nil {
 				r.logger.Warnf(
-					"Failed to restart node with id: %d, attempt number %v, because of: %w",
+					"Failed to restart node with id: %d, attempt number %v, because of: %s",
 					node.NodeId,
 					r.state.retriesMadeForNode[node.NodeId],
-					err,
+					err.Error(),
 				)
 				r.state.retriesMadeForNode[node.NodeId] += 1
 

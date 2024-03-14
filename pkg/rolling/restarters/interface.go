@@ -2,6 +2,7 @@ package restarters
 
 import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 type Restarter interface {
@@ -19,6 +20,7 @@ type ClusterNodesInfo struct {
 
 type FilterNodeParams struct {
 	Version           string
+	StartedTime       options.StartedOptions
 	ExcludeHosts      []string
 	SelectedTenants   []string
 	SelectedNodeIds   []uint32

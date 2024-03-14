@@ -2,7 +2,9 @@ package restarters
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
@@ -42,16 +44,18 @@ func restartNodeBySystemdUnit(logger *zap.SugaredLogger, node *Ydb_Maintenance.N
 
 	sshCommand, remainingSshArgs := stripCommandFromArgs(sshArgs)
 
-	fullSSHArgs := []string{"run"}
+	fullSSHArgs := []string{}
 	fullSSHArgs = append(fullSSHArgs, remainingSshArgs...)
 	switch sshCommand {
 	case "ssh":
 		fullSSHArgs = append(fullSSHArgs, node.Host, remoteRestartCommand)
 	case "nssh", "pssh":
-		fullSSHArgs = append(fullSSHArgs, remoteRestartCommand, node.Host)
+		fullSSHArgs = append(fullSSHArgs, "run", remoteRestartCommand, node.Host)
 	default:
 		return fmt.Errorf("Supported ssh commands: ssh, pssh, nssh. Specified: %s", sshCommand)
 	}
+
+	logger.Debugf("Full ssh command: ", strings.Join(fullSSHArgs, " "))
 
 	cmd := exec.Command(sshCommand, fullSSHArgs...)
 
@@ -59,7 +63,7 @@ func restartNodeBySystemdUnit(logger *zap.SugaredLogger, node *Ydb_Maintenance.N
 	stderr, _ := cmd.StderrPipe()
 
 	if err := cmd.Start(); err != nil {
-		fmt.Println("TODO Error on cmd.Start():", err)
+		logger.Errorf("Failed to start remote command: ", err)
 		return err
 	}
 
@@ -67,7 +71,7 @@ func restartNodeBySystemdUnit(logger *zap.SugaredLogger, node *Ydb_Maintenance.N
 	go StreamPipeIntoLogger(stderr, logger)
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Println("TODO Error on cmd.Wait():", err)
+		logger.Errorf("Remote command finished with an error:", err)
 		return err
 	}
 
