@@ -2,7 +2,6 @@ package restarters
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -110,13 +109,13 @@ func (r StorageBaremetalRestarter) Filter(
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
-	selectedNodes := FilterStorageNodes(cluster.AllNodes)
+	storageNodes := FilterStorageNodes(cluster.AllNodes)
 
-	if len(spec.SelectedNodeIds) > 0 || len(spec.SelectedHostFQDNs) > 0 {
-		selectedNodes = FilterByNodeIdOrFQDN(selectedNodes, spec)
-	}
+	preSelectedNodes := DoDefaultPopulate(storageNodes, spec)
 
-	r.logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", selectedNodes)
+	filteredNodes := DoDefaultExclude(preSelectedNodes, spec)
 
-	return selectedNodes
+	r.logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", filteredNodes)
+
+	return filteredNodes
 }

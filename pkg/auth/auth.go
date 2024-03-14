@@ -42,7 +42,7 @@ func (c *AuthClient) Auth(grpcOpts options.GRPC, user, password string) (string,
 	if err != nil {
 		return "", err
 	}
-	c.logger.Debugf("Login response: %s...[]", string([]rune(result.Token)[:20]))
+	c.logger.Debugf("Login response: %s... (token contents masked)", string([]rune(result.Token)[:20]))
 	return result.Token, nil
 }
 
@@ -62,7 +62,7 @@ func (c *AuthClient) ExecuteAuthMethod(
 	cl := Ydb_Auth_V1.NewAuthServiceClient(cc)
 	r, err := method(ctx, cl)
 	if err != nil {
-		c.logger.Debugf("Invocation error: %+v", err)
+		c.logger.Errorf("Invocation error: %+v", err)
 		return nil, err
 	}
 	op := r.GetOperation()

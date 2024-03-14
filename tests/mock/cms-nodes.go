@@ -2,9 +2,11 @@ package mock
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func makePointer[T any](arg T) *T {
@@ -33,14 +35,26 @@ func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 	}
 }
 
-func (s *YdbMock) SetNodeConfiguration(groupDistribution [][]uint32) {
+type TestNodeInfo struct {
+	StartTime time.Time
+}
+
+func (s *YdbMock) SetNodeConfiguration(groupDistribution [][]uint32, nodeInfo map[uint32]TestNodeInfo) {
   s.isNodeCurrentlyPermitted = make(map[uint32]bool)
 	s.nodeGroups = groupDistribution
 
 	for _, group := range s.nodeGroups {
 		for _, nodeId := range group {
 			s.isNodeCurrentlyPermitted[nodeId] = false
-			s.nodes = append(s.nodes, makeNode(nodeId))
+
+			node := makeNode(nodeId)
+			if testNodeInfo, ok := nodeInfo[nodeId]; ok {
+				node.StartTime = timestamppb.New(testNodeInfo.StartTime)
+			} else {
+				node.StartTime = timestamppb.New(time.Now())
+			}
+
+			s.nodes = append(s.nodes, node)
 		}
 	}
 }

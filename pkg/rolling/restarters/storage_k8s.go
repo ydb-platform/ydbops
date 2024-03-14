@@ -135,6 +135,35 @@ func (r StorageK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	))
 }
 
+func DoK8sPopulate(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams, hostnameToPod map[string]string) []*Ydb_Maintenance.Node { 
+	selectedNodes := []*Ydb_Maintenance.Node{}
+
+	if len(spec.SelectedNodeIds) == 0 && len(spec.SelectedHostFQDNs) == 0 {
+		selectedNodes = nodes
+	} else {
+		selectedNodes = append(
+			selectedNodes,
+			FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
+		)
+
+		for _, node := range nodes {
+			selectedHostFQDNsMap := collections.ToIndexMap(spec.SelectedHostFQDNs)
+
+			if _, present := selectedHostFQDNsMap[node.Host]; present {
+				selectedNodes = append(selectedNodes, node)
+				continue
+			}
+
+			if _, present := selectedHostFQDNsMap[hostnameToPod[node.Host]]; present {
+				selectedNodes = append(selectedNodes, node)
+				continue
+			}
+		}
+	}
+
+	return selectedNodes
+}
+
 func (r *StorageK8sRestarter) Filter(
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
@@ -143,30 +172,10 @@ func (r *StorageK8sRestarter) Filter(
 
 	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
 
-	selectedNodes := []*Ydb_Maintenance.Node{}
-	if len(spec.SelectedNodeIds) > 0 || len(spec.SelectedHostFQDNs) > 0 {
-		selectedNodes = append(
-			selectedNodes,
-			FilterByNodeIds(allStorageNodes, spec.SelectedNodeIds)...,
-		)
+	selectedNodes := DoK8sPopulate(allStorageNodes, spec, r.hostnameToPod)
 
-		for _, node := range allStorageNodes {
-			selectedHostFQDNsMap := collections.ToIndexMap(spec.SelectedHostFQDNs)
+	filteredNodes := DoDefaultExclude(selectedNodes, spec)
 
-			if _, present := selectedHostFQDNsMap[node.Host]; present {
-				selectedNodes = append(selectedNodes, node)
-				continue
-			}
-
-			if _, present := selectedHostFQDNsMap[r.hostnameToPod[node.Host]]; present {
-				selectedNodes = append(selectedNodes, node)
-				continue
-			}
-		}
-	} else {
-		selectedNodes = allStorageNodes
-	}
-
-	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", selectedNodes)
+	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", filteredNodes)
 	return selectedNodes
 }

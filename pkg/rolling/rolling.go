@@ -143,6 +143,7 @@ func (r *Rolling) DoRestart() error {
 			SelectedTenants:   r.opts.Tenants,
 			SelectedNodeIds:   nodeIds,
 			SelectedHostFQDNs: nodeFQDNs,
+			StartedTime:       r.opts.StartedTime,
 		},
 		restarters.ClusterNodesInfo{
 			AllTenants: r.state.tenants,
@@ -171,10 +172,10 @@ func (r *Rolling) DoRestartPrevious() error {
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 	var (
-		err    error
-		delay  time.Duration
-		taskId = task.GetTaskUid()
-		defaultDelay = time.Duration(r.opts.CMSQueryInterval) * time.Second 
+		err          error
+		delay        time.Duration
+		taskId       = task.GetTaskUid()
+		defaultDelay = time.Duration(r.opts.CMSQueryInterval) * time.Second
 	)
 
 	r.logger.Infof("Maintenance task %v, processing loop started", taskId)

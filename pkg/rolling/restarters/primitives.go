@@ -42,19 +42,6 @@ func FilterByHostFQDN(nodes []*Ydb_Maintenance.Node, hostFQDNs []string) []*Ydb_
 	)
 }
 
-func FilterByStartedTime(nodes []*Ydb_Maintenance.Node, startedTime options.StartedOptions) []*Ydb_Maintenance.Node {
-	return collections.FilterBy(nodes,
-		func(node *Ydb_Maintenance.Node) bool {
-			nodeStartTime := node.GetStartTime().AsTime()
-			if startedTime.Direction == '>' {
-				return startedTime.Timestamp.Before(nodeStartTime)
-			} else {
-				return startedTime.Timestamp.After(nodeStartTime)
-			}
-		},
-	)
-}
-
 func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 	buf := make([]byte, 1024)
 	for {
@@ -71,20 +58,51 @@ func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 	}
 }
 
-func FilterByNodeIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
-	preSelected := []*Ydb_Maintenance.Node{}
+func SatisfiesStartingTime(node *Ydb_Maintenance.Node, startedTime *options.StartedTime) bool {
+	if startedTime == nil {
+		return true
+	}
 
-	preSelected = append(
-		preSelected,
-		FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
-	)
+	nodeStartTime := node.GetStartTime().AsTime()
 
-	preSelected = append(
-		preSelected, FilterByHostFQDN(nodes, spec.SelectedHostFQDNs)...,
-	)
+	if startedTime.Direction == '<' {
+		return startedTime.Timestamp.After(nodeStartTime)
+	} else {
+		return startedTime.Timestamp.Before(nodeStartTime)
+	}
+}
 
+func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
+	return len(spec.SelectedHostFQDNs) == 0 && len(spec.SelectedNodeIds) == 0
+}
+
+func includeByHostIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	selected := []*Ydb_Maintenance.Node{}
-	for _, node := range preSelected {
+
+	selected = append(
+		selected, FilterByHostFQDN(nodes, spec.SelectedHostFQDNs)...,
+	)
+
+	selected = append(
+		selected, FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
+	)
+
+	// TODO return unique or do better filtering in opts
+
+	return selected
+}
+
+func DoDefaultPopulate(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
+	if isInclusiveFilteringUnspecified(spec) {
+		return nodes
+	} else {
+		return includeByHostIdOrFQDN(nodes, spec)
+	}
+}
+
+func DoDefaultExclude(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node { 
+	filtered := []*Ydb_Maintenance.Node{}
+	for _, node := range nodes {
 		if collections.Contains(spec.ExcludeHosts, strconv.Itoa(int(node.NodeId))) {
 			continue
 		}
@@ -92,8 +110,12 @@ func FilterByNodeIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) 
 		if collections.Contains(spec.ExcludeHosts, node.Host) {
 			continue
 		}
-		selected = append(selected, node)
-	}
 
-	return selected
+		if !SatisfiesStartingTime(node, spec.StartedTime) {
+			continue
+		}
+
+		filtered = append(filtered, node)
+	}
+	return filtered
 }

@@ -21,7 +21,7 @@ const (
 
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
-type StartedOptions struct {
+type StartedTime struct {
 	Timestamp time.Time
 	Direction rune
 }
@@ -36,7 +36,7 @@ type RestartOptions struct {
 	Version            string
 	CMSQueryInterval   int
 
-	StartedOptions StartedOptions
+	StartedTime *StartedTime
 
 	Continue bool
 }
@@ -76,7 +76,7 @@ func (o *RestartOptions) Validate() error {
 			return fmt.Errorf("failed to parse --started: %w", err)
 		}
 
-		o.StartedOptions = StartedOptions{
+		o.StartedTime = &StartedTime{
 			Timestamp: timestamp,
 			Direction: directionRune,
 		}
