@@ -2,7 +2,10 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
@@ -68,12 +71,30 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 		return insecure.NewCredentials(), nil
 	}
 
-	if f.grpc.CaFile == "" {
-		// TODO verify that this will use system pool
-		return credentials.NewClientTLSFromCert(nil, ""), nil
+	systemPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get the system cert pool: %w", err)
 	}
 
-	return credentials.NewClientTLSFromFile(f.grpc.CaFile, "")
+	if f.grpc.CaFile != "" {
+		b, err := os.ReadFile(f.grpc.CaFile)
+		if err != nil {
+			return nil, err
+		}
+		if !systemPool.AppendCertsFromPEM(b) {
+			return nil, fmt.Errorf("credentials: failed to append certificates")
+		}
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs: systemPool,
+	}
+
+	if f.grpc.GRPCSkipVerify {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	return credentials.NewTLS(tlsConfig), nil
 }
 
 func (f *Factory) endpoint() string {

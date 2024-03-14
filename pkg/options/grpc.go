@@ -21,6 +21,7 @@ type GRPC struct {
 	CaFile         string
 	GRPCSecure     bool
 	GRPCPort       int
+	GRPCSkipVerify bool
 	TimeoutSeconds int
 }
 
@@ -30,6 +31,9 @@ func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 
 	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
 		"Wait this much before timing out any GRPC requests")
+
+	fs.BoolVar(&o.GRPCSkipVerify, "grpc-skip-verify", false,
+		"Do not verify server hostname when using grpcs")
 
 	fs.StringVar(&o.CaFile, "ca-file", "", "Path to root ca file, overrides system pool")
 }
@@ -60,13 +64,16 @@ func (o *GRPC) Validate() error {
 	case "grpc":
 		o.GRPCSecure = false
 	case "":
-		// TODO should default GRPCSecure be true?
 		o.GRPCSecure = true
 	default:
 		return fmt.Errorf(
 			"Please specify the protocol in the endpoint explicitly: grpc or grpcs. Currently specified: %s\n",
 			parsedURL.Scheme,
 		)
+	}
+
+	if !o.GRPCSecure && o.GRPCSkipVerify {
+		return fmt.Errorf("unexpected --grpc-skip-verify with insecure grpc schema")
 	}
 
 	// Strip o.Endpoint from protocol and port number
