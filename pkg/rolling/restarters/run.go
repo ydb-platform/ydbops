@@ -47,7 +47,11 @@ func NewRunRestarter(logger *zap.SugaredLogger) *RunRestarter {
 }
 
 func (r RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	selectedNodes := FilterByNodeIdOrFQDN(cluster.AllNodes, spec)
+	selectedNodes := cluster.AllNodes
+
+	if len(spec.SelectedNodeIds) > 0 || len(spec.SelectedHostFQDNs) > 0 {
+		selectedNodes = FilterByNodeIdOrFQDN(cluster.AllNodes, spec)
+	}
 
 	r.logger.Debugf("Run Restarter selected following nodes for restart: %v", selectedNodes)
 

@@ -72,41 +72,6 @@ func (r *StorageK8sRestarter) prepareK8sState() {
 	}
 }
 
-func (r *StorageK8sRestarter) Filter(
-	spec FilterNodeParams,
-	cluster ClusterNodesInfo,
-) []*Ydb_Maintenance.Node {
-	r.prepareK8sState()
-
-	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
-
-	r.logger.Debugf("%+v", cluster.AllNodes)
-
-	selectedNodes := []*Ydb_Maintenance.Node{}
-
-	selectedNodes = append(
-		selectedNodes,
-		FilterByNodeIds(allStorageNodes, spec.SelectedNodeIds)...,
-	)
-
-	for _, node := range allStorageNodes {
-		selectedHostFQDNsMap := collections.ToIndexMap(spec.SelectedHostFQDNs)
-
-		if _, present := selectedHostFQDNsMap[node.Host]; present {
-			selectedNodes = append(selectedNodes, node)
-			continue
-		}
-
-		if _, present := selectedHostFQDNsMap[r.hostnameToPod[node.Host]]; present {
-			selectedNodes = append(selectedNodes, node)
-			continue
-		}
-	}
-
-	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", selectedNodes)
-	return selectedNodes
-}
-
 func (r StorageK8sRestarter) waitPodRunning(
 	podName string,
 	oldUID types.UID,
@@ -168,4 +133,40 @@ func (r StorageK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	return r.waitPodRunning(podName, oldUID, time.Duration(
 		options.RestartOptionsInstance.RestartDuration,
 	))
+}
+
+func (r *StorageK8sRestarter) Filter(
+	spec FilterNodeParams,
+	cluster ClusterNodesInfo,
+) []*Ydb_Maintenance.Node {
+	r.prepareK8sState()
+
+	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
+
+	selectedNodes := []*Ydb_Maintenance.Node{}
+	if len(spec.SelectedNodeIds) > 0 || len(spec.SelectedHostFQDNs) > 0 {
+		selectedNodes = append(
+			selectedNodes,
+			FilterByNodeIds(allStorageNodes, spec.SelectedNodeIds)...,
+		)
+
+		for _, node := range allStorageNodes {
+			selectedHostFQDNsMap := collections.ToIndexMap(spec.SelectedHostFQDNs)
+
+			if _, present := selectedHostFQDNsMap[node.Host]; present {
+				selectedNodes = append(selectedNodes, node)
+				continue
+			}
+
+			if _, present := selectedHostFQDNsMap[r.hostnameToPod[node.Host]]; present {
+				selectedNodes = append(selectedNodes, node)
+				continue
+			}
+		}
+	} else {
+		selectedNodes = allStorageNodes
+	}
+
+	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", selectedNodes)
+	return selectedNodes
 }

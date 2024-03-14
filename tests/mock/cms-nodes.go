@@ -11,7 +11,7 @@ func makePointer[T any](arg T) *T {
 	return &arg
 }
 
-func makeLocation(nodeId int) *Ydb_Discovery.NodeLocation {
+func makeLocation(nodeId uint32) *Ydb_Discovery.NodeLocation {
 	return &Ydb_Discovery.NodeLocation{
 		DataCenter: makePointer("DC-1"),
 		Module:     makePointer("DC-1-MODULE-1"),
@@ -20,9 +20,9 @@ func makeLocation(nodeId int) *Ydb_Discovery.NodeLocation {
 	}
 }
 
-func makeNode(nodeId int) *Ydb_Maintenance.Node {
+func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 	return &Ydb_Maintenance.Node{
-		NodeId:   uint32(nodeId),
+		NodeId:   nodeId,
 		Host:     fmt.Sprintf("storage-%v.ydb.tech", nodeId),
 		Port:     19000,
 		Location: makeLocation(nodeId),
@@ -33,16 +33,14 @@ func makeNode(nodeId int) *Ydb_Maintenance.Node {
 	}
 }
 
-func (s *YdbMock) initNodes() {
-	s.nodes = []*Ydb_Maintenance.Node{}
-	for i := 0; i < 8; i++ {
-		s.nodes = append(s.nodes, makeNode(i))
-	}
-
-	s.nodeGroups = [][]uint32{{1, 2, 3, 4, 5, 6, 7, 8}}
-
+func (s *YdbMock) SetNodeConfiguration(groupDistribution [][]uint32) {
   s.isNodeCurrentlyPermitted = make(map[uint32]bool)
-	for i := 0; i < 8; i++ {
-		s.isNodeCurrentlyPermitted[uint32(i)] = false
+	s.nodeGroups = groupDistribution
+
+	for _, group := range s.nodeGroups {
+		for _, nodeId := range group {
+			s.isNodeCurrentlyPermitted[nodeId] = false
+			s.nodes = append(s.nodes, makeNode(nodeId))
+		}
 	}
 }

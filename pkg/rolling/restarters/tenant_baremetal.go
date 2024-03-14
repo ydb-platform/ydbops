@@ -36,9 +36,11 @@ func (r TenantBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error 
 }
 
 func (r TenantBaremetalRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	allTenantNodes := FilterTenantNodes(cluster.AllNodes)
+	selectedNodes := FilterTenantNodes(cluster.AllNodes)
 
-	selectedNodes := FilterByNodeIdOrFQDN(allTenantNodes, spec)
+	if len(spec.SelectedNodeIds) > 0 || len(spec.SelectedHostFQDNs) > 0 {
+		selectedNodes = FilterByNodeIdOrFQDN(selectedNodes, spec)
+	}
 
 	r.logger.Debugf("Tenant Baremetal Restarter selected following nodes for restart: %v", selectedNodes)
 

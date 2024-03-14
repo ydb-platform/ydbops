@@ -106,9 +106,11 @@ func (r StorageBaremetalRestarter) Filter(
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
-	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
+	selectedNodes := FilterStorageNodes(cluster.AllNodes)
 
-	selectedNodes := FilterByNodeIdOrFQDN(allStorageNodes, spec)
+	if len(spec.SelectedNodeIds) > 0 || len(spec.SelectedHostFQDNs) > 0 {
+		selectedNodes = FilterByNodeIdOrFQDN(selectedNodes, spec)
+	}
 
 	r.logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", selectedNodes)
 

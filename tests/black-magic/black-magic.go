@@ -20,7 +20,7 @@ func populateFieldMapFor(tp reflect.Type, value reflect.Value) map[string]reflec
 // Please don't judge this code yet. This is an experimental matcher to compare two proto messages 
 // with a couple nuances, required for comparing e2e test output with an expected, hand-constructed 
 // output, type-safely.
-func DeepEqualOnPresentFields(expected proto.Message, actual proto.Message, values map[string]string) {
+func ExpectPresentFieldsDeepEqual(expected proto.Message, actual proto.Message, values map[string]string) {
 	expectedType := reflect.TypeOf(expected)
 	actualType := reflect.TypeOf(actual)
 
@@ -45,7 +45,7 @@ func DeepEqualOnPresentFields(expected proto.Message, actual proto.Message, valu
 			}
 
 			if expectedFieldValue.Kind() == reflect.Struct && expectedFieldValue.Interface().(proto.Message) != nil {
-				DeepEqualOnPresentFields(expectedFieldValue.Interface().(proto.Message), actualFieldValue.Interface().(proto.Message), values)
+				ExpectPresentFieldsDeepEqual(expectedFieldValue.Interface().(proto.Message), actualFieldValue.Interface().(proto.Message), values)
 			}
 
 			if expectedFieldValue.Kind() == reflect.Slice {
@@ -54,7 +54,7 @@ func DeepEqualOnPresentFields(expected proto.Message, actual proto.Message, valu
 				for i := 0; i < expectedFieldValue.Len(); i++ {
 					expectedElement := expectedFieldValue.Index(i)
 					actualElement := actualFieldValue.Index(i)
-					DeepEqualOnPresentFields(expectedElement.Interface().(proto.Message), actualElement.Interface().(proto.Message), values)
+					ExpectPresentFieldsDeepEqual(expectedElement.Interface().(proto.Message), actualElement.Interface().(proto.Message), values)
 				}
 			}
 		}

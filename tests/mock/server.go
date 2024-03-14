@@ -215,11 +215,10 @@ func NewYdbMockServer() *YdbMock {
 	server := &YdbMock{
 		tasks:                    make(map[string]*fakeMaintenanceTask),
 		actionToActionUid:        make(map[*Action]*ActionUid),
-		nodes:                    nil, // filled by initNodes()
-		nodeGroups:               nil, // filled by initNodes()
-		isNodeCurrentlyPermitted: nil, // filled by initNodes()
+		nodes:                    nil, // cluster node configuration filled by the test itself
+		nodeGroups:               nil, // cluster node configuration filled by the test itself
+		isNodeCurrentlyPermitted: nil, // cluster node configuration filled by the test itself
 	}
-	server.initNodes()
 
 	return server
 }
