@@ -1,30 +1,29 @@
-## ydbops
+# ydbops
 
-#### Disclaimer: heavy work in progress, expect changes until probably March 20th
+`ydbops` utility is used to perform various ad-hoc and maintenance operations on YDB clusters.
 
-If you have noticed something in code that you didn't like, then please tell jorres@, but it's probably in refactoring plans anyway.
+## Prerequisites:
 
-#### How to build:
+1. Go 1.21
 
-No special actions, just do from the repo root:
+## How to run tests:
+
+Ginkgo testing library is used. Do:
 
 ```
-go build
+ginkgo test -vvv ./tests
 ```
 
-#### Currently unimplemented, but will be in the nearest future (several days):
+## Current limitations:
 
-1. [FEATURE] last restarting subcommand, `restart tenant k8s` is not implemented yet, but soon.
-1. [FEATURE] All nodes are restarted SEQUENTIALLY at this moment, expect the parallel implementation very soon
+1. [CRITICAL FEATURE] Drain API is not in public YDB Maintenance GRPC api yet. Therefore, `ydbops` currently relies on builtin drain when restarting nodes (which has a certain timeout, and a node with a lot of tablets will probably not shutdown healthily). Will be implemented as soon as 
 1. [NON-CRITICAL FEATURE] Yandex IAM authorization with SA account key file is currently unsupported. However, you can always issue the token yourself and put it inside the `YDB_TOKEN` variable: `export YDB_TOKEN=$(ycp --profile <profile> iam create-token)`
-1. [NON-CRITICAL FEATURE] `--uptime` has been recently merged into Public Maintenance Api, use it to provide a filter (as artgromov@ asked, for example).
-1. [SMALL REFACTOR] The tests (`ginkgo test -vvv ./tests`) currently use real `time`, which means they run for a while (10-15 seconds). I will create a fake clock for tests later.
 
-#### How to use:
+## How to use:
 
 Please browse the `ydbops --help` first. Then read along for examples (substitute your own values, of course).
 
-##### Restart baremetal storage hosts
+#### Restart baremetal storage hosts
 
 ```
 ydbops restart storage baremetal \
@@ -62,9 +61,3 @@ ydbops restart storage k8s \
   --availability-mode strong --verbose --hosts 7,8 \
   --user jorres --kubeconfig ~/.kube/config
 ```
-
-## Tests
-
-TODO jorres@ describe the current expressive power of tests and how to write them.
-
-Please don't look into 'black-magic.go' for now. I promise it's going to become prettier.

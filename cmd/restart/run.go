@@ -15,10 +15,13 @@ func NewRunCmd() *cobra.Command {
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "run",
-		Short: "Run an arbitrary executable (e.g. shell code) in the context of the current host",
+		Short: "Run an arbitrary executable (e.g. shell code) in the context of the local machine",
 		Long: `ydbops restart run:
-	Run an arbitrary executable (e.g. shell code) in the context of the current host.
-	For every host released by CMS, ydbops will execute this payload independently.
+	Run an arbitrary executable (e.g. shell code) in the context of the local machine 
+	(where rolling-restart is launched). For example, if you want to execute ssh commands 
+	on the ydb cluster node, you must write ssh commands yourself. See the examples.
+
+	For every node released by CMS, ydbops will execute this payload independently.
 
 	Restart will be treated as successful if your executable finished with a zero 
 	return code.
