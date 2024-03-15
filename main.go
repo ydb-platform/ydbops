@@ -8,10 +8,12 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+
 func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 	atom, _ := zap.ParseAtomicLevel(level)
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
 	logger := zap.New(
 		zapcore.NewCore(
 			zapcore.NewConsoleEncoder(encoderCfg),
@@ -19,6 +21,7 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 			atom,
 		),
 	)
+
 
 	_ = zap.ReplaceGlobals(logger)
 	return atom, logger

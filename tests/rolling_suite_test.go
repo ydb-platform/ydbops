@@ -6,7 +6,7 @@ import (
   "testing"
 )
 
-func TestRolling(t *testing.T) {
+func TestRestart(t *testing.T) {
   RegisterFailHandler(Fail)
-  RunSpecs(t, "Rolling Suite")
+  RunSpecs(t, "Restart Suite")
 }

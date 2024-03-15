@@ -75,8 +75,9 @@ var _ = Describe("Test Rolling", func() {
 			"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 		)
 
-		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
+		_, err := cmd.CombinedOutput()
+		// output, err := cmd.CombinedOutput()
+		// fmt.Println(string(output))
 
 		Expect(err).To(BeNil())
 
@@ -173,8 +174,9 @@ var _ = Describe("Test Rolling", func() {
 			"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 		)
 
-		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
+		_, err := cmd.CombinedOutput()
+		// output, err := cmd.CombinedOutput()
+		// fmt.Println(string(output))
 
 		Expect(err).To(BeNil())
 
@@ -284,8 +286,9 @@ var _ = Describe("Test Rolling", func() {
 			"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 		)
 
-		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
+		_, err := cmd.CombinedOutput()
+		// output, err := cmd.CombinedOutput()
+		// fmt.Println(string(output))
 
 		Expect(err).To(BeNil())
 

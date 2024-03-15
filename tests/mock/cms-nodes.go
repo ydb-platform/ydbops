@@ -25,7 +25,7 @@ func makeLocation(nodeId uint32) *Ydb_Discovery.NodeLocation {
 func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 	return &Ydb_Maintenance.Node{
 		NodeId:   nodeId,
-		Host:     fmt.Sprintf("storage-%v.ydb.tech", nodeId),
+		Host:     fmt.Sprintf("ydb-%v.ydb.tech", nodeId),
 		Port:     19000,
 		Location: makeLocation(nodeId),
 		State:    Ydb_Maintenance.ItemState_ITEM_STATE_UP,
@@ -36,25 +36,51 @@ func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 }
 
 type TestNodeInfo struct {
-	StartTime time.Time
+	StartTime  time.Time
+	IsDynnode  bool
+	TenantName string
 }
 
-func (s *YdbMock) SetNodeConfiguration(groupDistribution [][]uint32, nodeInfo map[uint32]TestNodeInfo) {
-  s.isNodeCurrentlyPermitted = make(map[uint32]bool)
-	s.nodeGroups = groupDistribution
-
-	for _, group := range s.nodeGroups {
+func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestNodeInfo) []*Ydb_Maintenance.Node {
+	nodes := []*Ydb_Maintenance.Node{}
+	for _, group := range nodeGroups {
 		for _, nodeId := range group {
-			s.isNodeCurrentlyPermitted[nodeId] = false
-
+			testNodeInfo, ok := nodeInfo[nodeId]
 			node := makeNode(nodeId)
-			if testNodeInfo, ok := nodeInfo[nodeId]; ok {
+
+			if ok && testNodeInfo.IsDynnode {
+				node.Type = &Ydb_Maintenance.Node_Dynamic{
+					Dynamic: &Ydb_Maintenance.Node_DynamicNode{
+						Tenant: testNodeInfo.TenantName,
+					},
+				}
+			} else {
+				node.Type = &Ydb_Maintenance.Node_Storage{
+					Storage: &Ydb_Maintenance.Node_StorageNode{},
+				}
+			}
+
+			if ok && !testNodeInfo.StartTime.IsZero() {
 				node.StartTime = timestamppb.New(testNodeInfo.StartTime)
 			} else {
 				node.StartTime = timestamppb.New(time.Now())
 			}
 
-			s.nodes = append(s.nodes, node)
+			nodes = append(nodes, node)
 		}
 	}
+	return nodes
+}
+
+func (s *YdbMock) SetNodeConfiguration(nodeGroups [][]uint32, nodeInfo map[uint32]TestNodeInfo) {
+	s.isNodeCurrentlyPermitted = make(map[uint32]bool)
+	s.nodeGroups = nodeGroups
+
+	for _, group := range s.nodeGroups {
+		for _, nodeId := range group {
+			s.isNodeCurrentlyPermitted[nodeId] = false
+		}
+	}
+
+	s.nodes = CreateNodesFromShortConfig(nodeGroups, nodeInfo)
 }
