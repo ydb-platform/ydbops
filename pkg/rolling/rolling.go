@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/internal/collections"
@@ -34,6 +35,7 @@ type Rolling struct {
 
 type state struct {
 	nodes                          map[uint32]*Ydb_Maintenance.Node
+	tenantNameToNodeIds            map[string][]uint32
 	retriesMadeForNode             map[uint32]int
 	tenants                        []string
 	userSID                        string
@@ -146,7 +148,7 @@ func (r *Rolling) DoRestart() error {
 			StartedTime:       r.opts.StartedTime,
 		},
 		restarters.ClusterNodesInfo{
-			AllTenants: r.state.tenants,
+			TenantToNodeIds: r.state.tenantNameToNodeIds,
 			AllNodes:   collections.Values(r.state.nodes),
 		},
 	)
@@ -303,6 +305,22 @@ func (r *Rolling) prepareState() (*state, error) {
 		return nil, fmt.Errorf("failed to list available tenants: %+v", err)
 	}
 
+	tenantNameToNodeIds := make(map[string][]uint32)
+
+	for _, tenant := range r.opts.Tenants {
+		if collections.Contains(r.opts.Tenants, tenant) {
+			return nil, fmt.Errorf("tenant %s is not found in tenant list of this cluster", tenant)
+		}
+
+		endpoints, err := r.discovery.ListEndpoints(tenant)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the list of endpoints for the tenant %s", tenant)
+		}
+		tenantNameToNodeIds[tenant] = collections.Convert(endpoints, func(endpoint *Ydb_Discovery.EndpointInfo) uint32 {
+			return endpoint.NodeId
+		})
+	}
+
 	nodes, err := r.cms.Nodes()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list available nodes: %+v", err)
@@ -314,6 +332,7 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
+		tenantNameToNodeIds:            tenantNameToNodeIds,
 		tenants:                        tenants,
 		userSID:                        userSID,
 		nodes:                          collections.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),

@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func addAndReturn(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {
+func addAndReturnCmd(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {
 	for _, subCmd := range rest {
 		cmd.AddCommand(subCmd)
 	}
@@ -19,14 +19,15 @@ func addAndReturn(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {
 }
 
 func registerAllSubcommands(root *cobra.Command) {
-	_ = addAndReturn(root,
-		addAndReturn(NewRestartCmd(),
-			addAndReturn(restart.NewStorageCmd(),
+	_ = addAndReturnCmd(root,
+		addAndReturnCmd(NewRestartCmd(),
+			addAndReturnCmd(restart.NewStorageCmd(),
 				storage.NewStorageK8sCmd(),
 				storage.NewStorageBaremetalCmd(),
 			),
-			addAndReturn(restart.NewTenantCmd(),
+			addAndReturnCmd(restart.NewTenantCmd(),
 				tenant.NewTenantBaremetalCmd(),
+				tenant.NewTenantK8sCmd(),
 			),
 			restart.NewRunCmd(),
 		),

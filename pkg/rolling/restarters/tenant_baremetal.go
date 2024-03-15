@@ -8,6 +8,7 @@ import (
 )
 
 type TenantBaremetalRestarter struct {
+	baremetalRestarter
 	Opts   *TenantBaremetalOpts
 	logger *zap.SugaredLogger
 }
@@ -22,7 +23,7 @@ func NewTenantBaremetalRestarter(logger *zap.SugaredLogger) *TenantBaremetalRest
 		Opts: &TenantBaremetalOpts{
 			baremetalOpts: baremetalOpts{},
 		},
-		logger: logger,
+		baremetalRestarter: newBaremetalRestarter(logger),
 	}
 }
 
@@ -32,15 +33,19 @@ func (r TenantBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error 
 		systemdUnitName = fmt.Sprintf("%s@{%v}", internalTenantSystemdUnitPrefix, node.Port)
 	}
 
-	return restartNodeBySystemdUnit(r.logger, node, systemdUnitName, r.Opts.sshArgs)
+	return r.restartNodeBySystemdUnit(node, systemdUnitName, r.Opts.sshArgs)
 }
 
 func (r TenantBaremetalRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
 	tenantNodes := FilterTenantNodes(cluster.AllNodes)
 
-	preSelectedNodes := DoDefaultPopulate(tenantNodes, spec)
+	preSelectedNodes := PopulateByCommonFields(tenantNodes, spec)
 
-	filteredNodes := DoDefaultExclude(preSelectedNodes, spec)
+	selectedByTenantName := PopulateByTenantNames(tenantNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
+
+	preSelectedNodes = MergeAndUnique(preSelectedNodes, selectedByTenantName)
+
+	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 
 	r.logger.Debugf("Tenant Baremetal Restarter selected following nodes for restart: %v", filteredNodes)
 

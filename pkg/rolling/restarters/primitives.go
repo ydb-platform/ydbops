@@ -87,12 +87,12 @@ func includeByHostIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 		selected, FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
 	)
 
-	// TODO return unique or do better filtering in opts
+	selected = MergeAndUnique(selected)
 
 	return selected
 }
 
-func DoDefaultPopulate(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
+func PopulateByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	if isInclusiveFilteringUnspecified(spec) {
 		return nodes
 	} else {
@@ -100,7 +100,7 @@ func DoDefaultPopulate(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*
 	}
 }
 
-func DoDefaultExclude(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node { 
+func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	filtered := []*Ydb_Maintenance.Node{}
 	for _, node := range nodes {
 		if collections.Contains(spec.ExcludeHosts, strconv.Itoa(int(node.NodeId))) {
@@ -118,4 +118,34 @@ func DoDefaultExclude(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Y
 		filtered = append(filtered, node)
 	}
 	return filtered
+}
+
+func PopulateByTenantNames(
+	tenantNodes []*Ydb_Maintenance.Node,
+	selectedTenants []string,
+	tenantToNodeIds map[string][]uint32,
+) []*Ydb_Maintenance.Node {
+	return collections.FilterBy(tenantNodes, func(node *Ydb_Maintenance.Node) bool {
+		for _, tenant := range selectedTenants {
+			if collections.Contains(tenantToNodeIds[tenant], node.NodeId) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func MergeAndUnique(nodeSlices ...[]*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
+	presentNodes := make(map[uint32]bool)
+	result := []*Ydb_Maintenance.Node{}
+	for _, arg := range nodeSlices {
+		for _, node := range arg {
+			if _, present := presentNodes[node.NodeId]; !present {
+				result = append(result, node)
+				presentNodes[node.NodeId] = true
+			}
+		}
+	}
+
+	return result
 }

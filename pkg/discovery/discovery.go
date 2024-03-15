@@ -25,6 +25,21 @@ func NewDiscoveryClient(logger *zap.SugaredLogger, f *client.Factory) *Discovery
 	}
 }
 
+func (c *DiscoveryClient) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInfo, error) {
+	result := Ydb_Discovery.ListEndpointsResult{}
+	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error) {
+		c.logger.Debug("Invoke ListEndpoints method")
+		return cl.ListEndpoints(ctx, &Ydb_Discovery.ListEndpointsRequest{
+			Database: database,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Endpoints, nil
+}
+
 func (c *DiscoveryClient) WhoAmI() (string, error) {
 	result := Ydb_Discovery.WhoAmIResult{}
 	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error) {

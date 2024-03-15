@@ -47,15 +47,11 @@ func NewRunRestarter(logger *zap.SugaredLogger) *RunRestarter {
 }
 
 func (r RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	preSelectedNodes := DoDefaultPopulate(cluster.AllNodes, spec)
+	preSelectedNodes := PopulateByCommonFields(cluster.AllNodes, spec)
 
-	fmt.Println(preSelectedNodes)
-
-	filteredNodes := DoDefaultExclude(preSelectedNodes, spec)
+	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 
 	r.logger.Debugf("Run Restarter selected following nodes for restart: %v", filteredNodes)
-
-	// os.Exit(0)
 
 	return filteredNodes
 }

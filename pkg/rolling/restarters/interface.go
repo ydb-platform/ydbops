@@ -14,8 +14,8 @@ type Restarter interface {
 }
 
 type ClusterNodesInfo struct {
-	AllTenants []string
-	AllNodes   []*Ydb_Maintenance.Node
+	AllNodes        []*Ydb_Maintenance.Node
+	TenantToNodeIds map[string][]uint32
 }
 
 type FilterNodeParams struct {
