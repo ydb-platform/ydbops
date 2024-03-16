@@ -1,62 +1,55 @@
 package blackmagic
 
 import (
-	"reflect"
+	"fmt"
+	"regexp"
 
-	. "github.com/onsi/gomega"
-
-	"google.golang.org/protobuf/proto"
+	"github.com/google/go-cmp/cmp"
 )
 
-func populateFieldMapFor(tp reflect.Type, value reflect.Value) map[string]reflect.Value {
-	fields := make(map[string]reflect.Value)
-	for i := 0; i < tp.Elem().NumField(); i++ {
-		fields[tp.Elem().Field(i).Name] = value.Elem().Field(i)
-	}
-	return fields
-}
+var (
+	uuidRegex = regexp.MustCompile(`^(rolling-restart-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+)
 
-// NOTE this is just an experiment and will be probably gone soon! 
-// Please don't judge this code yet. This is an experimental matcher to compare two proto messages 
-// with a couple nuances, required for comparing e2e test output with an expected, hand-constructed 
-// output, type-safely.
-func ExpectPresentFieldsDeepEqual(expected proto.Message, actual proto.Message, values map[string]string) {
-	expectedType := reflect.TypeOf(expected)
-	actualType := reflect.TypeOf(actual)
-
-
-	Expect(expectedType).To(Equal(actualType))
-
-	expectedFieldValues := populateFieldMapFor(expectedType, reflect.ValueOf(expected))
-	actualFieldValues := populateFieldMapFor(actualType, reflect.ValueOf(actual))
-
-	for structFieldName, expectedFieldValue := range expectedFieldValues {
-		if expectedFieldValue.IsValid() && expectedFieldValue.CanSet() {
-			actualFieldValue := actualFieldValues[structFieldName]
-
-			if expectedFieldValue.Kind() == reflect.String {
-				Expect(actualFieldValue.Kind()).To(Equal(reflect.String))
-				expectedFieldString := expectedFieldValue.Interface().(string)
-				actualFieldString := actualFieldValue.Interface().(string)
-				if _, present := values[expectedFieldString]; !present {
-					values[expectedFieldString] = actualFieldString
-				}
-				Expect(values[expectedFieldString]).To(Equal(actualFieldString))
-			}
-
-			if expectedFieldValue.Kind() == reflect.Struct && expectedFieldValue.Interface().(proto.Message) != nil {
-				ExpectPresentFieldsDeepEqual(expectedFieldValue.Interface().(proto.Message), actualFieldValue.Interface().(proto.Message), values)
-			}
-
-			if expectedFieldValue.Kind() == reflect.Slice {
-				Expect(actualFieldValue.Kind()).To(Equal(reflect.Slice))
-				Expect(expectedFieldValue.Len()).To(Equal(actualFieldValue.Len()))
-				for i := 0; i < expectedFieldValue.Len(); i++ {
-					expectedElement := expectedFieldValue.Index(i)
-					actualElement := actualFieldValue.Index(i)
-					ExpectPresentFieldsDeepEqual(expectedElement.Interface().(proto.Message), actualElement.Interface().(proto.Message), values)
-				}
-			}
+// Here is some black magic. Problem is: `ydbops` produces random UUIDs during execution. This
+// is a stateful checker that checks all the string fields in test scenario, and if you specified equal string labels
+// in test scenario for uuids (e.g. test-uuid-1 and test-uuid-1 in some subsequent object), then this comparer makes
+// sure that two ACTUALLY passed uuids in these exact locations are ALSO the same.
+//
+// TODO jorres@: Maybe think about adding a hidden `--static-uuids` purely for e2e testing, not inventing
+// this complicated crutch here...
+func UuidComparer(expectedPlaceholders, actualPlaceholders map[string]int) cmp.Option {
+	return cmp.Comparer(func(expected, actual string) bool {
+		if !uuidRegex.MatchString(expected) && !uuidRegex.MatchString(actual) {
+			return expected == actual
 		}
-	}
+
+		expectedValue, expectedOk := expectedPlaceholders[expected]
+		actualValue, actualOk := actualPlaceholders[actual]
+
+		if !expectedOk && !actualOk {
+			placeholder := len(expectedPlaceholders) + 1
+			expectedPlaceholders[expected] = placeholder
+			actualPlaceholders[actual] = placeholder
+			return true
+		}
+
+		if expectedOk && actualOk {
+			if expectedValue != actualValue {
+				fmt.Printf(
+					"UuidComparer: failed comparing %s and %s. Previously seen one of those matching with a different uuid.\n",
+					expected, actual,
+				)
+			}
+			return expectedValue == actualValue
+		}
+
+		fmt.Printf(
+			"UuidComparer: when comparing %s and %s, I have previously seen only one of those."+
+				" This means that actual message contained uuid different from what was expected.\n",
+			expected, actual,
+		)
+
+		return false
+	})
 }
