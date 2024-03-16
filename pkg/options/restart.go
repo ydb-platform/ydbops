@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,13 @@ type StartedTime struct {
 	Direction rune
 }
 
+type VersionSpec struct {
+	Sign  string
+	Major int
+	Minor int
+	Patch int
+}
+
 type RestartOptions struct {
 	AvailabilityMode   string
 	Tenants            []string
@@ -37,12 +45,14 @@ type RestartOptions struct {
 	CMSQueryInterval   int
 
 	StartedTime *StartedTime
+	VersionSpec *VersionSpec
 
 	Continue bool
 }
 
 var (
-	startedFlag string
+	startedUnparsedFlag string
+	versionUnparsedFlag string
 )
 
 var RestartOptionsInstance = &RestartOptions{}
@@ -64,13 +74,13 @@ func (o *RestartOptions) Validate() error {
 		return fmt.Errorf("specified invalid restart retry number: %d. Must be positive", o.RestartRetryNumber)
 	}
 
-	if startedFlag != "" {
-		directionRune := []rune(startedFlag)[0]
+	if startedUnparsedFlag != "" {
+		directionRune := []rune(startedUnparsedFlag)[0]
 		if directionRune != '<' && directionRune != '>' {
 			return fmt.Errorf("the first character of --started value should be < or >.")
 		}
 
-		timestampString, _ := strings.CutPrefix(startedFlag, string(directionRune))
+		timestampString, _ := strings.CutPrefix(startedUnparsedFlag, string(directionRune))
 		timestamp, err := time.Parse(time.RFC3339, timestampString)
 		if err != nil {
 			return fmt.Errorf("failed to parse --started: %w", err)
@@ -79,6 +89,26 @@ func (o *RestartOptions) Validate() error {
 		o.StartedTime = &StartedTime{
 			Timestamp: timestamp,
 			Direction: directionRune,
+		}
+	}
+
+	if versionUnparsedFlag != "" {
+		pattern := `^(>|<|!=|==)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
+		re := regexp.MustCompile(pattern)
+
+		matches := re.FindStringSubmatch(versionUnparsedFlag)
+		if len(matches) == 5 {
+			major, _ := strconv.Atoi(matches[2])
+			minor, _ := strconv.Atoi(matches[3])
+			patch, _ := strconv.Atoi(matches[4])
+			o.VersionSpec = &VersionSpec{
+				Sign:  matches[1],
+				Major: major,
+				Minor: minor,
+				Patch: patch,
+			}
+		} else {
+			return fmt.Errorf("failed to parse --version flag. %s value does not satisfy the format, check --help", versionUnparsedFlag)
 		}
 	}
 
@@ -118,8 +148,11 @@ after that would be considered a regular cluster failure`)
 	fs.IntVar(&o.CMSQueryInterval, "cms-query-interval", DefaultCMSQueryIntervalSeconds,
 		fmt.Sprintf("How often to query CMS while waiting for new permissions %v", DefaultCMSQueryIntervalSeconds))
 
-	fs.StringVar(&startedFlag, "started", "",
+	fs.StringVar(&startedUnparsedFlag, "started", "",
 		fmt.Sprintf("Apply filter by node started time. Format: [<>%%Y-%%m-%%dT%%H:%%M:%%SZ], e.g. >2024-03-13T17:20:06Z"))
+
+	fs.StringVar(&versionUnparsedFlag, "version", "",
+		`Apply filter by node version. Format: [<>!=MAJOR.MINOR.PATCH]. For example, '--version !=24.1.2'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
 		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 

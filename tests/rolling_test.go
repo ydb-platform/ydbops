@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -22,7 +21,7 @@ import (
 	blackmagic "github.com/ydb-platform/ydbops/tests/black-magic"
 	"github.com/ydb-platform/ydbops/tests/mock"
 	"google.golang.org/protobuf/proto"
-	protocmp "google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func prepareEnvVariables() map[string]string {
@@ -94,8 +93,6 @@ var _ = Describe("Test Rolling", func() {
 		// 	fmt.Printf("\n%+v : %+v\n", reflect.TypeOf(req), req)
 		// }
 
-		Expect(len(tc.expectedRequests)).To(Equal(len(actualRequests)))
-
 		for _, actualReq := range actualRequests {
 			field := reflect.ValueOf(actualReq).Elem().FieldByName("OperationParams")
 			if field.IsValid() {
@@ -120,11 +117,12 @@ var _ = Describe("Test Rolling", func() {
 			actual := actualRequests[i]
 			Expect(cmp.Diff(expected, actual,
 				protocmp.Transform(),
-				protocmp.IgnoreEmptyMessages(),
-				cmpopts.EquateEmpty(),
+				blackmagic.ActionGroupSorter(),
 				blackmagic.UuidComparer(expectedPlaceholders, actualPlaceholders),
 			)).To(BeEmpty())
 		}
+
+		Expect(len(tc.expectedRequests)).To(Equal(len(actualRequests)))
 	},
 		Entry("restart 2 out of 8 nodes, nodes should be determined by --started filter", testCase{
 			nodeConfiguration: [][]uint32{
@@ -169,9 +167,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: []*Ydb_Maintenance.ActionGroup{
-						{}, {},
-					},
+					ActionGroups: mock.MakeActionGroups(3, 7),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -231,9 +227,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: []*Ydb_Maintenance.ActionGroup{
-						{}, {}, {},
-					},
+					ActionGroups: mock.MakeActionGroups(1, 2, 3),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -304,9 +298,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: []*Ydb_Maintenance.ActionGroup{
-						{}, {}, {},
-					},
+					ActionGroups: mock.MakeActionGroups(1, 2, 3),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -338,6 +330,76 @@ var _ = Describe("Test Rolling", func() {
 							TaskUid:  "task-UUID-1",
 							GroupId:  "group-UUID-3",
 							ActionId: "action-UUID-3",
+						},
+					},
+				},
+			},
+		},
+		),
+		Entry("filter nodes by --version flag", testCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				1: {
+					Version: "ydb-stable-24-1-0",
+				},
+				2: {
+					Version: "ydb-stable-24-2-0",
+				},
+				3: {
+					Version: "ydb-stable-24-3-0",
+				},
+			},
+			ydbopsInvocation: []string{
+				"--endpoint", "grpcs://localhost:2135",
+				"--verbose",
+				"restart",
+				"--availability-mode", "strong",
+				"--user", mock.TestUser,
+				"--cms-query-interval", "1",
+				"run",
+				"--version", ">24.1.0",
+				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			},
+			expectedRequests: []proto.Message{
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
+				},
+				&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+					TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+						TaskUid:          "task-UUID-1",
+						Description:      "Rolling restart maintenance task",
+						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+					},
+					ActionGroups: mock.MakeActionGroups(2, 3),
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-1",
+							ActionId: "action-UUID-1",
+						},
+					},
+				},
+				&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
+					TaskUid: "task-UUID-1",
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-2",
+							ActionId: "action-UUID-2",
 						},
 					},
 				},

@@ -98,7 +98,8 @@ func (s *YdbMock) ListClusterNodes(ctx context.Context, req *ListClusterNodesReq
 }
 
 func (s *YdbMock) CreateMaintenanceTask(ctx context.Context, req *CreateMaintenanceTaskRequest) (*MaintenanceTaskResponse, error) {
-	s.RequestLog = append(s.RequestLog, req)
+	s.RequestLog = append(s.RequestLog, proto.Clone(req))
+
 	taskUid := req.TaskOptions.TaskUid
 	s.tasks[taskUid] = &fakeMaintenanceTask{
 		options:           req.TaskOptions,
@@ -251,14 +252,8 @@ func (s *YdbMock) StartOn(port int) {
 	Ydb_Discovery_V1.RegisterDiscoveryServiceServer(s.grpcServer, s)
 	Ydb_Cms_V1.RegisterCmsServiceServer(s.grpcServer, s)
 
-	log.Printf("server listening at %v", lis.Addr())
-
 	go func() {
-		if err := s.grpcServer.Serve(lis); err == nil {
-			log.Printf("grpc server exited gracefully")
-		} else {
-			log.Fatalf("failed to serve: %v", err)
-		}
+		_ = s.grpcServer.Serve(lis)
 	}()
 }
 

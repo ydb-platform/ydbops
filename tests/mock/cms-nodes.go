@@ -6,6 +6,7 @@ import (
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -35,10 +36,36 @@ func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 	}
 }
 
+func MakeActionGroups(nodeIds... uint32) []*Ydb_Maintenance.ActionGroup {
+	result := []*Ydb_Maintenance.ActionGroup{}
+	for _, nodeId := range nodeIds {
+		result = append(result,
+			&Ydb_Maintenance.ActionGroup{
+				Actions: []*Ydb_Maintenance.Action{
+					{
+						Action: &Ydb_Maintenance.Action_LockAction{
+							LockAction: &Ydb_Maintenance.LockAction{
+								Scope: &Ydb_Maintenance.ActionScope{
+									Scope: &Ydb_Maintenance.ActionScope_NodeId{
+										NodeId: nodeId,
+									},
+								},
+								Duration: durationpb.New(time.Duration(180) * time.Second),
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+	return result
+}
+
 type TestNodeInfo struct {
 	StartTime  time.Time
 	IsDynnode  bool
 	TenantName string
+	Version    string
 }
 
 func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestNodeInfo) []*Ydb_Maintenance.Node {
@@ -64,6 +91,12 @@ func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestN
 				node.StartTime = timestamppb.New(testNodeInfo.StartTime)
 			} else {
 				node.StartTime = timestamppb.New(time.Now())
+			}
+
+			if ok && len(testNodeInfo.Version) > 0 {
+				node.Version = testNodeInfo.Version
+			} else {
+				node.Version = "some-fake-version-will-fail-when-parsing"
 			}
 
 			nodes = append(nodes, node)

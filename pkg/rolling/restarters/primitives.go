@@ -1,7 +1,9 @@
 package restarters
 
 import (
+	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
@@ -72,6 +74,80 @@ func SatisfiesStartingTime(node *Ydb_Maintenance.Node, startedTime *options.Star
 	}
 }
 
+func compareMajorMinorPatch(sign string, nodeVersion [3]int, userVersion [3]int) bool {
+	res := 0
+	for i := 0; i < 3; i++ {
+		if nodeVersion[i] < userVersion[i] {
+			res = -1
+			break
+		} else if nodeVersion[i] > userVersion[i] {
+			res = 1
+			break
+		}
+	}
+
+	switch sign {
+	case "==":
+		return res == 0
+	case "<":
+		return res == -1
+	case ">":
+		return res == 1
+	case "!=":
+		return res != 0
+	}
+	return false
+}
+
+func tryParseWith(reString string, version string) (int, int, int, bool) {
+	re := regexp.MustCompile(reString)
+	matches := re.FindStringSubmatch(version)
+	if len(matches) == 4 {
+		num1, _ := strconv.Atoi(matches[1])
+		num2, _ := strconv.Atoi(matches[2])
+		num3, _ := strconv.Atoi(matches[3])
+		return num1, num2, num3, true
+	}
+	return 0, 0, 0, false
+}
+
+func parseNodeVersion(version string) (int, int, int, error) {
+	pattern1 := `^ydb-stable-(\d+)-(\d+)-(\d+).*$`
+	major, minor, patch, parsed := tryParseWith(pattern1, version)
+	if parsed {
+		return major, minor, patch, nil
+	}
+
+	pattern2 := `^(\d+)\.(\d+)\.(\d+)\..*$`
+	major, minor, patch, parsed = tryParseWith(pattern2, version)
+	if parsed {
+		return major, minor, patch, nil
+	}
+
+	return 0, 0, 0, fmt.Errorf("Failed to parse the version number in any of the known patterns")
+}
+
+func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) bool {
+	zap.S().Errorf("checking satisfaction for %+v\n", version)
+	if version == nil {
+		return true
+	}
+
+	major, minor, patch, err := parseNodeVersion(node.Version)
+	if err != nil {
+		zap.S().Errorf(`ALARM: failed to parse %s when user specified a non-nil version. The filtering will
+ be conservative and not include the node, but it might be not what you want. Either you have a weird node
+ version in your cluster or we need to teach 'ydbops' to support one more version format.`)
+		return false
+	}
+
+	return compareMajorMinorPatch(
+		version.Sign,
+		[3]int{major, minor, patch},
+		[3]int{version.Major, version.Minor, version.Patch},
+	)
+}
+
 func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
 	return len(spec.SelectedHostFQDNs) == 0 && len(spec.SelectedNodeIds) == 0
 }
@@ -112,6 +188,10 @@ func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 		}
 
 		if !SatisfiesStartingTime(node, spec.StartedTime) {
+			continue
+		}
+
+		if !SatisfiedVersion(node, spec.Version) {
 			continue
 		}
 

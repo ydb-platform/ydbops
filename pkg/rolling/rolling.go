@@ -146,10 +146,12 @@ func (r *Rolling) DoRestart() error {
 			SelectedNodeIds:   nodeIds,
 			SelectedHostFQDNs: nodeFQDNs,
 			StartedTime:       r.opts.StartedTime,
+			Version:           r.opts.VersionSpec,
+			ExcludeHosts:      r.opts.ExcludeHosts,
 		},
 		restarters.ClusterNodesInfo{
 			TenantToNodeIds: r.state.tenantNameToNodeIds,
-			AllNodes:   collections.Values(r.state.nodes),
+			AllNodes:        collections.Values(r.state.nodes),
 		},
 	)
 

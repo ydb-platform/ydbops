@@ -5,6 +5,8 @@ import (
 	"regexp"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 var (
@@ -20,6 +22,10 @@ var (
 // this complicated crutch here...
 func UuidComparer(expectedPlaceholders, actualPlaceholders map[string]int) cmp.Option {
 	return cmp.Comparer(func(expected, actual string) bool {
+		if expected == actual {
+			return true
+		}
+
 		if !uuidRegex.MatchString(expected) && !uuidRegex.MatchString(actual) {
 			return expected == actual
 		}
@@ -51,5 +57,13 @@ func UuidComparer(expectedPlaceholders, actualPlaceholders map[string]int) cmp.O
 		)
 
 		return false
+	})
+}
+
+func ActionGroupSorter() cmp.Option {
+	return protocmp.SortRepeated(func(a, b *Ydb_Maintenance.ActionGroup) bool {
+		aNode := a.Actions[0].GetLockAction().GetScope().GetNodeId()
+		bNode := b.Actions[0].GetLockAction().GetScope().GetNodeId()
+		return aNode < bNode
 	})
 }

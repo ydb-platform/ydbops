@@ -19,7 +19,7 @@ type ClusterNodesInfo struct {
 }
 
 type FilterNodeParams struct {
-	Version           string
+	Version           *options.VersionSpec
 	StartedTime       *options.StartedTime
 	ExcludeHosts      []string
 	SelectedTenants   []string
