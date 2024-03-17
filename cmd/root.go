@@ -64,6 +64,8 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 		},
 	}
 
+  RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
 	defer func() {
 		_ = logger.Sync()
 	}()

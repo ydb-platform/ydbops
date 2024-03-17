@@ -16,7 +16,7 @@ func NewTenantBaremetalCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "baremetal",
 		Short: "Restarts a specified subset of storage nodes over SSH",
-		Long: `ydbops restart storage barematal:
+		Long: `ydbops restart storage baremetal:
   Restarts a specified subset of storage nodes over SSH`,
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)

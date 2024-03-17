@@ -50,14 +50,14 @@ func determinePadding(curCommand, subCommandLineNumber, totalCommands int) strin
 	}
 }
 
-func generateCommandTree(cmd *cobra.Command) []string {
-		result := []string{cmd.Name()}
+func generateCommandTree(cmd *cobra.Command, paddingSize int) []string {
+		result := []string{cmd.Name() + strings.Repeat(" ", paddingSize - len(cmd.Name())) + cmd.Short}
 		if cmd.HasAvailableSubCommands() {
 			subCommandLen := len(cmd.Commands())
 			for i := 0; i < len(cmd.Commands()); i++ {
 				subCmd := cmd.Commands()[i]
 				if !subCmd.Hidden {
-					subCmdTree := generateCommandTree(subCmd)
+					subCmdTree := generateCommandTree(subCmd, paddingSize - 3)
 					for j, line := range subCmdTree {
 						result = append(result, determinePadding(i, j, subCommandLen) + line)
 					}
@@ -75,7 +75,7 @@ func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 		if cmd.HasAvailableSubCommands() {
 			var builder strings.Builder
 			builder.WriteString("Subcommands:")
-			for _, line := range generateCommandTree(cmd) {
+			for _, line := range generateCommandTree(cmd, 23) {
 				builder.WriteString("\n")
 				builder.WriteString(line)
 			}

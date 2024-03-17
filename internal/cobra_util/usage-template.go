@@ -12,10 +12,10 @@ Examples:
 
 {{ drawNiceTree . }}{{if .HasAvailableLocalFlags}}
 
-Flags:
+Options:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 
-Global Flags:
+Global options:
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
