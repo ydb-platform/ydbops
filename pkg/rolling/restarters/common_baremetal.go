@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
@@ -53,12 +54,25 @@ func (r baremetalRestarter) restartNodeBySystemdUnit(node *Ydb_Maintenance.Node,
 		return fmt.Errorf("Supported ssh commands: ssh, pssh, nssh. Specified: %s", sshCommand)
 	}
 
-	r.logger.Debugf("Full ssh command: ", strings.Join(fullSSHArgs, " "))
-
 	cmd := exec.Command(sshCommand, fullSSHArgs...)
+
+	r.logger.Debugf("Full ssh command: `%s %v`", sshCommand, strings.Join(fullSSHArgs, " "))
 
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
+
+	warningTime := 5 * time.Second
+	ticker := time.NewTicker(warningTime)
+	defer ticker.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				r.logger.Warnf("Waiting to connect to the node by SSH...")
+			}
+		}
+	}()
 
 	if err := cmd.Start(); err != nil {
 		r.logger.Errorf("Failed to start remote command: ", err)

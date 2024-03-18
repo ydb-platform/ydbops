@@ -76,9 +76,18 @@ func generateCommandTree(cmd *cobra.Command, paddingSize int) []string {
 func generateShortGlobalOptions(rootCmd *cobra.Command) []string {
 	flagNames := []string{}
 	rootCmd.Flags().VisitAll(func(f *pflag.Flag) {
-		greenFlagName := color.GreenString(f.Name)
-		flagNames = append(flagNames, greenFlagName)
+		var flagString string
+		greenName := color.GreenString("--" + f.Name)
+		if len(f.Shorthand) > 0 {
+			greenShorthand := color.GreenString("-" + f.Shorthand)
+			flagString = fmt.Sprintf("{%s|%s}", greenShorthand, greenName)
+		} else {
+			flagString = greenName
+		}
+
+		flagNames = append(flagNames, flagString)
 	})
+
 	return []string{
 		"Global options: ",
 		"  " + strings.Join(flagNames, ", "),

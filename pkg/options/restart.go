@@ -131,10 +131,11 @@ func (o *RestartOptions) Validate() error {
 func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
 		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
-but you can not mix host FQDNs and node ids in this option.`)
+but you can not mix host FQDNs and node ids in this option. The list is comma-delimited.
+  E.g.: '--hosts 1,2,3' or '--hosts fqdn1,fqdn2,fqdn3'`)
 
 	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{},
-		`Never restart these hosts, even if they are also explicitly specified in --hosts.`)
+		`Comma-delimited list. Do not restart these hosts, even if they are explicitly specified in --hosts.`)
 
 	fs.StringVar(&o.AvailabilityMode, "availability-mode", "strong",
 		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(AvailabilityModes, ", ")))
@@ -144,7 +145,7 @@ but you can not mix host FQDNs and node ids in this option.`)
 after that would be considered a regular cluster failure`)
 
 	fs.IntVar(&o.RestartRetryNumber, "restart-retry-number", DefaultRetryCount,
-		fmt.Sprintf("How many times every node should be retried on error, default %v", DefaultRetryCount))
+		fmt.Sprintf("How many times a node should be retried on error, default %v", DefaultRetryCount))
 
 	fs.IntVar(&o.CMSQueryInterval, "cms-query-interval", DefaultCMSQueryIntervalSeconds,
 		fmt.Sprintf("How often to query CMS while waiting for new permissions %v", DefaultCMSQueryIntervalSeconds))
