@@ -128,7 +128,6 @@ func parseNodeVersion(version string) (int, int, int, error) {
 }
 
 func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) bool {
-	zap.S().Errorf("checking satisfaction for %+v\n", version)
 	if version == nil {
 		return true
 	}

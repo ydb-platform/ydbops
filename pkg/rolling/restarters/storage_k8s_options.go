@@ -12,6 +12,7 @@ type StorageK8sOpts struct {
 
 func (o *StorageK8sOpts) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.storage, "storage", "", "Storage resource name to restart")
+	o.k8sOpts.DefineFlags(fs)
 }
 
 func (o *StorageK8sOpts) Validate() error {
@@ -19,7 +20,7 @@ func (o *StorageK8sOpts) Validate() error {
 		return err
 	}
 	if o.storage == "" {
-		return fmt.Errorf("Please specify a non-empty --storage.")
+		return fmt.Errorf("Please specify a non-empty --storage")
 	}
 	return nil
 }

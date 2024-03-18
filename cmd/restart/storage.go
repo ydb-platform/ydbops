@@ -12,8 +12,9 @@ func NewStorageCmd() *cobra.Command {
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
 		Use:   "storage",
 		Short: "Restarts a specified subset of storage nodes",
-    Long:  `ydbops restart storage:
-  Restarts a specified subset of storage nodes`,
+		Long: `ydbops restart storage:
+  Restarts a specified subset of storage nodes.
+  Not specifying any filters will restart all storage nodes.`,
 	}, restartOpts)
 
 	return cmd

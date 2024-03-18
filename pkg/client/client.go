@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"github.com/ydb-platform/ydbops/internal/collections"
@@ -61,5 +62,9 @@ func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {
 			))
 	}
 
-	logger.Debugf("Invocation result:\n%s", sb.String())
+	if op.Status != Ydb.StatusIds_SUCCESS {
+		logger.Errorf("GRPC invocation unsuccessful:\n%s", sb.String())
+	} else {
+		logger.Debugf("Invocation result:\n%s", sb.String())
+	}
 }

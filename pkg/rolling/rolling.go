@@ -62,7 +62,7 @@ func initAuthToken(
 		logger.Debugf("Endpoint: %v", rootOpts.GRPC.Endpoint)
 		token, err := authClient.Auth(rootOpts.GRPC, user, password)
 		if err != nil {
-			return fmt.Errorf("Failed to initialize static auth token: %w", err)
+			return fmt.Errorf("failed to initialize static auth token: %w", err)
 		}
 		factory.SetAuthToken(token)
 	case options.IamToken:
@@ -70,9 +70,9 @@ func initAuthToken(
 	case options.IamCreds:
 		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
 	case options.None:
-		factory.SetAuthToken("")
+		return fmt.Errorf("failed to determine credentials. Anonymous credentials are unsupported in public maintenance api")
 	default:
-		return fmt.Errorf("Internal error: authorization type not recognized after options validation, this should never happen")
+		return fmt.Errorf("internal error: authorization type not recognized after options validation, this should never happen")
 	}
 
 	return nil
@@ -88,7 +88,7 @@ func ExecuteRolling(
 
 	err := initAuthToken(rootOpts, logger, factory)
 	if err != nil {
-		logger.Errorf("Failed to receive an auth token, rolling restart not started: %+v", err)
+		logger.Errorf("failed to receive an auth token, rolling restart not started: %+v", err)
 		return
 	}
 
@@ -198,8 +198,6 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 				}
 			}
 
-			r.logger.Info("Processing task action group states")
-			r.logger.Debug(r.state.unreportedButFinishedActionIds)
 			if completed := r.processActionGroupStates(task.GetActionGroupStates()); completed {
 				break
 			}
@@ -259,8 +257,8 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		go func() {
 			defer wg.Done()
 
-			r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
 			// TODO: drain node, but public draining api is not available yet
+			r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
 
 			r.logger.Debugf("Restart node with id: %d", node.NodeId)
 			if err := r.restarter.RestartNode(node); err != nil {
@@ -330,7 +328,7 @@ func (r *Rolling) prepareState() (*state, error) {
 
 	userSID, err := r.discovery.WhoAmI()
 	if err != nil {
-		return nil, fmt.Errorf("whoami failed: %+v", err)
+		return nil, fmt.Errorf("Failed to determine the : %+v", err)
 	}
 
 	return &state{

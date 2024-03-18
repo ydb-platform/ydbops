@@ -17,7 +17,8 @@ func NewTenantK8sCmd() *cobra.Command {
 		Use:   "k8s",
 		Short: "Restarts a specified subset of YDB tenant Pods in a Kubernetes cluster",
 		Long: `ydbops restart tenant k8s:
-  Restarts a specified subset of YDB tenant Pods in a Kubernetes cluster`,
+  Restarts a specified subset of YDB tenant Pods in a Kubernetes cluster.
+  Not specifying any filters will restart all tenant Pods.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},

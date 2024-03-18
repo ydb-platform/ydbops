@@ -12,6 +12,7 @@ type TenantK8sOpts struct {
 
 func (o *TenantK8sOpts) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.database, "database", "", "Database resource name to restart")
+	o.k8sOpts.DefineFlags(fs)
 }
 
 func (o *TenantK8sOpts) Validate() error {
@@ -19,7 +20,7 @@ func (o *TenantK8sOpts) Validate() error {
 		return err
 	}
 	if o.database == "" {
-		return fmt.Errorf("Please specify a non-empty --database.")
+		return fmt.Errorf("Please specify a non-empty --database")
 	}
 	return nil
 }

@@ -227,11 +227,13 @@ func (o *AuthOptions) Validate() error {
 	activeAuthType := explicitlyActiveAuthType
 	if activeAuthType == Unset {
 		activeAuthType = determineImplicitAuthType()
+		zap.S().Debugf("Authentication type not specified, implicitly assuming type: %s", activeAuthType)
+	} else {
+		zap.S().Debugf("Authentication type explicitly specified: %s", activeAuthType)
 	}
 
 	o.Type = activeAuthType
 	o.Creds = Auths[activeAuthType]
-	zap.S().Debugf("Determined auth type: %s", activeAuthType)
 
 	if err := o.Creds.Validate(); err != nil {
 		return err

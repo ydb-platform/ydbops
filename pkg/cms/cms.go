@@ -236,6 +236,10 @@ func (c *CMSClient) ExecuteMaintenanceMethod(
 		return op, nil
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
 	if out == nil {
 		return op, nil
 	}
@@ -278,6 +282,10 @@ func (c *CMSClient) ExecuteCMSMethod(
 		client.LogOperation(c.logger, op)
 		return op, nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	if out == nil {
 		return op, nil

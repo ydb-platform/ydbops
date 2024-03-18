@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/pflag"
+	"go.uber.org/zap"
 )
 
 type k8sOpts struct {
@@ -12,9 +13,12 @@ type k8sOpts struct {
 	namespace      string
 }
 
+var (
+	defaultKubeconfigPath = filepath.Join("~", ".kube", "config")
+)
+
 func (o *k8sOpts) DefineFlags(fs *pflag.FlagSet) {
-	defaultKubeconfigPath := filepath.Join("~", ".kube", "config")
-	fs.StringVar(&o.kubeconfigPath, "kubeconfig", defaultKubeconfigPath, fmt.Sprintf(
+	fs.StringVar(&o.kubeconfigPath, "kubeconfig", "", fmt.Sprintf(
 		"Path to kubeconfig file (default: %s)",
 		defaultKubeconfigPath,
 	))
@@ -22,8 +26,13 @@ func (o *k8sOpts) DefineFlags(fs *pflag.FlagSet) {
 }
 
 func (o *k8sOpts) Validate() error {
+	if o.kubeconfigPath == "" {
+		zap.S().Infof("--kubeconfig not specified, assuming default %s", defaultKubeconfigPath)
+		o.kubeconfigPath = defaultKubeconfigPath
+	}
+
 	if o.namespace == "" {
-		return fmt.Errorf("Please specify a non-empty --namespace.")
+		return fmt.Errorf("Please specify a non-empty --namespace")
 	}
   return nil
 }

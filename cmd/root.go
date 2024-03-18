@@ -62,6 +62,7 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
 		},
+		SilenceUsage: true,
 	}
 
   RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})

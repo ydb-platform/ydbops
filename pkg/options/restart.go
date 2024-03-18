@@ -152,7 +152,7 @@ after that would be considered a regular cluster failure`)
 		fmt.Sprintf("Apply filter by node started time. Format: [<>%%Y-%%m-%%dT%%H:%%M:%%SZ], e.g. >2024-03-13T17:20:06Z"))
 
 	fs.StringVar(&versionUnparsedFlag, "version", "",
-		`Apply filter by node version. Format: [<>!=MAJOR.MINOR.PATCH]. For example, '--version !=24.1.2'`)
+		`Apply filter by node version. Format: [<|>|!=|==MAJOR.MINOR.PATCH], e.g. '--version !=24.1.2'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
 		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 

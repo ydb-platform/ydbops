@@ -31,7 +31,5 @@ func main() {
 	logLevelSetter, logger := createLogger("info")
   cmd.InitRootCmd(logLevelSetter, logger.Sugar())
 
-	if err := cmd.RootCmd.Execute(); err != nil {
-		logger.Fatal("failed to execute restart", zap.Error(err))
-	}
+	_ = cmd.RootCmd.Execute()
 }
