@@ -19,10 +19,11 @@ func NewStorageBaremetalCmd() *cobra.Command {
 		Long: `ydbops restart storage baremetal:
   Restarts a specified subset of storage nodes over SSH.
   Not specifying any filters will restart all storage nodes.`,
+		PreRunE: cobra_util.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
-	}, restarter.Opts)
+	})
 
 	restarter.Opts.DefineFlags(cmd.Flags())
 	return cmd

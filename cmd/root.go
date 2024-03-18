@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/cmd/restart/storage"
@@ -56,16 +57,19 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 
 			zap.S().Debugf("Current logging level enabled: %s", logLevel)
 
-			return options.RootOptionsInstance.Validate()
+			return nil
 		},
 		// TODO decide if we need to hide this, for more compact --help
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
 		},
 		SilenceUsage: true,
+		RunE:         cobra_util.RequireSubcommand,
 	}
 
-  RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
+	RootCmd.SetOutput(color.Output)
 
 	defer func() {
 		_ = logger.Sync()

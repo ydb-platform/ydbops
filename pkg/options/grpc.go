@@ -13,7 +13,7 @@ import (
 
 const (
 	GRPCDefaultTimeoutSeconds = 60
-	GRPCDefaultPort = 2135
+	GRPCDefaultPort           = 2135
 )
 
 type GRPC struct {
@@ -27,7 +27,7 @@ type GRPC struct {
 
 func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Endpoint, "endpoint", "e", "",
-		"A GRPC address to connect to the YDB cluster")
+		"A GRPC URL to connect to the YDB cluster. Default protocol if unspecified: grpcs")
 
 	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
 		"Wait this much before timing out any GRPC requests")
@@ -63,13 +63,8 @@ func (o *GRPC) Validate() error {
 		o.GRPCSecure = true
 	case "grpc":
 		o.GRPCSecure = false
-	case "":
-		o.GRPCSecure = true
 	default:
-		return fmt.Errorf(
-			"Please specify the protocol in the endpoint explicitly: grpc or grpcs. Currently specified: %s\n",
-			parsedURL.Scheme,
-		)
+		return fmt.Errorf("Please specify the protocol in the endpoint explicitly: grpc or grpcs\n")
 	}
 
 	if !o.GRPCSecure && o.GRPCSkipVerify {

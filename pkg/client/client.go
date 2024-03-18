@@ -28,6 +28,8 @@ func WrapWithRetries(
 	maxAttempts int,
 	f func() (*Ydb_Operations.Operation, error),
 ) (*Ydb_Operations.Operation, error) {
+	var lastError error
+
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		op, err := f()
 		if err == nil {
@@ -36,15 +38,18 @@ func WrapWithRetries(
 
 		if s, ok := status.FromError(err); ok && shouldRetry(s.Code()) {
 			delay := backoffTimeAfter(attempt)
-			zap.S().Debugf("Retrying after %v seconds...\n", delay.Seconds())
-			time.Sleep(delay)
+			if attempt < maxAttempts - 1 {
+				zap.S().Debugf("Retrying after %v seconds...\n", delay.Seconds())
+				time.Sleep(delay)
+			}
+			lastError = err
 		} else {
 			// Don't retry for non-transient errors
 			return nil, err
 		}
 	}
 
-	return nil, fmt.Errorf("Number of retries exceeded: %v", maxAttempts)
+	return nil, fmt.Errorf("Number of retries exceeded: %v. Last error: %w", maxAttempts, lastError)
 }
 
 func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {

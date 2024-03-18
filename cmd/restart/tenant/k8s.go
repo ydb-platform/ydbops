@@ -11,6 +11,7 @@ import (
 func NewTenantK8sCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
+
 	restarter := restarters.NewTenantK8sRestarter(options.Logger)
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
@@ -19,12 +20,14 @@ func NewTenantK8sCmd() *cobra.Command {
 		Long: `ydbops restart tenant k8s:
   Restarts a specified subset of YDB tenant Pods in a Kubernetes cluster.
   Not specifying any filters will restart all tenant Pods.`,
+		PreRunE: cobra_util.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
-	}, restarter.Opts)
+	})
 
 	restarter.Opts.DefineFlags(cmd.Flags())
+
 	return cmd
 }
 

@@ -166,7 +166,6 @@ func (r *Rolling) DoRestart() error {
 		return fmt.Errorf("failed to create maintenance task: %+v", err)
 	}
 
-	r.logger.Infof("Maintenance task id: %s", task.GetTaskUid())
 	return r.cmsWaitingLoop(task)
 }
 
@@ -230,7 +229,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		return false
 	}
 
-	r.logger.Infof("Perform next %d ActionGroupStates", len(performed))
+	r.logger.Infof("%d ActionGroupStates moved to PERFORMED, will restart now...", len(performed))
 
 	actionsCompletedThisStep := []*Ydb_Maintenance.ActionUid{}
 	wg := new(sync.WaitGroup)

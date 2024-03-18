@@ -15,7 +15,10 @@ func NewTenantCmd() *cobra.Command {
 		Long: `ydbops restart tenant:
   Restarts a specified subset of tenant nodes (also known as dynnodes). 
   Not specifying any filters will restart all tenant nodes`,
-	}, restartOpts)
+		RunE: cobra_util.RequireSubcommand,
+	})
+
+	restartOpts.TenantOptions.DefineFlags(cmd.Flags())
 
 	return cmd
 }

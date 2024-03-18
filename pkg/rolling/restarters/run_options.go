@@ -18,7 +18,7 @@ func (o *RunOpts) DefineFlags(fs *pflag.FlagSet) {
 		&o.PayloadFilepath,
 		"payload",
 		"",
-		"file with arbitrary shell code to run in the context of the machine, executing 'ydbops restart'.",
+		"File path to arbitrary executable to run in the context of the local machine",
 	)
 }
 

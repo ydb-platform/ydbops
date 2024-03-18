@@ -36,7 +36,6 @@ type VersionSpec struct {
 
 type RestartOptions struct {
 	AvailabilityMode   string
-	Tenants            []string
 	Hosts              []string
 	ExcludeHosts       []string
 	RestartDuration    int
@@ -48,6 +47,8 @@ type RestartOptions struct {
 	VersionSpec *VersionSpec
 
 	Continue bool
+
+	*TenantOptions
 }
 
 var (
@@ -55,7 +56,9 @@ var (
 	versionUnparsedFlag string
 )
 
-var RestartOptionsInstance = &RestartOptions{}
+var RestartOptionsInstance = &RestartOptions{ 
+	TenantOptions: &TenantOptions{},
+}
 
 func (o *RestartOptions) Validate() error {
 	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
@@ -132,8 +135,6 @@ but you can not mix host FQDNs and node ids in this option.`)
 
 	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{},
 		`Never restart these hosts, even if they are also explicitly specified in --hosts.`)
-
-	fs.StringSliceVar(&o.Tenants, "tenants", o.Tenants, "Restart only specified tenants")
 
 	fs.StringVar(&o.AvailabilityMode, "availability-mode", "strong",
 		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(AvailabilityModes, ", ")))

@@ -12,7 +12,7 @@ type StorageBaremetalRestarter struct {
 }
 
 func (r StorageBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
-	r.logger.Infof("Restarting storage node %s with ssh-args %v", node.Host, r.Opts.sshArgs)
+	r.logger.Infof("Restarting storage node %s", node.Host)
 
 	// It is theoretically possible to guess the systemd-unit, but it is a fragile
 	// solution. tarasov-egor@ will keep it here during development time for reference:

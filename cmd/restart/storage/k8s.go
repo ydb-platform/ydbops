@@ -19,10 +19,11 @@ func NewStorageK8sCmd() *cobra.Command {
 		Long: `ydbops restart storage k8s:
   Restarts a specified subset of YDB storage Pods in a Kubernetes cluster.
   Not specifying any filters will restart all storage Pods.`,
+		PreRunE: cobra_util.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
-	}, restarter.Opts)
+	})
 
 	restarter.Opts.DefineFlags(cmd.Flags())
 	return cmd

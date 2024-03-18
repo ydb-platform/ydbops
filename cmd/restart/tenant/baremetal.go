@@ -11,6 +11,7 @@ import (
 func NewTenantBaremetalCmd() *cobra.Command {
 	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
+
 	restarter := restarters.NewTenantBaremetalRestarter(options.Logger)
 
 	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
@@ -19,10 +20,11 @@ func NewTenantBaremetalCmd() *cobra.Command {
 		Long: `ydbops restart tenant baremetal:
   Restarts a specified subset of tenant nodes over SSH.
   Not specifying any filters will restart all tenant nodes.`,
+		PreRunE: cobra_util.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
-	}, restarter.Opts)
+	})
 
 	restarter.Opts.DefineFlags(cmd.Flags())
 	return cmd

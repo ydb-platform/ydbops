@@ -15,7 +15,8 @@ func NewRestartCmd() *cobra.Command {
 		Long: `ydbops restart: 
   Restarts a specified subset of nodes in the cluster. 
   Has subcommands for various YDB environments.`,
-	}, opts)
+		RunE: cobra_util.RequireSubcommand,
+	})
 
 	opts.DefineFlags(cmd.PersistentFlags())
 	return cmd
