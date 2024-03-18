@@ -35,7 +35,7 @@ func makePersistentPreRunE(original PersistentPreRunEFunc) PersistentPreRunEFunc
 }
 
 func determinePadding(curCommand, subCommandLineNumber, totalCommands int) string {
-	if curCommand == totalCommands - 1 {
+	if curCommand == totalCommands-1 {
 		if subCommandLineNumber == 0 {
 			return "└─ "
 		} else {
@@ -51,20 +51,41 @@ func determinePadding(curCommand, subCommandLineNumber, totalCommands int) strin
 }
 
 func generateCommandTree(cmd *cobra.Command, paddingSize int) []string {
-		result := []string{cmd.Name() + strings.Repeat(" ", paddingSize - len(cmd.Name())) + cmd.Short}
-		if cmd.HasAvailableSubCommands() {
-			subCommandLen := len(cmd.Commands())
-			for i := 0; i < len(cmd.Commands()); i++ {
-				subCmd := cmd.Commands()[i]
-				if !subCmd.Hidden {
-					subCmdTree := generateCommandTree(subCmd, paddingSize - 3)
-					for j, line := range subCmdTree {
-						result = append(result, determinePadding(i, j, subCommandLen) + line)
-					}
+	result := []string{cmd.Name() + strings.Repeat(" ", paddingSize-len(cmd.Name())) + cmd.Short}
+	if cmd.HasAvailableSubCommands() {
+		subCommandLen := len(cmd.Commands())
+		for i := 0; i < len(cmd.Commands()); i++ {
+			subCmd := cmd.Commands()[i]
+			if !subCmd.Hidden {
+				subCmdTree := generateCommandTree(subCmd, paddingSize-3)
+				for j, line := range subCmdTree {
+					result = append(result, determinePadding(i, j, subCommandLen)+line)
 				}
 			}
 		}
-		return result
+	}
+	return result
+}
+
+func generateCommandOptionsMessage(cmd *cobra.Command) []string {
+	result := []string{}
+
+	local := cmd.LocalFlags()
+	if len(local.FlagUsages()) > 0 {
+		if cmd.Name() == "ydbops" {
+			result = append(result, "Global options:")
+		} else {
+			result = append(result, cmd.Name()+" options:")
+		}
+
+		result = append(result, local.FlagUsages())
+	}
+
+	if cmd.HasParent() {
+		result = append(result, generateCommandOptionsMessage(cmd.Parent())...)
+	}
+
+	return result
 }
 
 func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
@@ -85,6 +106,13 @@ func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 		return ""
 	})
 
+	cobra.AddTemplateFunc("listAllFlagsInNiceGroups", func(cmd *cobra.Command) string {
+		if cmd.HasFlags() {
+			return strings.Join(generateCommandOptionsMessage(cmd), "\n")
+		}
+		return ""
+	})
+
 	cmd.SetUsageTemplate(UsageTemplate)
 
 	if cmd.PersistentPreRunE == nil {
@@ -93,14 +121,14 @@ func SetDefaultsOn(cmd *cobra.Command, opts options.Options) *cobra.Command {
 				if opts != nil {
 					return opts.Validate()
 				}
-        return nil
+				return nil
 			},
 		)
 	}
 
-	// It is confusing to get messages about unknown flags, when in reality you just forgot to 
+	// It is confusing to get messages about unknown flags, when in reality you just forgot to
 	// specify the necessary subcommand.
-	cmd.SetFlagErrorFunc(func (cmd *cobra.Command, err error) error {
+	cmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		if cmd.HasAvailableSubCommands() {
 			return fmt.Errorf("You have not selected a subcommand. Available subcommands are: %v",
 				collections.Convert(cmd.Commands(), func(cmd *cobra.Command) string {
