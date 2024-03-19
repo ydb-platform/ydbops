@@ -10,8 +10,6 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-type PersistentPreRunEFunc func(cmd *cobra.Command, args []string) error
-
 func determinePadding(curCommand, subCommandLineNumber, totalCommands int) string {
 	if curCommand == totalCommands-1 {
 		if subCommandLineNumber == 0 {
@@ -137,7 +135,7 @@ func ValidateOptions(optsArgs ...options.Options) func(*cobra.Command, []string)
 	return func(cmd *cobra.Command, args []string) error {
 		for _, opts := range optsArgs {
 			if err := opts.Validate(); err != nil {
-				return err
+				return fmt.Errorf("%w\nTry '--help' option for more info.", err)
 			}
 		}
 		return nil

@@ -64,7 +64,7 @@ func (o *GRPC) Validate() error {
 	case "grpc":
 		o.GRPCSecure = false
 	default:
-		return fmt.Errorf("Please specify the protocol in the endpoint explicitly: grpc or grpcs\n")
+		return fmt.Errorf("please specify the protocol in the endpoint explicitly: grpc or grpcs.")
 	}
 
 	if !o.GRPCSecure && o.GRPCSkipVerify {

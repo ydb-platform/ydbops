@@ -70,7 +70,7 @@ func initAuthToken(
 	case options.IamCreds:
 		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
 	case options.None:
-		return fmt.Errorf("failed to determine credentials. Anonymous credentials are unsupported in public maintenance api")
+		return fmt.Errorf("Determined credentials to be anonymous. Anonymous credentials are currently unsupported.")
 	default:
 		return fmt.Errorf("internal error: authorization type not recognized after options validation, this should never happen")
 	}
