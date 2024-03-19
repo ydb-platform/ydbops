@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/ydb-platform/ydbops/cmd"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-)
 
+	"github.com/ydb-platform/ydbops/cmd"
+)
 
 func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 	atom, _ := zap.ParseAtomicLevel(level)
@@ -22,14 +22,13 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 		),
 	)
 
-
 	_ = zap.ReplaceGlobals(logger)
 	return atom, logger
 }
 
 func main() {
 	logLevelSetter, logger := createLogger("info")
-  cmd.InitRootCmd(logLevelSetter, logger.Sugar())
+	cmd.InitRootCmd(logLevelSetter, logger.Sugar())
 
 	_ = cmd.RootCmd.Execute()
 }

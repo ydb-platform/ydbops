@@ -5,10 +5,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/zap"
+
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"github.com/ydb-platform/ydbops/tests/mock"
-	"go.uber.org/zap"
 )
 
 var _ = Describe("Test storage Filter", func() {
@@ -107,8 +108,8 @@ var _ = Describe("Test storage Filter", func() {
 			filteredNodeIds[node.NodeId] = true
 		}
 
-    for i := 1; i <= 8; i++ {
-      Expect(filteredNodeIds).Should(HaveKey(uint32(i)))
-    }
+		for i := 1; i <= 8; i++ {
+			Expect(filteredNodeIds).Should(HaveKey(uint32(i)))
+		}
 	})
 })

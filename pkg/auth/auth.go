@@ -8,11 +8,11 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/options"
-	"go.uber.org/zap"
 )
 
 type AuthClient struct {
@@ -38,7 +38,6 @@ func (c *AuthClient) Auth(grpcOpts options.GRPC, user, password string) (string,
 			Password:        password,
 		})
 	}, grpcOpts)
-
 	if err != nil {
 		return "", err
 	}

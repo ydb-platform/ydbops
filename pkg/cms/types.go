@@ -7,7 +7,7 @@ import (
 )
 
 type MaintenanceTaskParams struct {
-	TaskUID         string
+	TaskUID          string
 	AvailabilityMode Ydb_Maintenance.AvailabilityMode
 	Duration         *durationpb.Duration
 	Nodes            []*Ydb_Maintenance.Node

@@ -5,13 +5,13 @@ import (
 )
 
 type TenantBaremetalOpts struct {
-  baremetalOpts
+	baremetalOpts
 	kikimrTenantUnit bool
 }
 
 func (o *TenantBaremetalOpts) DefineFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.kikimrTenantUnit, "kikimr", false, "Use 'kikimr-multi@{ic_port}' as the dynnode unit name to restart")
-  o.baremetalOpts.DefineFlags(fs)
+	o.baremetalOpts.DefineFlags(fs)
 }
 
 func (o *TenantBaremetalOpts) Validate() error {

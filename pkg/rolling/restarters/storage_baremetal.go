@@ -8,7 +8,7 @@ import (
 type StorageBaremetalRestarter struct {
 	baremetalRestarter
 
-	Opts   *StorageBaremetalOpts
+	Opts *StorageBaremetalOpts
 }
 
 func (r StorageBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error {

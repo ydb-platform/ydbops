@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ydb-platform/ydbops/pkg/options"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -13,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 const (
@@ -20,9 +21,9 @@ const (
 )
 
 type k8sRestarter struct {
-	k8sClient *kubernetes.Clientset
+	k8sClient     *kubernetes.Clientset
 	hostnameToPod map[string]string
-	logger *zap.SugaredLogger
+	logger        *zap.SugaredLogger
 }
 
 func newK8sRestarter(logger *zap.SugaredLogger) k8sRestarter {

@@ -3,7 +3,7 @@ package restarters
 import "github.com/spf13/pflag"
 
 type baremetalOpts struct {
-	sshArgs                 []string
+	sshArgs []string
 }
 
 func (o *baremetalOpts) DefineFlags(fs *pflag.FlagSet) {

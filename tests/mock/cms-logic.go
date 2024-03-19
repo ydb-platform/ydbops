@@ -11,7 +11,7 @@ import (
 )
 
 func deleteFromSlice[T any](s []T, i int) []T {
-  return append(s[:i], s[i+1:]...)
+	return append(s[:i], s[i+1:]...)
 }
 
 func (s *YdbMock) setPendingOrPerformed(
@@ -28,22 +28,22 @@ func (s *YdbMock) setPendingOrPerformed(
 
 		for _, nodeId := range nodeGroup {
 			if nodeId == currentNodeId {
-        if s.isNodeCurrentlyPermitted[currentNodeId] {
+				if s.isNodeCurrentlyPermitted[currentNodeId] {
 					return ActionState_ACTION_STATUS_PERFORMED
-        }
+				}
 
 				if permittedOutOfGroup == 0 {
-          s.isNodeCurrentlyPermitted[currentNodeId] = true
+					s.isNodeCurrentlyPermitted[currentNodeId] = true
 					return ActionState_ACTION_STATUS_PERFORMED
 				}
 
 				if permittedOutOfGroup == 1 && availabilityMode != AvailabilityMode_AVAILABILITY_MODE_STRONG {
-          s.isNodeCurrentlyPermitted[currentNodeId] = true
+					s.isNodeCurrentlyPermitted[currentNodeId] = true
 					return ActionState_ACTION_STATUS_PERFORMED
 				}
 
 				if availabilityMode == AvailabilityMode_AVAILABILITY_MODE_FORCE {
-          s.isNodeCurrentlyPermitted[currentNodeId] = true
+					s.isNodeCurrentlyPermitted[currentNodeId] = true
 					return ActionState_ACTION_STATUS_PERFORMED
 				}
 			}
@@ -98,14 +98,14 @@ func (s *YdbMock) cleanupActionGroupState(task *fakeMaintenanceTask, actionId st
 	for k, actionGroupState := range task.actionGroupStates {
 		for i, actionState := range actionGroupState.ActionStates {
 			if actionState.ActionUid.ActionId == actionId {
-        actionGroupState.ActionStates = deleteFromSlice(actionGroupState.ActionStates, i)
+				actionGroupState.ActionStates = deleteFromSlice(actionGroupState.ActionStates, i)
 				break
 			}
 		}
-    if len(actionGroupState.ActionStates) == 0 {
-      task.actionGroupStates = deleteFromSlice(task.actionGroupStates, k)
-      return
-    }
+		if len(actionGroupState.ActionStates) == 0 {
+			task.actionGroupStates = deleteFromSlice(task.actionGroupStates, k)
+			return
+		}
 	}
 }
 
@@ -117,30 +117,30 @@ func (s *YdbMock) cleanupActionById(actionId string) {
 					s.isNodeCurrentlyPermitted[action.GetLockAction().Scope.GetNodeId()] = false
 					s.actionToActionUid[action] = nil
 					s.cleanupActionGroupState(task, actionId)
-          actionGroup.Actions = deleteFromSlice(actionGroup.Actions, i)
+					actionGroup.Actions = deleteFromSlice(actionGroup.Actions, i)
 					break
 				}
 			}
 
 			if len(actionGroup.Actions) == 0 {
-        task.actionGroups = deleteFromSlice(task.actionGroups, k)
+				task.actionGroups = deleteFromSlice(task.actionGroups, k)
 
-        if len(task.actionGroups) == 0 {
-          s.tasks[task.options.TaskUid] = nil
-        }
+				if len(task.actionGroups) == 0 {
+					s.tasks[task.options.TaskUid] = nil
+				}
 
-        return
+				return
 			}
 		}
 	}
 }
 
 func (s *YdbMock) refreshStatesForTask(taskUid string) {
-  task := s.tasks[taskUid]
-  for _, ags := range task.actionGroupStates {
-    for _, as := range ags.ActionStates {
-      nodeId := as.Action.GetLockAction().Scope.GetNodeId()
-      as.Status = s.setPendingOrPerformed(nodeId, task.options.AvailabilityMode)
-    }
-  }
+	task := s.tasks[taskUid]
+	for _, ags := range task.actionGroupStates {
+		for _, as := range ags.ActionStates {
+			nodeId := as.Action.GetLockAction().Scope.GetNodeId()
+			as.Status = s.setPendingOrPerformed(nodeId, task.options.AvailabilityMode)
+		}
+	}
 }

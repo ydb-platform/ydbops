@@ -36,7 +36,7 @@ func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 	}
 }
 
-func MakeActionGroups(nodeIds... uint32) []*Ydb_Maintenance.ActionGroup {
+func MakeActionGroups(nodeIds ...uint32) []*Ydb_Maintenance.ActionGroup {
 	result := []*Ydb_Maintenance.ActionGroup{}
 	for _, nodeId := range nodeIds {
 		result = append(result,

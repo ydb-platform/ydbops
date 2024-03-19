@@ -31,15 +31,13 @@ const (
 	MultipleAtOnce AuthType = "multiple-at-once"
 )
 
-var (
-	Auths = map[AuthType]Options{
-		None:     &AuthNone{},
-		Static:   &AuthStatic{},
-		IamToken: &AuthIAMToken{},
-		IamCreds: &AuthIAMCreds{},
-		// TODO support OAuth
-	}
-)
+var Auths = map[AuthType]Options{
+	None:     &AuthNone{},
+	Static:   &AuthStatic{},
+	IamToken: &AuthIAMToken{},
+	IamCreds: &AuthIAMCreds{},
+	// TODO support OAuth
+}
 
 type (
 	AuthNone struct{}

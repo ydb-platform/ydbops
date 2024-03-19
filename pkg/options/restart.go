@@ -10,8 +10,9 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydbops/internal/collections"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 const (
@@ -56,7 +57,7 @@ var (
 	versionUnparsedFlag string
 )
 
-var RestartOptionsInstance = &RestartOptions{ 
+var RestartOptionsInstance = &RestartOptions{
 	TenantOptions: &TenantOptions{},
 }
 

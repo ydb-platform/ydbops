@@ -9,10 +9,11 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
-	"github.com/ydb-platform/ydbops/internal/collections"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 func backoffTimeAfter(attempt int) time.Duration {
@@ -38,7 +39,7 @@ func WrapWithRetries(
 
 		if s, ok := status.FromError(err); ok && shouldRetry(s.Code()) {
 			delay := backoffTimeAfter(attempt)
-			if attempt < maxAttempts - 1 {
+			if attempt < maxAttempts-1 {
 				zap.S().Debugf("Retrying after %v seconds...\n", delay.Seconds())
 				time.Sleep(delay)
 			}

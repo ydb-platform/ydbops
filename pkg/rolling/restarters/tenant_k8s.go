@@ -19,7 +19,7 @@ func NewTenantK8sRestarter(logger *zap.SugaredLogger) *TenantK8sRestarter {
 }
 
 func (r TenantK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
-  return r.restartNodeByRestartingPod(node.Host, r.Opts.namespace)
+	return r.restartNodeByRestartingPod(node.Host, r.Opts.namespace)
 }
 
 func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {

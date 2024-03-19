@@ -15,10 +15,9 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/auth"
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/cms"
-	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
-
 	"github.com/ydb-platform/ydbops/pkg/discovery"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 type Rolling struct {
@@ -52,7 +51,6 @@ func initAuthToken(
 	logger *zap.SugaredLogger,
 	factory *client.Factory,
 ) error {
-
 	switch rootOpts.Auth.Type {
 	case options.Static:
 		authClient := auth.NewAuthClient(logger, factory)

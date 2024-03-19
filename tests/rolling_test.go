@@ -12,16 +12,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Cms"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
+
 	"github.com/ydb-platform/ydbops/pkg/options"
 	blackmagic "github.com/ydb-platform/ydbops/tests/black-magic"
 	"github.com/ydb-platform/ydbops/tests/mock"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func prepareEnvVariables() map[string]string {
@@ -44,9 +44,9 @@ var _ = Describe("Test Rolling", func() {
 	var ydb *mock.YdbMock
 	var previousEnvVars map[string]string
 
-	var now = time.Now()
-	var twoNodesStartedEarlier = now.Add(-10 * time.Minute)
-	var startedFilterValue = now.Add(-5 * time.Minute)
+	now := time.Now()
+	twoNodesStartedEarlier := now.Add(-10 * time.Minute)
+	startedFilterValue := now.Add(-5 * time.Minute)
 
 	type testCase struct {
 		nodeConfiguration [][]uint32

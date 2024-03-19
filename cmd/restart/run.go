@@ -2,6 +2,7 @@ package restart
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/ydb-platform/ydbops/internal/cobra_util"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"

@@ -5,9 +5,9 @@ import (
 )
 
 type RootOptions struct {
-	Auth     AuthOptions
-	GRPC     GRPC
-	Verbose  bool
+	Auth    AuthOptions
+	GRPC    GRPC
+	Verbose bool
 }
 
 var RootOptionsInstance = &RootOptions{}

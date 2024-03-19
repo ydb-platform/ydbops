@@ -35,7 +35,7 @@ func (o *RunOpts) Validate() error {
 	// Just run some bitmagic. 0100 is octal, in binary it would be equivalent to:
 	// 000001000000
 	//   drwxrwxrwx
-	executableByOwner := 0100
+	executableByOwner := 0o100
 	if fileInfo.Mode()&fs.FileMode(executableByOwner) != fs.FileMode(executableByOwner) {
 		return fmt.Errorf("payload file '%s' is not executable by the owner", o.PayloadFilepath)
 	}

@@ -3,13 +3,14 @@ package cmd
 import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/cmd/restart/storage"
 	"github.com/ydb-platform/ydbops/cmd/restart/tenant"
 	"github.com/ydb-platform/ydbops/internal/cobra_util"
 	"github.com/ydb-platform/ydbops/pkg/options"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 func addAndReturnCmd(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {

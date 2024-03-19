@@ -32,7 +32,6 @@ func NewCMSClient(logger *zap.SugaredLogger, f *client.Factory) *CMSClient {
 func (c *CMSClient) Tenants() ([]string, error) {
 	result := Ydb_Cms.ListDatabasesResult{}
 	_, err := c.ExecuteCMSMethod(&result, func(ctx context.Context, cl Ydb_Cms_V1.CmsServiceClient) (client.OperationResponse, error) {
-
 		c.logger.Debug("Invoke ListDatabases method")
 		return cl.ListDatabases(ctx, &Ydb_Cms.ListDatabasesRequest{OperationParams: c.f.OperationParams()})
 	})
@@ -208,7 +207,6 @@ func (c *CMSClient) CompleteAction(actionIds []*Ydb_Maintenance.ActionUid) (*Ydb
 	return &result, nil
 }
 
-
 func (c *CMSClient) ExecuteMaintenanceMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error),
@@ -235,7 +233,6 @@ func (c *CMSClient) ExecuteMaintenanceMethod(
 		client.LogOperation(c.logger, op)
 		return op, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +246,6 @@ func (c *CMSClient) ExecuteMaintenanceMethod(
 	}
 
 	if op.Status != Ydb.StatusIds_SUCCESS {
-
 		return op, fmt.Errorf("unsuccessful status code: %s", op.Status)
 	}
 
@@ -282,7 +278,6 @@ func (c *CMSClient) ExecuteCMSMethod(
 		client.LogOperation(c.logger, op)
 		return op, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

@@ -237,7 +237,6 @@ func (s *YdbMock) StartOn(port int) {
 
 	if s.caFile != "" && s.keyFile != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.caFile, s.keyFile)
-
 		if err != nil {
 			log.Fatal(err)
 		}
