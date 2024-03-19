@@ -14,19 +14,19 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/client"
 )
 
-type DiscoveryClient struct {
+type Client struct {
 	logger *zap.SugaredLogger
 	f      *client.Factory
 }
 
-func NewDiscoveryClient(logger *zap.SugaredLogger, f *client.Factory) *DiscoveryClient {
-	return &DiscoveryClient{
+func NewDiscoveryClient(logger *zap.SugaredLogger, f *client.Factory) *Client {
+	return &Client{
 		logger: logger,
 		f:      f,
 	}
 }
 
-func (c *DiscoveryClient) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInfo, error) {
+func (c *Client) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInfo, error) {
 	result := Ydb_Discovery.ListEndpointsResult{}
 	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error) {
 		c.logger.Debug("Invoke ListEndpoints method")
@@ -41,7 +41,7 @@ func (c *DiscoveryClient) ListEndpoints(database string) ([]*Ydb_Discovery.Endpo
 	return result.Endpoints, nil
 }
 
-func (c *DiscoveryClient) WhoAmI() (string, error) {
+func (c *Client) WhoAmI() (string, error) {
 	result := Ydb_Discovery.WhoAmIResult{}
 	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error) {
 		c.logger.Debug("Invoke WhoAmI method")
@@ -54,7 +54,7 @@ func (c *DiscoveryClient) WhoAmI() (string, error) {
 	return result.User, nil
 }
 
-func (c *DiscoveryClient) ExecuteDiscoveryMethod(
+func (c *Client) ExecuteDiscoveryMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {

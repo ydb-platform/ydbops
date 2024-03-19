@@ -65,7 +65,7 @@ type YdbMock struct {
 	// These two fields are just 'indexes', they can be calculated from `tasks`
 	// but are used for convenience in CMS logic.
 	isNodeCurrentlyPermitted map[uint32]bool
-	actionToActionUid        map[*Action]*ActionUid
+	actionToActionUID        map[*Action]*ActionUid
 }
 
 func makeSuccessfulOperation() *Ydb_Operations.Operation {
@@ -121,7 +121,7 @@ func (s *YdbMock) DropMaintenanceTask(ctx context.Context, req *DropMaintenanceT
 	// client comes for the particular task. For now, we only actualize our helper indexes:
 	for _, ag := range s.tasks[req.TaskUid].actionGroups {
 		for _, action := range ag.Actions {
-			delete(s.actionToActionUid, action)
+			delete(s.actionToActionUID, action)
 			actionNodeId := action.GetLockAction().Scope.GetNodeId()
 			s.isNodeCurrentlyPermitted[actionNodeId] = false
 		}
@@ -155,7 +155,7 @@ func (s *YdbMock) CompleteAction(ctx context.Context, req *CompleteActionRequest
 
 	actionStatuses := []*ManageActionResult_Status{}
 	for _, completedActionUid := range req.ActionUids {
-		s.cleanupActionById(completedActionUid.ActionId)
+		s.cleanupActionByID(completedActionUid.ActionId)
 		actionStatuses = append(actionStatuses, &ManageActionResult_Status{
 			ActionUid: completedActionUid,
 			Status:    Ydb.StatusIds_SUCCESS,
@@ -200,7 +200,7 @@ func (s *YdbMock) Login(ctx context.Context, req *Ydb_Auth.LoginRequest) (*Ydb_A
 		return &Ydb_Auth.LoginResponse{Operation: wrapIntoOperation(result)}, nil
 	}
 
-	return &Ydb_Auth.LoginResponse{Operation: makeFaultyOperation()}, fmt.Errorf("Incorrect credentials")
+	return &Ydb_Auth.LoginResponse{Operation: makeFaultyOperation()}, fmt.Errorf("incorrect credentials")
 }
 
 func (s *YdbMock) ListDatabases(ctx context.Context, req *Ydb_Cms.ListDatabasesRequest) (*Ydb_Cms.ListDatabasesResponse, error) {
@@ -215,7 +215,7 @@ func (s *YdbMock) ListDatabases(ctx context.Context, req *Ydb_Cms.ListDatabasesR
 func NewYdbMockServer() *YdbMock {
 	server := &YdbMock{
 		tasks:                    make(map[string]*fakeMaintenanceTask),
-		actionToActionUid:        make(map[*Action]*ActionUid),
+		actionToActionUID:        make(map[*Action]*ActionUid),
 		nodes:                    nil, // cluster node configuration filled by the test itself
 		nodeGroups:               nil, // cluster node configuration filled by the test itself
 		isNodeCurrentlyPermitted: nil, // cluster node configuration filled by the test itself

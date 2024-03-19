@@ -1,6 +1,7 @@
 package restarters
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -53,7 +54,7 @@ func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 			logger.Info(string(buf[:n]))
 		}
 		if err != nil {
-			if err != io.EOF {
+			if errors.Is(err, io.EOF) {
 				logger.Error("Error reading from pipe", zap.Error(err))
 			}
 			break
@@ -70,12 +71,12 @@ func SatisfiesStartingTime(node *Ydb_Maintenance.Node, startedTime *options.Star
 
 	if startedTime.Direction == '<' {
 		return startedTime.Timestamp.After(nodeStartTime)
-	} else {
-		return startedTime.Timestamp.Before(nodeStartTime)
 	}
+
+	return startedTime.Timestamp.Before(nodeStartTime)
 }
 
-func compareMajorMinorPatch(sign string, nodeVersion [3]int, userVersion [3]int) bool {
+func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
 	res := 0
 	for i := 0; i < 3; i++ {
 		if nodeVersion[i] < userVersion[i] {
@@ -100,7 +101,7 @@ func compareMajorMinorPatch(sign string, nodeVersion [3]int, userVersion [3]int)
 	return false
 }
 
-func tryParseWith(reString string, version string) (int, int, int, bool) {
+func tryParseWith(reString, version string) (int, int, int, bool) {
 	re := regexp.MustCompile(reString)
 	matches := re.FindStringSubmatch(version)
 	if len(matches) == 4 {
@@ -125,7 +126,7 @@ func parseNodeVersion(version string) (int, int, int, error) {
 		return major, minor, patch, nil
 	}
 
-	return 0, 0, 0, fmt.Errorf("Failed to parse the version number in any of the known patterns")
+	return 0, 0, 0, fmt.Errorf("failed to parse the version number in any of the known patterns")
 }
 
 func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) bool {
@@ -152,7 +153,7 @@ func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
 	return len(spec.SelectedHostFQDNs) == 0 && len(spec.SelectedNodeIds) == 0
 }
 
-func includeByHostIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
+func includeByHostIDOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	selected := []*Ydb_Maintenance.Node{}
 
 	selected = append(
@@ -171,9 +172,9 @@ func includeByHostIdOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 func PopulateByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	if isInclusiveFilteringUnspecified(spec) {
 		return nodes
-	} else {
-		return includeByHostIdOrFQDN(nodes, spec)
 	}
+
+	return includeByHostIDOrFQDN(nodes, spec)
 }
 
 func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {

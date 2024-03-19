@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
@@ -79,9 +80,9 @@ func (o *RestartOptions) Validate() error {
 	}
 
 	if startedUnparsedFlag != "" {
-		directionRune := []rune(startedUnparsedFlag)[0]
+		directionRune, _ := utf8.DecodeRuneInString(startedUnparsedFlag)
 		if directionRune != '<' && directionRune != '>' {
-			return fmt.Errorf("the first character of --started value should be < or >.")
+			return fmt.Errorf("the first character of --started value should be < or >")
 		}
 
 		timestampString, _ := strings.CutPrefix(startedUnparsedFlag, string(directionRune))
@@ -112,7 +113,10 @@ func (o *RestartOptions) Validate() error {
 				Patch: patch,
 			}
 		} else {
-			return fmt.Errorf("failed to parse --version flag. %s value does not satisfy the format, check --help", versionUnparsedFlag)
+			return fmt.Errorf(
+				"failed to parse --version flag. %s value does not satisfy the format, check --help",
+				versionUnparsedFlag,
+			)
 		}
 	}
 
@@ -192,10 +196,10 @@ func (o *RestartOptions) GetNodeFQDNs() ([]string, error) {
 func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 	ids := make([]uint32, 0, len(o.Hosts))
 
-	for _, nodeId := range o.Hosts {
-		id, err := strconv.Atoi(nodeId)
+	for _, nodeID := range o.Hosts {
+		id, err := strconv.Atoi(nodeID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse node id: %+v", err)
+			return nil, fmt.Errorf("failed to parse node id: %w", err)
 		}
 		if id < 0 {
 			return nil, fmt.Errorf("invalid node id specified: %d, must be positive", id)

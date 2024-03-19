@@ -1,4 +1,4 @@
-package cobra_util
+package cli
 
 import (
 	"fmt"
@@ -15,16 +15,14 @@ func determinePadding(curCommand, subCommandLineNumber, totalCommands int) strin
 	if curCommand == totalCommands-1 {
 		if subCommandLineNumber == 0 {
 			return "└─ "
-		} else {
-			return "   "
 		}
-	} else {
-		if subCommandLineNumber == 0 {
-			return "├─ "
-		} else {
-			return "│  "
-		}
+		return "   "
 	}
+
+	if subCommandLineNumber == 0 {
+		return "├─ "
+	}
+	return "│  "
 }
 
 func generateUsage(cmd *cobra.Command) string {
@@ -98,12 +96,10 @@ func colorizeUsages(cmd *cobra.Command) string {
 	replacementPairs := []string{}
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
 		longFlagName := fmt.Sprintf("--%s", f.Name)
-		replacementPairs = append(replacementPairs, longFlagName)
-		replacementPairs = append(replacementPairs, color.GreenString(longFlagName))
+		replacementPairs = append(replacementPairs, longFlagName, color.GreenString(longFlagName))
 		if len(f.Shorthand) > 0 {
 			shortFlagName := fmt.Sprintf("-%s", f.Shorthand)
-			replacementPairs = append(replacementPairs, shortFlagName)
-			replacementPairs = append(replacementPairs, color.GreenString(shortFlagName))
+			replacementPairs = append(replacementPairs, shortFlagName, color.GreenString(shortFlagName))
 		}
 	})
 
@@ -118,7 +114,7 @@ func generateCommandOptionsMessage(cmd *cobra.Command) []string {
 
 	local := cmd.LocalFlags()
 	if len(local.FlagUsages()) > 0 {
-		if cmd.Name() == "ydbops" {
+		if cmd == cmd.Root() {
 			return generateShortGlobalOptions(cmd)
 		}
 
@@ -136,7 +132,7 @@ func ValidateOptions(optsArgs ...options.Options) func(*cobra.Command, []string)
 	return func(cmd *cobra.Command, args []string) error {
 		for _, opts := range optsArgs {
 			if err := opts.Validate(); err != nil {
-				return fmt.Errorf("%w\nTry '--help' option for more info.", err)
+				return fmt.Errorf("%w\nTry '--help' option for more info", err)
 			}
 		}
 		return nil
@@ -145,7 +141,7 @@ func ValidateOptions(optsArgs ...options.Options) func(*cobra.Command, []string)
 
 func RequireSubcommand(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("You have not selected a subcommand\nTry '--help' option for more info.")
+		return fmt.Errorf("you have not selected a subcommand\nTry '--help' option for more info")
 	}
 	return nil
 }
@@ -171,7 +167,7 @@ func SetDefaultsOn(cmd *cobra.Command) *cobra.Command {
 	cobra.AddTemplateFunc("generateUsage", generateUsage)
 
 	cobra.AddTemplateFunc("listAllFlagsInNiceGroups", func(cmd *cobra.Command) string {
-		if cmd.Name() == "ydbops" {
+		if cmd == cmd.Root() {
 			return "Global options:\n" + colorizeUsages(cmd)
 		}
 

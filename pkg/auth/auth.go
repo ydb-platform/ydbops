@@ -15,19 +15,19 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-type AuthClient struct {
+type Client struct {
 	logger *zap.SugaredLogger
 	f      *client.Factory
 }
 
-func NewAuthClient(logger *zap.SugaredLogger, f *client.Factory) *AuthClient {
-	return &AuthClient{
+func NewAuthClient(logger *zap.SugaredLogger, f *client.Factory) *Client {
+	return &Client{
 		logger: logger,
 		f:      f,
 	}
 }
 
-func (c *AuthClient) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
+func (c *Client) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
 	result := Ydb_Auth.LoginResult{}
 
 	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
@@ -45,7 +45,7 @@ func (c *AuthClient) Auth(grpcOpts options.GRPC, user, password string) (string,
 	return result.Token, nil
 }
 
-func (c *AuthClient) ExecuteAuthMethod(
+func (c *Client) ExecuteAuthMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error),
 	grpcOpts options.GRPC,

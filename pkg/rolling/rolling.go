@@ -21,8 +21,8 @@ import (
 )
 
 type Rolling struct {
-	cms       *cms.CMSClient
-	discovery *discovery.DiscoveryClient
+	cms       *cms.Client
+	discovery *discovery.Client
 
 	factory *client.Factory
 
@@ -68,9 +68,11 @@ func initAuthToken(
 	case options.IamCreds:
 		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
 	case options.None:
-		return fmt.Errorf("Determined credentials to be anonymous. Anonymous credentials are currently unsupported.")
+		return fmt.Errorf("determined credentials to be anonymous. Anonymous credentials are currently unsupported")
 	default:
-		return fmt.Errorf("internal error: authorization type not recognized after options validation, this should never happen")
+		return fmt.Errorf(
+			"internal error: authorization type not recognized after options validation, this should never happen",
+		)
 	}
 
 	return nil
@@ -124,7 +126,7 @@ func (r *Rolling) DoRestart() error {
 	}
 	r.state = state
 
-	if err := r.cleanupOldRollingRestarts(); err != nil {
+	if err = r.cleanupOldRollingRestarts(); err != nil {
 		return err
 	}
 
@@ -161,25 +163,25 @@ func (r *Rolling) DoRestart() error {
 	}
 	task, err := r.cms.CreateMaintenanceTask(taskParams)
 	if err != nil {
-		return fmt.Errorf("failed to create maintenance task: %+v", err)
+		return fmt.Errorf("failed to create maintenance task: %w", err)
 	}
 
 	return r.cmsWaitingLoop(task)
 }
 
 func (r *Rolling) DoRestartPrevious() error {
-	return fmt.Errorf("--continue behaviour not implemented yet.")
+	return fmt.Errorf("--continue behavior not implemented yet")
 }
 
 func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 	var (
 		err          error
 		delay        time.Duration
-		taskId       = task.GetTaskUid()
+		taskID       = task.GetTaskUid()
 		defaultDelay = time.Duration(r.opts.CMSQueryInterval) * time.Second
 	)
 
-	r.logger.Infof("Maintenance task %v, processing loop started", taskId)
+	r.logger.Infof("Maintenance task %v, processing loop started", taskID)
 	for {
 		delay = defaultDelay
 
@@ -203,8 +205,8 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
 		r.logger.Infof("Wait next %s delay", delay)
 		time.Sleep(delay)
 
-		r.logger.Infof("Refresh maintenance task with id: %s", taskId)
-		task, err = r.cms.RefreshMaintenanceTask(taskId)
+		r.logger.Infof("Refresh maintenance task with id: %s", taskID)
+		task, err = r.cms.RefreshMaintenanceTask(taskID)
 		if err != nil {
 			r.logger.Warnf("Failed to refresh maintenance task: %+v", err)
 		}
@@ -242,7 +244,8 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
 			actionsCompletedThisStep = append(actionsCompletedThisStep, as.ActionUid)
 			r.logger.Debugf(
-				"Node id %v already restarted, but CompleteAction failed on last iteration, so CMS does not know it is complete yet.",
+				"Node id %v already restarted, but CompleteAction failed on last iteration, "+
+					"so CMS does not know it is complete yet.",
 				node.NodeId,
 			)
 			continue
@@ -265,7 +268,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 					r.state.retriesMadeForNode[node.NodeId],
 					err.Error(),
 				)
-				r.state.retriesMadeForNode[node.NodeId] += 1
+				r.state.retriesMadeForNode[node.NodeId]++
 
 				if r.state.retriesMadeForNode[node.NodeId] == r.opts.RestartRetryNumber {
 					// TODO reduce copypaste with literally 5 lines below
@@ -279,7 +282,6 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 				r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
 			}
 		}()
-
 	}
 
 	wg.Wait()
@@ -299,7 +301,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 func (r *Rolling) prepareState() (*state, error) {
 	tenants, err := r.cms.Tenants()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list available tenants: %+v", err)
+		return nil, fmt.Errorf("failed to list available tenants: %w", err)
 	}
 
 	tenantNameToNodeIds := make(map[string][]uint32)
@@ -320,12 +322,12 @@ func (r *Rolling) prepareState() (*state, error) {
 
 	nodes, err := r.cms.Nodes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list available nodes: %+v", err)
+		return nil, fmt.Errorf("failed to list available nodes: %w", err)
 	}
 
 	userSID, err := r.discovery.WhoAmI()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to determine the : %+v", err)
+		return nil, fmt.Errorf("failed to determine the user SID: %w", err)
 	}
 
 	return &state{

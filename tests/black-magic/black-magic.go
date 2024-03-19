@@ -18,7 +18,7 @@ var uuidRegex = regexp.MustCompile(`^(rolling-restart-)?[0-9a-f]{8}-[0-9a-f]{4}-
 //
 // TODO jorres@: Maybe think about adding a hidden `--static-uuids` purely for e2e testing, not inventing
 // this complicated crutch here...
-func UuidComparer(expectedPlaceholders, actualPlaceholders map[string]int) cmp.Option {
+func UUIDComparer(expectedPlaceholders, actualPlaceholders map[string]int) cmp.Option {
 	return cmp.Comparer(func(expected, actual string) bool {
 		if expected == actual {
 			return true

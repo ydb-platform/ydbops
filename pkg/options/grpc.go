@@ -45,7 +45,7 @@ func (o *GRPC) Validate() error {
 		}
 
 		if _, err := os.Stat(o.CaFile); errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("root CA file not found: %v", err)
+			return fmt.Errorf("root CA file not found: %w", err)
 		}
 	}
 
@@ -64,7 +64,7 @@ func (o *GRPC) Validate() error {
 	case "grpc":
 		o.GRPCSecure = false
 	default:
-		return fmt.Errorf("please specify the protocol in the endpoint explicitly: grpc or grpcs.")
+		return fmt.Errorf("please specify the protocol in the endpoint explicitly: grpc or grpcs")
 	}
 
 	if !o.GRPCSecure && o.GRPCSkipVerify {

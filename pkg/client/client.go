@@ -50,7 +50,7 @@ func WrapWithRetries(
 		}
 	}
 
-	return nil, fmt.Errorf("Number of retries exceeded: %v. Last error: %w", maxAttempts, lastError)
+	return nil, fmt.Errorf("number of retries exceeded: %v. Last error: %w", maxAttempts, lastError)
 }
 
 func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {

@@ -89,7 +89,7 @@ func (a *AuthStatic) Validate() error {
 	if a.PasswordFile != "" {
 		content, err := os.ReadFile(a.PasswordFile)
 		if err != nil {
-			return fmt.Errorf("Error reading file with static password: %w", err)
+			return fmt.Errorf("error reading file with static password: %w", err)
 		}
 		a.Password = string(content)
 		return nil
@@ -101,7 +101,7 @@ func (a *AuthStatic) Validate() error {
 	}
 
 	return fmt.Errorf(
-		"Failed to discover the password: neither --password nor environment variable \"%s\" seem to be defined.",
+		"failed to discover the password: neither --password nor environment variable \"%s\" seem to be defined",
 		DefaultStaticPasswordEnvVar,
 	)
 }
@@ -119,12 +119,12 @@ func (a *AuthIAMToken) Validate() error {
 		if envToken, present := os.LookupEnv(DefaultAuthEnvVar); present && envToken != "" {
 			a.Token = envToken
 			return nil
-		} else {
-			return fmt.Errorf(
-				"failed to discover the token: neither --token-file nor environment variable \"%s\" seem to be defined.",
-				DefaultAuthEnvVar,
-			)
 		}
+
+		return fmt.Errorf(
+			"failed to discover the token: neither --token-file nor environment variable \"%s\" seem to be defined",
+			DefaultAuthEnvVar,
+		)
 	}
 
 	content, err := os.ReadFile(a.TokenFile)
@@ -150,7 +150,7 @@ Definition priority:
 func (a *AuthIAMCreds) Validate() error {
 	if len(a.KeyFilename) != 0 {
 		if _, err := os.Stat(a.KeyFilename); errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("auth iam key file %s not exists: %v", a.KeyFilename, err)
+			return fmt.Errorf("auth iam key file %s not exists: %w", a.KeyFilename, err)
 		}
 	}
 
@@ -182,7 +182,9 @@ func determineExplicitAuthType() AuthType {
 		authType[IamToken] = true
 	}
 
-	if static, ok := Auths[IamCreds]; ok && static.(*AuthIAMCreds).Endpoint != "" && static.(*AuthIAMCreds).KeyFilename != "" {
+	if static, ok := Auths[IamCreds]; ok &&
+		static.(*AuthIAMCreds).Endpoint != "" &&
+		static.(*AuthIAMCreds).KeyFilename != "" {
 		authType[IamCreds] = true
 	}
 
@@ -219,7 +221,7 @@ func determineImplicitAuthType() AuthType {
 func (o *AuthOptions) Validate() error {
 	explicitlyActiveAuthType := determineExplicitAuthType()
 	if explicitlyActiveAuthType == MultipleAtOnce {
-		return fmt.Errorf("please specify exactly one authorization option. You specified more than one.")
+		return fmt.Errorf("please specify exactly one authorization option. You specified more than one")
 	}
 
 	activeAuthType := explicitlyActiveAuthType

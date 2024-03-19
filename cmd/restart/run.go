@@ -3,7 +3,7 @@ package restart
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
@@ -14,7 +14,7 @@ func NewRunCmd() *cobra.Command {
 	rootOpts := options.RootOptionsInstance
 	restarter := restarters.NewRunRestarter(options.Logger)
 
-	cmd := cobra_util.SetDefaultsOn(&cobra.Command{
+	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "run",
 		Short: "Run an arbitrary executable (e.g. shell code) in the context of the local machine",
 		Long: `ydbops restart run:
@@ -29,7 +29,7 @@ func NewRunCmd() *cobra.Command {
 
 	Certain environment variable will be passed to your executable on each run:
 		$HOSTNAME: the fqdn of the node currently released by CMS.`,
-		PreRunE: cobra_util.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
+		PreRunE: cli.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},

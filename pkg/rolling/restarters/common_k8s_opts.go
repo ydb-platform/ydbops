@@ -30,7 +30,7 @@ func (o *k8sOpts) Validate() error {
 	}
 
 	if o.namespace == "" {
-		return fmt.Errorf("Please specify a non-empty --namespace")
+		return fmt.Errorf("please specify a non-empty --namespace")
 	}
 	return nil
 }

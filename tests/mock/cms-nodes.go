@@ -14,21 +14,21 @@ func makePointer[T any](arg T) *T {
 	return &arg
 }
 
-func makeLocation(nodeId uint32) *Ydb_Discovery.NodeLocation {
+func makeLocation(nodeID uint32) *Ydb_Discovery.NodeLocation {
 	return &Ydb_Discovery.NodeLocation{
 		DataCenter: makePointer("DC-1"),
 		Module:     makePointer("DC-1-MODULE-1"),
 		Rack:       makePointer("DC-1-MODULE-1-RACK-1"),
-		Unit:       makePointer(fmt.Sprintf("DC-1-MODULE-1-RACK-1-UNIT-%v", nodeId)),
+		Unit:       makePointer(fmt.Sprintf("DC-1-MODULE-1-RACK-1-UNIT-%v", nodeID)),
 	}
 }
 
-func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
+func makeNode(nodeID uint32) *Ydb_Maintenance.Node {
 	return &Ydb_Maintenance.Node{
-		NodeId:   nodeId,
-		Host:     fmt.Sprintf("ydb-%v.ydb.tech", nodeId),
+		NodeId:   nodeID,
+		Host:     fmt.Sprintf("ydb-%v.ydb.tech", nodeID),
 		Port:     19000,
-		Location: makeLocation(nodeId),
+		Location: makeLocation(nodeID),
 		State:    Ydb_Maintenance.ItemState_ITEM_STATE_UP,
 		Type: &Ydb_Maintenance.Node_Storage{
 			Storage: &Ydb_Maintenance.Node_StorageNode{},
@@ -36,9 +36,9 @@ func makeNode(nodeId uint32) *Ydb_Maintenance.Node {
 	}
 }
 
-func MakeActionGroups(nodeIds ...uint32) []*Ydb_Maintenance.ActionGroup {
+func MakeActionGroups(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
 	result := []*Ydb_Maintenance.ActionGroup{}
-	for _, nodeId := range nodeIds {
+	for _, nodeID := range nodeIDs {
 		result = append(result,
 			&Ydb_Maintenance.ActionGroup{
 				Actions: []*Ydb_Maintenance.Action{
@@ -47,7 +47,7 @@ func MakeActionGroups(nodeIds ...uint32) []*Ydb_Maintenance.ActionGroup {
 							LockAction: &Ydb_Maintenance.LockAction{
 								Scope: &Ydb_Maintenance.ActionScope{
 									Scope: &Ydb_Maintenance.ActionScope_NodeId{
-										NodeId: nodeId,
+										NodeId: nodeID,
 									},
 								},
 								Duration: durationpb.New(time.Duration(180) * time.Second),
@@ -71,9 +71,9 @@ type TestNodeInfo struct {
 func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestNodeInfo) []*Ydb_Maintenance.Node {
 	nodes := []*Ydb_Maintenance.Node{}
 	for _, group := range nodeGroups {
-		for _, nodeId := range group {
-			testNodeInfo, ok := nodeInfo[nodeId]
-			node := makeNode(nodeId)
+		for _, nodeID := range group {
+			testNodeInfo, ok := nodeInfo[nodeID]
+			node := makeNode(nodeID)
 
 			if ok && testNodeInfo.IsDynnode {
 				node.Type = &Ydb_Maintenance.Node_Dynamic{
@@ -110,8 +110,8 @@ func (s *YdbMock) SetNodeConfiguration(nodeGroups [][]uint32, nodeInfo map[uint3
 	s.nodeGroups = nodeGroups
 
 	for _, group := range s.nodeGroups {
-		for _, nodeId := range group {
-			s.isNodeCurrentlyPermitted[nodeId] = false
+		for _, nodeID := range group {
+			s.isNodeCurrentlyPermitted[nodeID] = false
 		}
 	}
 

@@ -21,45 +21,39 @@ jobs:
       - name: checkout-when-this-repo-source
         uses: actions/checkout@v3
         if: github.event.pull_request.head.sha == ''
-  lint:
+  golangci:
+    name: golangci-lint
     concurrency:
       group: lint-golangci-${{ github.ref }}
       cancel-in-progress: true
-    needs:
-      - smart-checkout
     runs-on: ubuntu-latest
     steps:
-      - name: setup-go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.21
-      - name: set-env-vars
-        run: |
-          echo "HOME=/actions-runner" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.48.0
-  code-format-check:
+          version: v1.52.0
+  autoformatter:
+    name: autoformat check
     concurrency:
       group: lint-autoformat-${{ github.ref }}
       cancel-in-progress: true
-    needs:
-      - smart-checkout
     runs-on: ubuntu-latest
     steps:
-      - name: setup-go
+      - uses: actions/checkout@v3
+
+      - name: Install Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
-      - name: set-env-vars
-        run: |
-          echo "HOME=/actions-runner" >> $GITHUB_ENV
+          go-version: "1.21"
+
       - name: Install utilities
         run: |
           go install mvdan.cc/gofumpt@v0.3.1
           go install github.com/rinchsan/gosimports/cmd/gosimports@v0.1.5
+
       - name: format all files with auto-formatter
         run: bash ./.github/scripts/format-all-go-code.sh "$PWD"
+
       - name: Check repository diff
         run: bash ./.github/scripts/check-work-copy-equals-to-committed.sh "auto-format broken"

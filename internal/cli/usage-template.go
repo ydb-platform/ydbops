@@ -1,4 +1,4 @@
-package cobra_util
+package cli
 
 const UsageTemplate = `{{ generateUsage . }}{{if .HasExample}}
 

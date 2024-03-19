@@ -48,7 +48,7 @@ func (f *Factory) SetAuthToken(t string) {
 func (f *Factory) Connection() (*grpc.ClientConn, error) {
 	cr, err := f.makeCredentials()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load credentials: %v", err)
+		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
 
 	return grpc.Dial(f.endpoint(),
@@ -73,7 +73,7 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 
 	systemPool, err := x509.SystemCertPool()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get the system cert pool: %w", err)
+		return nil, fmt.Errorf("failed to get the system cert pool: %w", err)
 	}
 
 	if f.grpc.CaFile != "" {
@@ -87,7 +87,8 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 	}
 
 	tlsConfig := &tls.Config{
-		RootCAs: systemPool,
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    systemPool,
 	}
 
 	if f.grpc.GRPCSkipVerify {
@@ -103,17 +104,17 @@ func (f *Factory) endpoint() string {
 	return fmt.Sprintf("%s:%d", f.grpc.Endpoint, f.grpc.GRPCPort)
 }
 
-func (f Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
+func (f *Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
 	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
 
 	return metadata.AppendToOutgoingContext(ctx,
 		"x-ydb-auth-ticket", f.token), cf, nil
 }
 
-func (f Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
+func (f *Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
 }
 
-func (f Factory) GetRetryNumber() int {
+func (f *Factory) GetRetryNumber() int {
 	return f.restart.RestartRetryNumber
 }

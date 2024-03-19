@@ -118,7 +118,7 @@ var _ = Describe("Test Rolling", func() {
 			Expect(cmp.Diff(expected, actual,
 				protocmp.Transform(),
 				blackmagic.ActionGroupSorter(),
-				blackmagic.UuidComparer(expectedPlaceholders, actualPlaceholders),
+				blackmagic.UUIDComparer(expectedPlaceholders, actualPlaceholders),
 			)).To(BeEmpty())
 		}
 

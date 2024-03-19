@@ -19,6 +19,7 @@ type RunRestarter struct {
 }
 
 func (r RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
+	//nolint:gosec
 	cmd := exec.Command(r.Opts.PayloadFilepath)
 
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", HostnameEnvVar, node.Host))
@@ -27,14 +28,14 @@ func (r RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	stderr, _ := cmd.StderrPipe()
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("Error running payload file: %w", err)
+		return fmt.Errorf("error running payload file: %w", err)
 	}
 
 	go StreamPipeIntoLogger(stdout, r.logger)
 	go StreamPipeIntoLogger(stderr, r.logger)
 
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("Payload command finished with an error: %w", err)
+		return fmt.Errorf("payload command finished with an error: %w", err)
 	}
 	return nil
 }

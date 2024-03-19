@@ -17,23 +17,30 @@ type baremetalRestarter struct {
 const (
 	defaultStorageSystemdUnit  = "ydb-server-storage.service"
 	internalStorageSystemdUnit = "kikimr"
+	sshBin                     = "ssh"
+	psshBin                    = "pssh"
+	nsshBin                    = "nssh"
 )
 
 func (r baremetalRestarter) stripCommandFromArgs(args []string) (string, []string) {
-	remainingSshArgs := []string{}
-	command := "ssh"
+	remainingSSHArgs := []string{}
+	command := sshBin
 	for _, arg := range args {
-		if arg == "ssh" || arg == "pssh" || arg == "nssh" {
+		if arg == sshBin || arg == psshBin || arg == nsshBin {
 			command = arg
 		} else {
-			remainingSshArgs = append(remainingSshArgs, arg)
+			remainingSSHArgs = append(remainingSSHArgs, arg)
 		}
 	}
 
-	return command, remainingSshArgs
+	return command, remainingSSHArgs
 }
 
-func (r baremetalRestarter) restartNodeBySystemdUnit(node *Ydb_Maintenance.Node, unitName string, sshArgs []string) error {
+func (r baremetalRestarter) restartNodeBySystemdUnit(
+	node *Ydb_Maintenance.Node,
+	unitName string,
+	sshArgs []string,
+) error {
 	r.logger.Debugf("Restarting %s systemd unit", unitName)
 
 	remoteRestartCommand := fmt.Sprintf(
@@ -41,17 +48,17 @@ func (r baremetalRestarter) restartNodeBySystemdUnit(node *Ydb_Maintenance.Node,
 		unitName,
 	)
 
-	sshCommand, remainingSshArgs := r.stripCommandFromArgs(sshArgs)
+	sshCommand, remainingSSHArgs := r.stripCommandFromArgs(sshArgs)
 
 	fullSSHArgs := []string{}
-	fullSSHArgs = append(fullSSHArgs, remainingSshArgs...)
+	fullSSHArgs = append(fullSSHArgs, remainingSSHArgs...)
 	switch sshCommand {
-	case "ssh":
+	case sshBin:
 		fullSSHArgs = append(fullSSHArgs, node.Host, remoteRestartCommand)
-	case "nssh", "pssh":
+	case nsshBin, psshBin:
 		fullSSHArgs = append(fullSSHArgs, "run", remoteRestartCommand, node.Host)
 	default:
-		return fmt.Errorf("Supported ssh commands: ssh, pssh, nssh. Specified: %s", sshCommand)
+		return fmt.Errorf("supported ssh commands: ssh, pssh, nssh. Specified: %s", sshCommand)
 	}
 
 	cmd := exec.Command(sshCommand, fullSSHArgs...)
@@ -66,11 +73,8 @@ func (r baremetalRestarter) restartNodeBySystemdUnit(node *Ydb_Maintenance.Node,
 	defer ticker.Stop()
 
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				r.logger.Warnf("Waiting to connect to the node by SSH...")
-			}
+		for range ticker.C {
+			r.logger.Warnf("Waiting to connect to the node by SSH...")
 		}
 	}()
 

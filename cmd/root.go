@@ -9,7 +9,7 @@ import (
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/cmd/restart/storage"
 	"github.com/ydb-platform/ydbops/cmd/restart/tenant"
-	"github.com/ydb-platform/ydbops/internal/cobra_util"
+	"github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -65,7 +65,7 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 			DisableDefaultCmd: true,
 		},
 		SilenceUsage: true,
-		RunE:         cobra_util.RequireSubcommand,
+		RunE:         cli.RequireSubcommand,
 	}
 
 	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
@@ -82,5 +82,5 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 
 	registerAllSubcommands(RootCmd)
 
-	RootCmd.SetUsageTemplate(cobra_util.UsageTemplate)
+	RootCmd.SetUsageTemplate(cli.UsageTemplate)
 }

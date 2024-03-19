@@ -48,12 +48,16 @@ func (r k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Clients
 	return clientset
 }
 
-func (r k8sRestarter) waitPodRunning(namespace string, podName string, oldUID types.UID, podRestartTimeout time.Duration) error {
+func (r k8sRestarter) waitPodRunning(
+	namespace, podName string,
+	oldUID types.UID,
+	podRestartTimeout time.Duration,
+) error {
 	checkInterval := DefaultPodPhasePollingInterval
 	start := time.Now()
 	for {
 		if time.Since(start) >= podRestartTimeout {
-			return fmt.Errorf("Timed out waiting for a pod %s to start", podName)
+			return fmt.Errorf("timed out waiting for a pod %s to start", podName)
 		}
 
 		pod, err := r.k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
@@ -82,7 +86,7 @@ func (r k8sRestarter) waitPodRunning(namespace string, podName string, oldUID ty
 	}
 }
 
-func (r k8sRestarter) prepareK8sState(kubeconfigPath string, labelSelector string, namespace string) {
+func (r k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace string) {
 	r.k8sClient = r.createK8sClient(kubeconfigPath)
 
 	pods, err := r.k8sClient.CoreV1().Pods(namespace).List(
@@ -90,8 +94,8 @@ func (r k8sRestarter) prepareK8sState(kubeconfigPath string, labelSelector strin
 		metav1.ListOptions{LabelSelector: labelSelector},
 	)
 
-	for _, pod := range pods.Items {
-		r.hostnameToPod[pod.Spec.Hostname] = pod.Name
+	for i := range pods.Items {
+		r.hostnameToPod[pods.Items[i].Spec.Hostname] = pods.Items[i].Name
 	}
 
 	r.logger.Debugf("hostnameToPod: %+v", r.hostnameToPod)
@@ -101,14 +105,14 @@ func (r k8sRestarter) prepareK8sState(kubeconfigPath string, labelSelector strin
 	}
 }
 
-func (r k8sRestarter) restartNodeByRestartingPod(nodeHost string, namespace string) error {
+func (r k8sRestarter) restartNodeByRestartingPod(nodeHost, namespace string) error {
 	podName := r.hostnameToPod[nodeHost]
 
 	r.logger.Infof("Restarting node %s on the %s pod", nodeHost, podName)
 
 	pod, err := r.k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Pod scheduled for deletion %s not found: %w", podName, err)
+		return fmt.Errorf("pod scheduled for deletion %s not found: %w", podName, err)
 	}
 
 	oldUID := pod.ObjectMeta.UID
