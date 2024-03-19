@@ -32,7 +32,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.52.0
+          version: v1.55.2
   autoformatter:
     name: autoformat check
     concurrency:

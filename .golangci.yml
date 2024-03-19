@@ -273,7 +273,7 @@ linters:
 #    - testpackage
 #    - thelper
 #    - tenv
-    - typecheck
+    # - typecheck
     - unconvert
     - unparam
     - unused
