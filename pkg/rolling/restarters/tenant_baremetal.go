@@ -7,9 +7,9 @@ import (
 	"go.uber.org/zap"
 )
 
-type TenantBaremetalRestarter struct {
-	baremetalRestarter
-	Opts   *TenantBaremetalOpts
+type TenantSSHRestarter struct {
+	sshRestarter
+	Opts   *TenantSSHOpts
 	logger *zap.SugaredLogger
 }
 
@@ -18,16 +18,16 @@ const (
 	internalTenantSystemdUnitPrefix = "kikimr-multi"
 )
 
-func NewTenantBaremetalRestarter(logger *zap.SugaredLogger) *TenantBaremetalRestarter {
-	return &TenantBaremetalRestarter{
-		Opts: &TenantBaremetalOpts{
-			baremetalOpts: baremetalOpts{},
+func NewTenantSSHRestarter(logger *zap.SugaredLogger) *TenantSSHRestarter {
+	return &TenantSSHRestarter{
+		Opts: &TenantSSHOpts{
+			sshOpts: sshOpts{},
 		},
-		baremetalRestarter: newBaremetalRestarter(logger),
+		sshRestarter: newSSHRestarter(logger),
 	}
 }
 
-func (r TenantBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
+func (r TenantSSHRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	systemdUnitName := defaultTenantSystemdUnit
 	if r.Opts.kikimrTenantUnit {
 		systemdUnitName = fmt.Sprintf("%s@{%v}", internalTenantSystemdUnitPrefix, node.Port)
@@ -36,7 +36,7 @@ func (r TenantBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error 
 	return r.restartNodeBySystemdUnit(node, systemdUnitName, r.Opts.sshArgs)
 }
 
-func (r TenantBaremetalRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
+func (r TenantSSHRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
 	tenantNodes := FilterTenantNodes(cluster.AllNodes)
 
 	preSelectedNodes := PopulateByCommonFields(tenantNodes, spec)
@@ -47,7 +47,7 @@ func (r TenantBaremetalRestarter) Filter(spec FilterNodeParams, cluster ClusterN
 
 	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 
-	r.logger.Debugf("Tenant Baremetal Restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Tenant SSH Restarter selected following nodes for restart: %v", filteredNodes)
 
 	return filteredNodes
 }

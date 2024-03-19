@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type baremetalRestarter struct {
+type sshRestarter struct {
 	logger *zap.SugaredLogger
 }
 
@@ -22,7 +22,7 @@ const (
 	nsshBin                    = "nssh"
 )
 
-func (r baremetalRestarter) stripCommandFromArgs(args []string) (string, []string) {
+func (r sshRestarter) stripCommandFromArgs(args []string) (string, []string) {
 	remainingSSHArgs := []string{}
 	command := sshBin
 	for _, arg := range args {
@@ -36,7 +36,7 @@ func (r baremetalRestarter) stripCommandFromArgs(args []string) (string, []strin
 	return command, remainingSSHArgs
 }
 
-func (r baremetalRestarter) restartNodeBySystemdUnit(
+func (r sshRestarter) restartNodeBySystemdUnit(
 	node *Ydb_Maintenance.Node,
 	unitName string,
 	sshArgs []string,
@@ -94,8 +94,8 @@ func (r baremetalRestarter) restartNodeBySystemdUnit(
 	return nil
 }
 
-func newBaremetalRestarter(logger *zap.SugaredLogger) baremetalRestarter {
-	return baremetalRestarter{
+func newSSHRestarter(logger *zap.SugaredLogger) sshRestarter {
+	return sshRestarter{
 		logger: logger,
 	}
 }

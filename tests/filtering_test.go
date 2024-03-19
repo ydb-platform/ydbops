@@ -19,8 +19,8 @@ var _ = Describe("Test storage Filter", func() {
 		fiveMinutesAgoTimestamp = now.Add(-5 * time.Minute)
 	)
 
-	It("baremetal restarter filtering by --started>timestamp", func() {
-		restarter := restarters.NewStorageBaremetalRestarter(zap.S())
+	It("ssh restarter filtering by --started>timestamp", func() {
+		restarter := restarters.NewStorageSSHRestarter(zap.S())
 
 		nodeGroups := [][]uint32{
 			{1, 2, 3, 4, 5, 6, 7, 8},
@@ -65,8 +65,8 @@ var _ = Describe("Test storage Filter", func() {
 		Expect(filteredNodeIds).Should(HaveKey(uint32(3)))
 	})
 
-	It("baremetal restarter without arguments takes all storage nodes", func() {
-		restarter := restarters.NewStorageBaremetalRestarter(zap.S())
+	It("ssh restarter without arguments takes all storage nodes", func() {
+		restarter := restarters.NewStorageSSHRestarter(zap.S())
 
 		nodeGroups := [][]uint32{
 			{1, 2, 3, 4, 5, 6, 7, 8},

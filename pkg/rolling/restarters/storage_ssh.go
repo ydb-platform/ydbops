@@ -5,13 +5,13 @@ import (
 	"go.uber.org/zap"
 )
 
-type StorageBaremetalRestarter struct {
-	baremetalRestarter
+type StorageSSHRestarter struct {
+	sshRestarter
 
-	Opts *StorageBaremetalOpts
+	Opts *StorageSSHOpts
 }
 
-func (r StorageBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
+func (r StorageSSHRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	r.logger.Infof("Restarting storage node %s", node.Host)
 
 	// It is theoretically possible to guess the systemd-unit, but it is a fragile
@@ -30,16 +30,16 @@ func (r StorageBaremetalRestarter) RestartNode(node *Ydb_Maintenance.Node) error
 	return r.restartNodeBySystemdUnit(node, systemdUnitName, r.Opts.sshArgs)
 }
 
-func NewStorageBaremetalRestarter(logger *zap.SugaredLogger) *StorageBaremetalRestarter {
-	return &StorageBaremetalRestarter{
-		Opts: &StorageBaremetalOpts{
-			baremetalOpts: baremetalOpts{},
+func NewStorageSSHRestarter(logger *zap.SugaredLogger) *StorageSSHRestarter {
+	return &StorageSSHRestarter{
+		Opts: &StorageSSHOpts{
+			sshOpts: sshOpts{},
 		},
-		baremetalRestarter: newBaremetalRestarter(logger),
+		sshRestarter: newSSHRestarter(logger),
 	}
 }
 
-func (r StorageBaremetalRestarter) Filter(
+func (r StorageSSHRestarter) Filter(
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
@@ -49,7 +49,7 @@ func (r StorageBaremetalRestarter) Filter(
 
 	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 
-	r.logger.Debugf("Storage Baremetal Restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Storage SSH Restarter selected following nodes for restart: %v", filteredNodes)
 
 	return filteredNodes
 }
