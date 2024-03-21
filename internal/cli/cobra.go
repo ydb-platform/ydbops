@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
 func determinePadding(curCommand, subCommandLineNumber, totalCommands int) string {
@@ -93,19 +95,33 @@ func generateShortGlobalOptions(rootCmd *cobra.Command) []string {
 }
 
 func colorizeUsages(cmd *cobra.Command) string {
-	replacementPairs := []string{}
+	flagOccurences := []string{}
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
 		longFlagName := fmt.Sprintf("--%s", f.Name)
-		replacementPairs = append(replacementPairs, longFlagName, color.GreenString(longFlagName))
+		flagOccurences = append(flagOccurences, longFlagName)
 		if len(f.Shorthand) > 0 {
 			shortFlagName := fmt.Sprintf("-%s", f.Shorthand)
-			replacementPairs = append(replacementPairs, shortFlagName, color.GreenString(shortFlagName))
+			flagOccurences = append(flagOccurences, shortFlagName)
 		}
 	})
+
+	// Imagine flags --profile and --profile-name. If we first recolor
+	// --profile, then --profile-name would be recolored into <green>--profile-name</green>.
+	// Sorting in descending order by length allows to avoid that.
+	slices.SortFunc(flagOccurences, func(a string, b string) int {
+		return len(b) - len(a)
+	})
+
+	replacementPairs := []string{}
+
+	for _, flag := range flagOccurences {
+		replacementPairs = append(replacementPairs, flag, color.GreenString(flag))
+	}
 
 	replacer := strings.NewReplacer(replacementPairs...)
 
 	flagUsages := cmd.LocalFlags().FlagUsages()
+
 	return replacer.Replace(flagUsages)
 }
 
@@ -128,8 +144,14 @@ func generateCommandOptionsMessage(cmd *cobra.Command) []string {
 	return result
 }
 
-func ValidateOptions(optsArgs ...options.Options) func(*cobra.Command, []string) error {
+func PopulateProfileDefaultsAndValidate(optsArgs ...options.Options) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		rootOpts := options.RootOptionsInstance
+		err := profile.FillDefaultsFromActiveProfile(rootOpts.ProfileFile, rootOpts.ActiveProfile)
+		if err != nil {
+			return err
+		}
+
 		for _, opts := range optsArgs {
 			if err := opts.Validate(); err != nil {
 				return fmt.Errorf("%w\nTry '--help' option for more info", err)

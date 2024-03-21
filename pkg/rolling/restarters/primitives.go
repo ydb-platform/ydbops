@@ -55,7 +55,9 @@ func StreamPipeIntoLogger(p io.ReadCloser, logger *zap.SugaredLogger) {
 		}
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				logger.Error("Error reading from pipe", zap.Error(err))
+				logger.Info("Finished reading from remote command pipe")
+			} else {
+				logger.Errorf("Unknown error while reading from remote command pipe: %w", err)
 			}
 			break
 		}

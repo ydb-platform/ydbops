@@ -15,11 +15,10 @@ type sshRestarter struct {
 }
 
 const (
-	defaultStorageSystemdUnit  = "ydb-server-storage.service"
-	internalStorageSystemdUnit = "kikimr"
-	sshBin                     = "ssh"
-	psshBin                    = "pssh"
-	nsshBin                    = "nssh"
+	defaultStorageSystemdUnit = "ydb-server-storage.service"
+	sshBin                    = "ssh"
+	psshBin                   = "pssh"
+	nsshBin                   = "nssh"
 )
 
 func (r sshRestarter) stripCommandFromArgs(args []string) (string, []string) {

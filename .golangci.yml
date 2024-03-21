@@ -153,7 +153,7 @@ linters-settings:
       hugeParam:
         # Size in bytes that makes the warning trigger.
         # Default: 80
-        sizeThreshold: 200
+        sizeThreshold: 300
       nestingReduce:
         # Min number of statements inside a branch to trigger a warning.
         # Default: 5

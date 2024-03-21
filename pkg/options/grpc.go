@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
+
+	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
 const (
@@ -26,7 +28,9 @@ type GRPC struct {
 }
 
 func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&o.Endpoint, "endpoint", "e", "",
+	profile.PopulateFromProfileLaterP(
+		fs.StringVarP, &o.Endpoint, "endpoint", "e",
+		"",
 		"A GRPC URL to connect to the YDB cluster. Default protocol if unspecified: grpcs")
 
 	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
@@ -35,7 +39,10 @@ func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.GRPCSkipVerify, "grpc-skip-verify", false,
 		"Do not verify server hostname when using grpcs")
 
-	fs.StringVar(&o.CaFile, "ca-file", "", "Path to root ca file, overrides system pool")
+	profile.PopulateFromProfileLater(
+		fs.StringVar, &o.CaFile, "ca-file",
+		"",
+		"Path to root ca file, overrides system pool")
 }
 
 func (o *GRPC) Validate() error {

@@ -1,4 +1,4 @@
-package restart
+package cmd
 
 import (
 	"github.com/spf13/cobra"
@@ -29,14 +29,16 @@ func NewRunCmd() *cobra.Command {
 
 	Certain environment variable will be passed to your executable on each run:
 		$HOSTNAME: the fqdn of the node currently released by CMS.`,
-		PreRunE: cli.ValidateOptions(restartOpts, rootOpts, restarter.Opts),
+		PreRunE: cli.PopulateProfileDefaultsAndValidate(
+			restartOpts, rootOpts, restarter.Opts,
+		),
 		Run: func(cmd *cobra.Command, args []string) {
 			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
 	})
 
 	restarter.Opts.DefineFlags(cmd.Flags())
-	restartOpts.TenantOptions.DefineFlags(cmd.Flags())
+	restartOpts.DefineFlags(cmd.Flags())
 	return cmd
 }
 

@@ -20,7 +20,7 @@ var _ = Describe("Test storage Filter", func() {
 	)
 
 	It("ssh restarter filtering by --started>timestamp", func() {
-		restarter := restarters.NewStorageSSHRestarter(zap.S())
+		restarter := restarters.NewStorageSSHRestarter(zap.S(), []string{}, "")
 
 		nodeGroups := [][]uint32{
 			{1, 2, 3, 4, 5, 6, 7, 8},
@@ -66,7 +66,7 @@ var _ = Describe("Test storage Filter", func() {
 	})
 
 	It("ssh restarter without arguments takes all storage nodes", func() {
-		restarter := restarters.NewStorageSSHRestarter(zap.S())
+		restarter := restarters.NewStorageSSHRestarter(zap.S(), []string{}, "")
 
 		nodeGroups := [][]uint32{
 			{1, 2, 3, 4, 5, 6, 7, 8},

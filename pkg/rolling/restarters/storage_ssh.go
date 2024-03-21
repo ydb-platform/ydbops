@@ -23,17 +23,20 @@ func (r StorageSSHRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	// sudo systemctl restart $YDBD_UNIT
 
 	systemdUnitName := defaultStorageSystemdUnit
-	if r.Opts.kikimrStorageUnit {
-		systemdUnitName = internalStorageSystemdUnit
+	if r.Opts.storageUnit != "" {
+		systemdUnitName = r.Opts.storageUnit
 	}
 
 	return r.restartNodeBySystemdUnit(node, systemdUnitName, r.Opts.sshArgs)
 }
 
-func NewStorageSSHRestarter(logger *zap.SugaredLogger) *StorageSSHRestarter {
+func NewStorageSSHRestarter(logger *zap.SugaredLogger, sshArgs []string, systemdUnit string) *StorageSSHRestarter {
 	return &StorageSSHRestarter{
 		Opts: &StorageSSHOpts{
-			sshOpts: sshOpts{},
+			sshOpts: sshOpts{
+				sshArgs: sshArgs,
+			},
+			storageUnit: systemdUnit,
 		},
 		sshRestarter: newSSHRestarter(logger),
 	}

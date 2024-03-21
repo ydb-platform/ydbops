@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
+
+	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
 const (
@@ -70,17 +73,22 @@ func (an *AuthNone) DefineFlags(_ *pflag.FlagSet) {}
 func (an *AuthNone) Validate() error { return nil }
 
 func (a *AuthStatic) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&a.User, "user", "",
+	profile.PopulateFromProfileLater(
+		fs.StringVar, &a.User, "user", "",
 		fmt.Sprintf(`User name to authenticate with
 User name search order:
-	1. This option
-	2. "%s" environment variable`, DefaultStaticUserEnvVar))
+  1. This option
+  2. "%s" environment variable
+  3. active profile, see --profile-file`, DefaultStaticUserEnvVar))
 
-	fs.StringVar(&a.PasswordFile, "password-file", "",
+	profile.PopulateFromProfileLater(
+		fs.StringVar, &a.PasswordFile, "password-file", "",
 		fmt.Sprintf(`File with password to authenticate with.
 Password search order:
-	1. This option
-	2. "%s" environment variable (interpreted as password, not as a filepath)`, DefaultStaticPasswordEnvVar))
+  1. This option
+  2. "%s" environment variable (interpreted as password, not as a filepath)
+  3. active profile, see --profile-file`, DefaultStaticPasswordEnvVar))
+
 	fs.BoolVar(&a.NoPassword, "no-password", false,
 		"TODO NOT IMPLEMENTED Do not ask for user password (if empty) (default: false)")
 }
@@ -107,11 +115,13 @@ func (a *AuthStatic) Validate() error {
 }
 
 func (a *AuthIAMToken) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&a.TokenFile, "token-file", "",
+	profile.PopulateFromProfileLater(
+		fs.StringVar, &a.TokenFile, "token-file", "",
 		`IAM token file
 Token search order:
-	1. This option
-	2. "YDB_TOKEN" environment variable (interpreted as token, not as a filepath)`)
+  1. This option
+  2. "YDB_TOKEN" environment variable (interpreted as token, not as a filepath)
+  3. active profile, see --profile-file`)
 }
 
 func (a *AuthIAMToken) Validate() error {
@@ -129,20 +139,22 @@ func (a *AuthIAMToken) Validate() error {
 
 	content, err := os.ReadFile(a.TokenFile)
 	if err != nil {
-		return fmt.Errorf("failed to read the file specified in --token-file: %w", err)
+		return fmt.Errorf("failed to read the token file: %w", err)
 	}
 
-	a.Token = string(content)
+	a.Token = strings.TrimSpace(string(content))
 
 	return nil
 }
 
 func (a *AuthIAMCreds) DefineFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&a.KeyFilename, "sa-key-file", "", "",
+	profile.PopulateFromProfileLaterP(
+		fs.StringVarP, &a.KeyFilename, "sa-key-file", "", "",
 		fmt.Sprintf(`Service account key file
 Definition priority:
-	1. This option
-	2. "%s" environment variable (interpreted as path to the file)`, DefaultServiceAccountKeyFile))
+  1. This option
+  2. "%s" environment variable (interpreted as path to the file)
+  3. active profile, see --profile-file`, DefaultServiceAccountKeyFile))
 	fs.StringVarP(&a.Endpoint, "iam-endpoint", "", DefaultAuthIAMEndpoint,
 		"Authentication iam endpoint")
 }

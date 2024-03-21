@@ -11,9 +11,14 @@ type TenantK8sRestarter struct {
 	k8sRestarter
 }
 
-func NewTenantK8sRestarter(logger *zap.SugaredLogger) *TenantK8sRestarter {
+func NewTenantK8sRestarter(logger *zap.SugaredLogger, kubeconfigPath, namespace string) *TenantK8sRestarter {
 	return &TenantK8sRestarter{
-		Opts:         &TenantK8sOpts{},
+		Opts: &TenantK8sOpts{
+			k8sOpts: k8sOpts{
+				kubeconfigPath: kubeconfigPath,
+				namespace:      namespace,
+			},
+		},
 		k8sRestarter: newK8sRestarter(logger),
 	}
 }

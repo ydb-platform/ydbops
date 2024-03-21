@@ -146,7 +146,7 @@ func (r *Rolling) DoRestart() error {
 
 	nodesToRestart := r.restarter.Filter(
 		restarters.FilterNodeParams{
-			SelectedTenants:   r.opts.Tenants,
+			SelectedTenants:   r.opts.TenantList,
 			SelectedNodeIds:   nodeIds,
 			SelectedHostFQDNs: nodeFQDNs,
 			StartedTime:       r.opts.StartedTime,
@@ -317,8 +317,8 @@ func (r *Rolling) prepareState() (*state, error) {
 
 	tenantNameToNodeIds := make(map[string][]uint32)
 
-	for _, tenant := range r.opts.Tenants {
-		if collections.Contains(r.opts.Tenants, tenant) {
+	for _, tenant := range r.opts.TenantList {
+		if collections.Contains(r.opts.TenantList, tenant) {
 			return nil, fmt.Errorf("tenant %s is not found in tenant list of this cluster", tenant)
 		}
 

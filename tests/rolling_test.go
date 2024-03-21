@@ -113,6 +113,8 @@ var _ = Describe("Test Rolling", func() {
 		expectedPlaceholders := make(map[string]int)
 		actualPlaceholders := make(map[string]int)
 
+		Expect(len(tc.expectedRequests)).To(Equal(len(actualRequests)))
+
 		for i, expected := range tc.expectedRequests {
 			actual := actualRequests[i]
 			Expect(cmp.Diff(expected, actual,
@@ -121,8 +123,6 @@ var _ = Describe("Test Rolling", func() {
 				blackmagic.UUIDComparer(expectedPlaceholders, actualPlaceholders),
 			)).To(BeEmpty())
 		}
-
-		Expect(len(tc.expectedRequests)).To(Equal(len(actualRequests)))
 	},
 		Entry("restart 2 out of 8 nodes, nodes should be determined by --started filter", testCase{
 			nodeConfiguration: [][]uint32{
@@ -139,7 +139,6 @@ var _ = Describe("Test Rolling", func() {
 			ydbopsInvocation: []string{
 				"--endpoint", "grpcs://localhost:2135",
 				"--verbose",
-				"restart",
 				"--availability-mode", "strong",
 				"--user", mock.TestUser,
 				"--cms-query-interval", "1",
@@ -201,7 +200,6 @@ var _ = Describe("Test Rolling", func() {
 			ydbopsInvocation: []string{
 				"--endpoint", "grpcs://localhost:2135",
 				"--verbose",
-				"restart",
 				"--availability-mode", "strong",
 				"--hosts=1,2,3",
 				"--user", mock.TestUser,
@@ -273,7 +271,6 @@ var _ = Describe("Test Rolling", func() {
 			ydbopsInvocation: []string{
 				"--endpoint", "grpcs://localhost:2135",
 				"--verbose",
-				"restart",
 				"--availability-mode", "strong",
 				"--user", mock.TestUser,
 				"--cms-query-interval", "1",
@@ -354,7 +351,6 @@ var _ = Describe("Test Rolling", func() {
 			ydbopsInvocation: []string{
 				"--endpoint", "grpcs://localhost:2135",
 				"--verbose",
-				"restart",
 				"--availability-mode", "strong",
 				"--user", mock.TestUser,
 				"--cms-query-interval", "1",

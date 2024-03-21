@@ -6,9 +6,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/ydb-platform/ydbops/cmd/restart"
-	"github.com/ydb-platform/ydbops/cmd/restart/storage"
-	"github.com/ydb-platform/ydbops/cmd/restart/tenant"
 	"github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
@@ -22,17 +19,8 @@ func addAndReturnCmd(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command 
 
 func registerAllSubcommands(root *cobra.Command) {
 	_ = addAndReturnCmd(root,
-		addAndReturnCmd(NewRestartCmd(),
-			addAndReturnCmd(restart.NewStorageCmd(),
-				storage.NewStorageK8sCmd(),
-				storage.NewStorageSSHCmd(),
-			),
-			addAndReturnCmd(restart.NewTenantCmd(),
-				tenant.NewTenantSSHCmd(),
-				tenant.NewTenantK8sCmd(),
-			),
-			restart.NewRunCmd(),
-		),
+		NewRestartCmd(),
+		NewRunCmd(),
 	)
 }
 
