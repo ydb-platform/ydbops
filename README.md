@@ -26,7 +26,7 @@ Please browse the `ydbops --help` first. Then read along for examples (substitut
 #### Restart baremetal storage hosts
 
 ```
-ydbops restart storage baremetal \
+ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
   --ssh-args=pssh,-A,-J,<bastion-fqdn>,--ycp-profile,prod,--no-yubikey \
   --verbose --hosts <node1-fqdn>,<node2-fqdn>,<node3-fqdn>
@@ -35,7 +35,7 @@ ydbops restart storage baremetal \
 ##### Run hello-world on remote hosts
 
 ```
-ydbops restart run \
+ydbops run \
   --endpoint grpc://<cluster-fqdn> \
   --availability-mode strong --verbose --hosts 7,8 \
   --payload ./tests/payloads/payload-echo-helloworld.sh
@@ -44,7 +44,7 @@ ydbops restart run \
 ##### Restart hosts using a custom payload
 
 ```
-ydbops restart run \
+ydbops run \
   --endpoint grpc://<cluster-fqdn> \
   --availability-mode strong --verbose --hosts 5,6 \
   --payload ./tests/payloads/payload-restart-ydbd.sh
@@ -56,7 +56,7 @@ An example of authenticating with static credentials:
 
 ```
 export YDB_PASSWORD=password_123
-ydbops restart storage k8s \
+ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
   --availability-mode strong --verbose --hosts 7,8 \
   --user jorres --kubeconfig ~/.kube/config
