@@ -29,8 +29,8 @@ var RootCmd *cobra.Command
 func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 	RootCmd = &cobra.Command{
 		Use:   "ydbops",
-		Short: "ydbops: a CLI tool with common YDB cluster maintenance operations",
-		Long:  "ydbops: a CLI tool with common YDB cluster maintenance operations",
+		Short: "ydbops: a CLI tool for performing YDB cluster maintenance operations",
+		Long:  "ydbops: a CLI tool for performing YDB cluster maintenance operations",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
 			if options.RootOptionsInstance.Verbose {
@@ -48,7 +48,7 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 
 			return nil
 		},
-		// TODO decide if we need to hide this, for more compact --help
+		// hide --completion for more compact --help
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
 		},
@@ -57,6 +57,9 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 	}
 
 	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
+	RootCmd.Flags().SortFlags = false
+	RootCmd.PersistentFlags().SortFlags = false
 
 	RootCmd.SetOutput(color.Output)
 

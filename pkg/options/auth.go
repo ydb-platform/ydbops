@@ -79,7 +79,7 @@ func (a *AuthStatic) DefineFlags(fs *pflag.FlagSet) {
 User name search order:
   1. This option
   2. "%s" environment variable
-  3. active profile, see --profile-file`, DefaultStaticUserEnvVar))
+  3. active profile, see --config-file`, DefaultStaticUserEnvVar))
 
 	profile.PopulateFromProfileLater(
 		fs.StringVar, &a.PasswordFile, "password-file", "",
@@ -87,7 +87,7 @@ User name search order:
 Password search order:
   1. This option
   2. "%s" environment variable (interpreted as password, not as a filepath)
-  3. active profile, see --profile-file`, DefaultStaticPasswordEnvVar))
+  3. active profile, see --config-file`, DefaultStaticPasswordEnvVar))
 
 	fs.BoolVar(&a.NoPassword, "no-password", false,
 		"TODO NOT IMPLEMENTED Do not ask for user password (if empty) (default: false)")
@@ -121,7 +121,7 @@ func (a *AuthIAMToken) DefineFlags(fs *pflag.FlagSet) {
 Token search order:
   1. This option
   2. "YDB_TOKEN" environment variable (interpreted as token, not as a filepath)
-  3. active profile, see --profile-file`)
+  3. active profile, see --config-file`)
 }
 
 func (a *AuthIAMToken) Validate() error {
@@ -154,7 +154,7 @@ func (a *AuthIAMCreds) DefineFlags(fs *pflag.FlagSet) {
 Definition priority:
   1. This option
   2. "%s" environment variable (interpreted as path to the file)
-  3. active profile, see --profile-file`, DefaultServiceAccountKeyFile))
+  3. active profile, see --config-file`, DefaultServiceAccountKeyFile))
 	fs.StringVarP(&a.Endpoint, "iam-endpoint", "", DefaultAuthIAMEndpoint,
 		"Authentication iam endpoint")
 }

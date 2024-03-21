@@ -28,18 +28,18 @@ func (o *RootOptions) Validate() error {
 }
 
 func (o *RootOptions) DefineFlags(fs *pflag.FlagSet) {
-	o.Auth.DefineFlags(fs)
 	o.GRPC.DefineFlags(fs)
+	o.Auth.DefineFlags(fs)
 
 	fs.StringVar(
-		&o.ProfileFile, "profile-file",
+		&o.ProfileFile, "config-file",
 		"",
 		"Path to config file with profile data in yaml format")
 
 	fs.StringVar(
 		&o.ActiveProfile, "profile",
 		"",
-		"Which profile to choose from --profile-file")
+		"Override currently set profile name from --config-file")
 
 	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
 }

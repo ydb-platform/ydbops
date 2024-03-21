@@ -87,13 +87,12 @@ func ExecuteRolling(
 	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
-) {
+) error {
 	factory := client.NewConnectionFactory(rootOpts.Auth, rootOpts.GRPC, restartOpts)
 
 	err := initAuthToken(rootOpts, logger, factory)
 	if err != nil {
-		logger.Errorf("failed to receive an auth token, rolling restart not started: %+v", err)
-		return
+		return fmt.Errorf("failed to receive an auth token, rolling restart not started: %w", err)
 	}
 
 	discoveryClient := discovery.NewDiscoveryClient(logger, factory)
@@ -118,9 +117,11 @@ func ExecuteRolling(
 
 	if err != nil {
 		logger.Errorf("Failed to complete restart: %+v", err)
+		return err
 	} else {
 		logger.Info("Restart completed successfully")
 	}
+	return nil
 }
 
 func (r *Rolling) DoRestart() error {

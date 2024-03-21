@@ -142,21 +142,20 @@ func (o *RestartOptions) Validate() error {
 }
 
 func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
-	profile.PopulateFromProfileLater(
-		fs.StringVar, &o.KubeconfigPath, "kubeconfig",
-		"",
-		"Path to kubeconfig file. Can be specified in profile, see --profile-file.")
+	fs.BoolVar(&o.Storage, "storage", false, `Only include storage nodes. Otherwise, include all nodes by default`)
 
-	profile.PopulateFromProfileLater(
-		fs.StringVar, &o.K8sNamespace, "k8s-namespace",
-		"",
-		"Limit your operations to pods in this kubernetes namespace. Can be specified in profile, see --profile-file.")
+	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes. Otherwise, include all nodes by default`)
 
-	fs.BoolVar(&o.Storage, "storage", false, `Only include storage nodes`)
-	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes`)
 	fs.StringSliceVar(&o.TenantList, "tenant-list", []string{}, `Comma-delimited list of tenant names to restart. 
   E.g.:'--tenant-list name1,name2,name3'`)
+
 	fs.StringVar(&o.CustomSystemdUnitName, "systemd-unit", "", "Specify custom systemd unit name to restart")
+
+	fs.StringSliceVarP(&o.SSHArgs, "ssh-args", "", nil,
+		`This argument will be used when ssh-ing to the nodes. It may be used to override 
+the ssh command itself, ssh username or any additional arguments.
+E.g.:
+	--ssh-args=pssh,-A,-J,<some jump host>,--yc-profile,<YC profile name>`)
 
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
 		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
@@ -190,11 +189,15 @@ after that would be considered a regular cluster failure`)
 for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since 
 the ydbops utility is stateless. Use at your own risk.`)
 
-	fs.StringSliceVarP(&o.SSHArgs, "ssh-args", "", nil,
-		`This argument will be used when ssh-ing to the nodes. It may be used to override 
-the ssh command itself, ssh username or any additional arguments.
-E.g.:
-	--ssh-args=pssh,-A,-J,<some jump host>,--yc-profile,<YC profile name>`)
+	profile.PopulateFromProfileLater(
+		fs.StringVar, &o.KubeconfigPath, "kubeconfig",
+		"",
+		"[can specify in profile] Path to kubeconfig file.")
+
+	profile.PopulateFromProfileLater(
+		fs.StringVar, &o.K8sNamespace, "k8s-namespace",
+		"",
+		"[can specify in profile] Limit your operations to pods in this kubernetes namespace.")
 }
 
 func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {

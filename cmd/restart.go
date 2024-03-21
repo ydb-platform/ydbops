@@ -17,44 +17,53 @@ func NewRestartCmd() *cobra.Command {
 		Use:   "restart",
 		Short: "Restarts a specified subset of nodes in the cluster",
 		Long: `ydbops restart: 
-  Restarts a specified subset of nodes in the cluster.`,
+  Restarts a specified subset of nodes in the cluster.
+  By default will restart all nodes, filters can be specified to 
+  narrow down what subset will be restarted.`,
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
 			restartOpts, rootOpts,
 		),
-		Run: func(cmd *cobra.Command, args []string) {
-			var restarter restarters.Restarter
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var storageRestarter restarters.Restarter
+			var tenantRestarter restarters.Restarter
 
 			if rootOpts.KubeconfigPath != "" {
-				if restartOpts.Storage {
-					restarter = restarters.NewStorageK8sRestarter(
-						options.Logger,
-						rootOpts.KubeconfigPath,
-						rootOpts.K8sNamespace,
-					)
-				} else { // Tenant
-					restarter = restarters.NewTenantK8sRestarter(
-						options.Logger,
-						rootOpts.KubeconfigPath,
-						rootOpts.K8sNamespace,
-					)
-				}
+				storageRestarter = restarters.NewStorageK8sRestarter(
+					options.Logger,
+					rootOpts.KubeconfigPath,
+					rootOpts.K8sNamespace,
+				)
+				tenantRestarter = restarters.NewTenantK8sRestarter(
+					options.Logger,
+					rootOpts.KubeconfigPath,
+					rootOpts.K8sNamespace,
+				)
 			} else {
-				if restartOpts.Storage {
-					restarter = restarters.NewStorageSSHRestarter(
-						options.Logger,
-						restartOpts.SSHArgs,
-						restartOpts.CustomSystemdUnitName,
-					)
-				} else { // Tenant
-					restarter = restarters.NewTenantSSHRestarter(
-						options.Logger,
-						restartOpts.SSHArgs,
-						restartOpts.CustomSystemdUnitName,
-					)
-				}
+				storageRestarter = restarters.NewStorageSSHRestarter(
+					options.Logger,
+					restartOpts.SSHArgs,
+					restartOpts.CustomSystemdUnitName,
+				)
+				tenantRestarter = restarters.NewTenantSSHRestarter(
+					options.Logger,
+					restartOpts.SSHArgs,
+					restartOpts.CustomSystemdUnitName,
+				)
 			}
 
-			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+			var err error
+
+			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
+
+			if restartOpts.Storage || bothUnspecified {
+				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, storageRestarter)
+			}
+
+			if err == nil && (restartOpts.Tenant || bothUnspecified) {
+				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, tenantRestarter)
+			}
+
+			return err
 		},
 	})
 

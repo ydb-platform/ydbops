@@ -31,7 +31,8 @@ func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 	profile.PopulateFromProfileLaterP(
 		fs.StringVarP, &o.Endpoint, "endpoint", "e",
 		"",
-		"A GRPC URL to connect to the YDB cluster. Default protocol if unspecified: grpcs")
+		fmt.Sprintf(`[Required] PROTOCOL://HOST[:PORT]
+  A GRPC URL to connect to the YDB cluster. Default port is %v`, GRPCDefaultPort))
 
 	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
 		"Wait this much before timing out any GRPC requests")
@@ -42,17 +43,17 @@ func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 	profile.PopulateFromProfileLater(
 		fs.StringVar, &o.CaFile, "ca-file",
 		"",
-		"Path to root ca file, overrides system pool")
+		"Path to root ca file, appends to system pool")
 }
 
 func (o *GRPC) Validate() error {
 	if o.CaFile != "" {
 		if !strings.Contains(o.Endpoint, "grpcs") {
-			return fmt.Errorf("root CA must be specified only for secure connection")
+			return fmt.Errorf("--ca-file must be specified only for secure connection")
 		}
 
 		if _, err := os.Stat(o.CaFile); errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("root CA file not found: %w", err)
+			return fmt.Errorf("--ca-file file not found: %w", err)
 		}
 	}
 
