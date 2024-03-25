@@ -27,16 +27,16 @@ func NewRestartCmd() *cobra.Command {
 			var storageRestarter restarters.Restarter
 			var tenantRestarter restarters.Restarter
 
-			if rootOpts.KubeconfigPath != "" {
+			if restartOpts.KubeconfigPath != "" {
 				storageRestarter = restarters.NewStorageK8sRestarter(
 					options.Logger,
-					rootOpts.KubeconfigPath,
-					rootOpts.K8sNamespace,
+					restartOpts.KubeconfigPath,
+					restartOpts.K8sNamespace,
 				)
 				tenantRestarter = restarters.NewTenantK8sRestarter(
 					options.Logger,
-					rootOpts.KubeconfigPath,
-					rootOpts.K8sNamespace,
+					restartOpts.KubeconfigPath,
+					restartOpts.K8sNamespace,
 				)
 			} else {
 				storageRestarter = restarters.NewStorageSSHRestarter(

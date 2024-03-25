@@ -75,6 +75,10 @@ func (o *RestartOptions) Validate() error {
 		return fmt.Errorf("specified a non-existing availability mode: %s", o.AvailabilityMode)
 	}
 
+	if len(o.KubeconfigPath) > 0 && len(o.K8sNamespace) == 0 {
+		return fmt.Errorf("specified --kubeconfig, but not --k8s-namespace")
+	}
+
 	if o.RestartDuration < 0 {
 		return fmt.Errorf("specified invalid restart duration seconds: %d. Must be positive", o.RestartDuration)
 	}

@@ -34,7 +34,7 @@ func newK8sRestarter(logger *zap.SugaredLogger) k8sRestarter {
 	}
 }
 
-func (r k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Clientset {
+func (r *k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Clientset {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		r.logger.Fatalf("Failed to build config from flags %w", err)
@@ -48,7 +48,7 @@ func (r k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Clients
 	return clientset
 }
 
-func (r k8sRestarter) waitPodRunning(
+func (r *k8sRestarter) waitPodRunning(
 	namespace, podName string,
 	oldUID types.UID,
 	podRestartTimeout time.Duration,
@@ -86,7 +86,7 @@ func (r k8sRestarter) waitPodRunning(
 	}
 }
 
-func (r k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace string) {
+func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace string) {
 	r.k8sClient = r.createK8sClient(kubeconfigPath)
 
 	pods, err := r.k8sClient.CoreV1().Pods(namespace).List(
@@ -105,7 +105,7 @@ func (r k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace s
 	}
 }
 
-func (r k8sRestarter) restartNodeByRestartingPod(nodeHost, namespace string) error {
+func (r *k8sRestarter) restartNodeByRestartingPod(nodeHost, namespace string) error {
 	podName := r.hostnameToPod[nodeHost]
 
 	r.logger.Infof("Restarting node %s on the %s pod", nodeHost, podName)
@@ -126,7 +126,10 @@ func (r k8sRestarter) restartNodeByRestartingPod(nodeHost, namespace string) err
 		return err
 	}
 
-	return r.waitPodRunning(namespace, podName, oldUID, time.Duration(
-		options.RestartOptionsInstance.RestartDuration,
-	))
+	return r.waitPodRunning(
+		namespace,
+		podName,
+		oldUID,
+		time.Duration(options.RestartOptionsInstance.RestartDuration)*time.Second,
+	)
 }

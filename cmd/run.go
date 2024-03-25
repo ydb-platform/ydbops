@@ -32,8 +32,8 @@ func NewRunCmd() *cobra.Command {
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
 			restartOpts, rootOpts, restarter.Opts,
 		),
-		Run: func(cmd *cobra.Command, args []string) {
-			rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
 		},
 	})
 

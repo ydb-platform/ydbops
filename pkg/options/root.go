@@ -5,13 +5,11 @@ import (
 )
 
 type RootOptions struct {
-	Auth           AuthOptions
-	GRPC           GRPC
-	Verbose        bool
-	KubeconfigPath string
-	K8sNamespace   string
-	ProfileFile    string
-	ActiveProfile  string
+	Auth          AuthOptions
+	GRPC          GRPC
+	Verbose       bool
+	ProfileFile   string
+	ActiveProfile string
 }
 
 var RootOptionsInstance = &RootOptions{}
