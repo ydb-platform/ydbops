@@ -152,14 +152,14 @@ func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) 
 }
 
 func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
-	return len(spec.SelectedHostFQDNs) == 0 && len(spec.SelectedNodeIds) == 0
+	return len(spec.SelectedHosts) == 0 && len(spec.SelectedNodeIds) == 0
 }
 
 func includeByHostIDOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	selected := []*Ydb_Maintenance.Node{}
 
 	selected = append(
-		selected, FilterByHostFQDN(nodes, spec.SelectedHostFQDNs)...,
+		selected, FilterByHostFQDN(nodes, spec.SelectedHosts)...,
 	)
 
 	selected = append(

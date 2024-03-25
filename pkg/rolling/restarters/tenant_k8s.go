@@ -34,7 +34,7 @@ func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesI
 
 	tenantNodes := FilterTenantNodes(cluster.AllNodes)
 
-	selectedNodes := PopulateByCommonFields(tenantNodes, spec)
+	selectedNodes := populateWithK8sRules(tenantNodes, spec, r.FQDNToPodName)
 
 	selectedByTenantName := PopulateByTenantNames(tenantNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
 

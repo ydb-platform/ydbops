@@ -3,8 +3,6 @@ package restarters
 import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
-
-	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 type StorageK8sRestarter struct {
@@ -29,26 +27,31 @@ func (r StorageK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	return r.restartNodeByRestartingPod(node.Host, r.Opts.namespace)
 }
 
-func populateWithK8sRules(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams, hostnameToPod map[string]string) []*Ydb_Maintenance.Node {
+func populateWithK8sRules(
+	nodes []*Ydb_Maintenance.Node,
+	spec FilterNodeParams,
+	FqdnToPodName map[string]string,
+) []*Ydb_Maintenance.Node {
+	if isInclusiveFilteringUnspecified(spec) {
+		return nodes
+	}
+
 	selectedNodes := []*Ydb_Maintenance.Node{}
 
-	if len(spec.SelectedNodeIds) == 0 && len(spec.SelectedHostFQDNs) == 0 {
-		selectedNodes = nodes
-	} else {
-		selectedNodes = append(
-			selectedNodes,
-			FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
-		)
+	selectedNodes = append(
+		selectedNodes,
+		FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
+	)
 
-		for _, node := range nodes {
-			selectedHostFQDNsMap := collections.ToIndexMap(spec.SelectedHostFQDNs)
-
-			if _, present := selectedHostFQDNsMap[node.Host]; present {
+	// TODO make this linear
+	for _, node := range nodes {
+		for _, selectedHostFQDN := range spec.SelectedHosts {
+			if node.Host == selectedHostFQDN {
 				selectedNodes = append(selectedNodes, node)
 				continue
 			}
 
-			if _, present := selectedHostFQDNsMap[hostnameToPod[node.Host]]; present {
+			if selectedHostFQDN == FqdnToPodName[node.Host] {
 				selectedNodes = append(selectedNodes, node)
 				continue
 			}
@@ -68,7 +71,7 @@ func (r *StorageK8sRestarter) Filter(
 
 	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
 
-	selectedNodes := populateWithK8sRules(allStorageNodes, spec, r.hostnameToPod)
+	selectedNodes := populateWithK8sRules(allStorageNodes, spec, r.FQDNToPodName)
 
 	filteredNodes := ExcludeByCommonFields(selectedNodes, spec)
 

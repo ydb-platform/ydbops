@@ -22,14 +22,14 @@ const (
 
 type k8sRestarter struct {
 	k8sClient     *kubernetes.Clientset
-	hostnameToPod map[string]string
+	FQDNToPodName map[string]string
 	logger        *zap.SugaredLogger
 }
 
 func newK8sRestarter(logger *zap.SugaredLogger) k8sRestarter {
 	return k8sRestarter{
 		k8sClient:     nil, // initialized later
-		hostnameToPod: make(map[string]string),
+		FQDNToPodName: make(map[string]string),
 		logger:        logger,
 	}
 }
@@ -94,21 +94,23 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 		metav1.ListOptions{LabelSelector: labelSelector},
 	)
 
-	for i := range pods.Items {
-		r.hostnameToPod[pods.Items[i].Spec.Hostname] = pods.Items[i].Name
+	for _, pod := range pods.Items {
+		fullPodFQDN := fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
+		r.FQDNToPodName[fullPodFQDN] = pod.Name
 	}
-
-	r.logger.Debugf("hostnameToPod: %+v", r.hostnameToPod)
 
 	if err != nil {
 		panic(err.Error()) // TODO refactor Filter. Filter should also return error, it makes sense
 	}
 }
 
-func (r *k8sRestarter) restartNodeByRestartingPod(nodeHost, namespace string) error {
-	podName := r.hostnameToPod[nodeHost]
+func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) error {
+	podName := nodeFQDN
+	if _, present := r.FQDNToPodName[nodeFQDN]; present {
+		podName = r.FQDNToPodName[nodeFQDN]
+	}
 
-	r.logger.Infof("Restarting node %s on the %s pod", nodeHost, podName)
+	r.logger.Infof("Restarting node %s on the %s pod", nodeFQDN, podName)
 
 	pod, err := r.k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
