@@ -118,9 +118,8 @@ func ExecuteRolling(
 	if err != nil {
 		logger.Errorf("Failed to complete restart: %+v", err)
 		return err
-	} else {
-		logger.Info("Restart completed successfully")
 	}
+	logger.Info("Restart completed successfully")
 	return nil
 }
 

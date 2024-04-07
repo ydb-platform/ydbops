@@ -30,7 +30,7 @@ func (r StorageK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 func populateWithK8sRules(
 	nodes []*Ydb_Maintenance.Node,
 	spec FilterNodeParams,
-	FqdnToPodName map[string]string,
+	fqdnToPodName map[string]string,
 ) []*Ydb_Maintenance.Node {
 	if isInclusiveFilteringUnspecified(spec) {
 		return nodes
@@ -51,7 +51,7 @@ func populateWithK8sRules(
 				continue
 			}
 
-			if selectedHostFQDN == FqdnToPodName[node.Host] {
+			if selectedHostFQDN == fqdnToPodName[node.Host] {
 				selectedNodes = append(selectedNodes, node)
 				continue
 			}

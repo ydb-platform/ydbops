@@ -94,7 +94,8 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 		metav1.ListOptions{LabelSelector: labelSelector},
 	)
 
-	for _, pod := range pods.Items {
+	for i := 0; i < len(pods.Items); i++ {
+		pod := &pods.Items[i]
 		fullPodFQDN := fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
 		r.FQDNToPodName[fullPodFQDN] = pod.Name
 	}
