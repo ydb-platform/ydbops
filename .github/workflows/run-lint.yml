@@ -1,7 +1,7 @@
 # Implicit requirements
 # runner must have `docker` and `curl` installed (true on github-runners)
 
-name: run-lint
+name: tests
 
 on:
   push:
@@ -57,3 +57,23 @@ jobs:
 
       - name: Check repository diff
         run: bash ./.github/scripts/check-work-copy-equals-to-committed.sh "auto-format broken"
+  tests:
+    name: run tests
+    concurrency:
+      group: tests-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: install go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.21"
+      - name: download dependencies
+        run: |
+          go mod download
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+      - name: build ydbops
+        run: go build
+      - name: run tests
+        run: go test -v -p 1 ./... -args -ginkgo.v 

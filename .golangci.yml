@@ -168,7 +168,7 @@ linters-settings:
       rangeValCopy:
         # Size in bytes that makes the warning trigger.
         # Default: 128
-        sizeThreshold: 32
+        sizeThreshold: 2048
         # Whether to check test functions.
         # Default: true
         skipTestFuncs: false
