@@ -152,8 +152,8 @@ var _ = Describe("Test Rolling", func() {
 					User:     mock.TestUser,
 					Password: mock.TestPassword,
 				},
-				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Discovery.WhoAmIRequest{
 					IncludeGroups: false,
 				},
@@ -213,8 +213,8 @@ var _ = Describe("Test Rolling", func() {
 					User:     mock.TestUser,
 					Password: mock.TestPassword,
 				},
-				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Discovery.WhoAmIRequest{},
 				&Ydb_Maintenance.ListMaintenanceTasksRequest{
 					User: &mock.TestUser,
@@ -283,8 +283,8 @@ var _ = Describe("Test Rolling", func() {
 					User:     mock.TestUser,
 					Password: mock.TestPassword,
 				},
-				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Discovery.WhoAmIRequest{},
 				&Ydb_Maintenance.ListMaintenanceTasksRequest{
 					User: &mock.TestUser,
@@ -364,8 +364,8 @@ var _ = Describe("Test Rolling", func() {
 					User:     mock.TestUser,
 					Password: mock.TestPassword,
 				},
-				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
 				&Ydb_Discovery.WhoAmIRequest{},
 				&Ydb_Maintenance.ListMaintenanceTasksRequest{
 					User: &mock.TestUser,
@@ -377,6 +377,80 @@ var _ = Describe("Test Rolling", func() {
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
 					ActionGroups: mock.MakeActionGroups(2, 3),
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-1",
+							ActionId: "action-UUID-1",
+						},
+					},
+				},
+				&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
+					TaskUid: "task-UUID-1",
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-2",
+							ActionId: "action-UUID-2",
+						},
+					},
+				},
+			},
+		},
+		),
+		Entry("happy path, restart dynnodes by tenant name", testCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3, 4, 5, 6, 7, 8},
+				{9, 10, 11},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				9: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant1",
+				},
+				10: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant2",
+				},
+				11: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant2",
+				},
+			},
+			ydbopsInvocation: []string{
+				"--endpoint", "grpcs://localhost:2135",
+				"--verbose",
+				"--availability-mode", "strong",
+				"--user", mock.TestUser,
+				"--cms-query-interval", "1",
+				"--tenant",
+				"--tenant-list=fakeTenant2",
+				"run",
+				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			},
+			expectedRequests: []proto.Message{
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
+				},
+				&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+					TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+						TaskUid:          "task-UUID-1",
+						Description:      "Rolling restart maintenance task",
+						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+					},
+					ActionGroups: mock.MakeActionGroups(10, 11),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{

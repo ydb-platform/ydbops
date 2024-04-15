@@ -151,7 +151,7 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes. Otherwise, include all nodes by default`)
 
 	fs.StringSliceVar(&o.TenantList, "tenant-list", []string{}, `Comma-delimited list of tenant names to restart. 
-  E.g.:'--tenant-list name1,name2,name3'`)
+  E.g.:'--tenant-list=name1,name2,name3'`)
 
 	fs.StringVar(&o.CustomSystemdUnitName, "systemd-unit", "", "Specify custom systemd unit name to restart")
 

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/internal/collections"
@@ -314,31 +313,35 @@ func (r *Rolling) atomicRememberComplete(m *sync.Mutex, actionUID *Ydb_Maintenan
 	r.completedActions = append(r.completedActions, actionUID)
 }
 
+func (r *Rolling) populateTenantToNodesMapping(nodes []*Ydb_Maintenance.Node) map[string][]uint32 {
+	tenantNameToNodeIds := make(map[string][]uint32)
+	for _, node := range nodes {
+		dynamicNode := node.GetDynamic()
+		if dynamicNode != nil {
+			tenantNameToNodeIds[dynamicNode.GetTenant()] = append(
+				tenantNameToNodeIds[dynamicNode.GetTenant()],
+				node.NodeId,
+			)
+		}
+	}
+
+	return tenantNameToNodeIds
+}
+
 func (r *Rolling) prepareState() (*state, error) {
+	nodes, err := r.cms.Nodes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list available nodes: %w", err)
+	}
+
 	tenants, err := r.cms.Tenants()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list available tenants: %w", err)
 	}
-
-	tenantNameToNodeIds := make(map[string][]uint32)
-
 	for _, tenant := range r.opts.TenantList {
-		if collections.Contains(r.opts.TenantList, tenant) {
+		if !collections.Contains(tenants, tenant) {
 			return nil, fmt.Errorf("tenant %s is not found in tenant list of this cluster", tenant)
 		}
-
-		endpoints, err := r.discovery.ListEndpoints(tenant)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get the list of endpoints for the tenant %s", tenant)
-		}
-		tenantNameToNodeIds[tenant] = collections.Convert(endpoints, func(endpoint *Ydb_Discovery.EndpointInfo) uint32 {
-			return endpoint.NodeId
-		})
-	}
-
-	nodes, err := r.cms.Nodes()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list available nodes: %w", err)
 	}
 
 	userSID, err := r.discovery.WhoAmI()
@@ -347,7 +350,7 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
-		tenantNameToNodeIds:            tenantNameToNodeIds,
+		tenantNameToNodeIds:            r.populateTenantToNodesMapping(nodes),
 		tenants:                        tenants,
 		userSID:                        userSID,
 		nodes:                          collections.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),

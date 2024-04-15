@@ -7,6 +7,8 @@ import (
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
+
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 const (
@@ -47,8 +49,35 @@ func NewRunRestarter(logger *zap.SugaredLogger) *RunRestarter {
 	}
 }
 
+func determineRunScope(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
+	// Abstraction leaks here:
+	restartOpts := options.RestartOptionsInstance
+
+	if !restartOpts.Tenant && !restartOpts.Storage {
+		return cluster.AllNodes
+	}
+
+	result := []*Ydb_Maintenance.Node{}
+	if restartOpts.Storage {
+		storageNodes := FilterStorageNodes(cluster.AllNodes)
+		result = append(result, storageNodes...)
+	}
+
+	if restartOpts.Tenant {
+		tenantNodes := FilterTenantNodes(cluster.AllNodes)
+
+		selectedByTenantName := PopulateByTenantNames(tenantNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
+
+		result = append(result, selectedByTenantName...)
+	}
+
+	return result
+}
+
 func (r RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	preSelectedNodes := PopulateByCommonFields(cluster.AllNodes, spec)
+	runScopeNodes := determineRunScope(spec, cluster)
+
+	preSelectedNodes := PopulateByCommonFields(runScopeNodes, spec)
 
 	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 

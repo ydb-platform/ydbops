@@ -22,6 +22,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 var (
@@ -205,8 +207,16 @@ func (s *YdbMock) Login(ctx context.Context, req *Ydb_Auth.LoginRequest) (*Ydb_A
 
 func (s *YdbMock) ListDatabases(ctx context.Context, req *Ydb_Cms.ListDatabasesRequest) (*Ydb_Cms.ListDatabasesResponse, error) {
 	s.RequestLog = append(s.RequestLog, req)
+
+	paths := make(map[string]bool)
+	for _, node := range s.nodes {
+		if node.GetDynamic() != nil {
+			paths[node.GetDynamic().GetTenant()] = true
+		}
+	}
+
 	result := &Ydb_Cms.ListDatabasesResult{
-		Paths: []string{},
+		Paths: collections.Keys(paths),
 	}
 
 	return &Ydb_Cms.ListDatabasesResponse{Operation: wrapIntoOperation(result)}, nil
