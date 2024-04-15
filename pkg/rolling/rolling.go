@@ -239,7 +239,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
 	wg := new(sync.WaitGroup)
 
-	mutexForCompletedActions := new(sync.Mutex)
+	rollingStateMutex := new(sync.Mutex)
 
 	for _, gs := range performed {
 		var (
@@ -269,20 +269,24 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 			r.logger.Debugf("Restart node with id: %d", node.NodeId)
 			if err := r.restarter.RestartNode(node); err != nil {
+				rollingStateMutex.Lock()
+				retriesUntilNow := r.state.retriesMadeForNode[node.NodeId]
+				r.state.retriesMadeForNode[node.NodeId]++
+				rollingStateMutex.Unlock()
+
 				r.logger.Warnf(
 					"Failed to restart node with id: %d, attempt number %v, because of: %s",
 					node.NodeId,
-					r.state.retriesMadeForNode[node.NodeId],
+					retriesUntilNow,
 					err.Error(),
 				)
-				r.state.retriesMadeForNode[node.NodeId]++
 
-				if r.state.retriesMadeForNode[node.NodeId] == r.opts.RestartRetryNumber {
-					r.atomicRememberComplete(mutexForCompletedActions, as.ActionUid)
+				if retriesUntilNow+1 == r.opts.RestartRetryNumber {
+					r.atomicRememberComplete(rollingStateMutex, as.ActionUid)
 					r.logger.Warnf("Failed to retry node %v specified number of times %v", node.NodeId, r.opts.RestartRetryNumber)
 				}
 			} else {
-				r.atomicRememberComplete(mutexForCompletedActions, as.ActionUid)
+				r.atomicRememberComplete(rollingStateMutex, as.ActionUid)
 				r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
 			}
 		}()
