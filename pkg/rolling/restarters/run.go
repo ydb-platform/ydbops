@@ -7,8 +7,6 @@ import (
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
-
-	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 const (
@@ -16,11 +14,13 @@ const (
 )
 
 type RunRestarter struct {
-	Opts   *RunOpts
-	logger *zap.SugaredLogger
+	Opts        *RunOpts
+	logger      *zap.SugaredLogger
+	storageOnly bool
+	dynnodeOnly bool
 }
 
-func (r RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
+func (r *RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	//nolint:gosec
 	cmd := exec.Command(r.Opts.PayloadFilepath)
 
@@ -49,37 +49,29 @@ func NewRunRestarter(logger *zap.SugaredLogger) *RunRestarter {
 	}
 }
 
-func determineRunScope(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	// Abstraction leaks here:
-	restartOpts := options.RestartOptionsInstance
-
-	if !restartOpts.Tenant && !restartOpts.Storage {
-		return cluster.AllNodes
-	}
-
-	result := []*Ydb_Maintenance.Node{}
-	if restartOpts.Storage {
-		storageNodes := FilterStorageNodes(cluster.AllNodes)
-		result = append(result, storageNodes...)
-	}
-
-	if restartOpts.Tenant {
-		tenantNodes := FilterTenantNodes(cluster.AllNodes)
-
-		selectedByTenantName := PopulateByTenantNames(tenantNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
-
-		result = append(result, selectedByTenantName...)
-	}
-
-	return result
+func (r *RunRestarter) SetStorageOnly() {
+	r.storageOnly = true
+	r.dynnodeOnly = false
 }
 
-func (r RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	runScopeNodes := determineRunScope(spec, cluster)
+func (r *RunRestarter) SetDynnodeOnly() {
+	r.storageOnly = false
+	r.dynnodeOnly = true
+}
 
-	preSelectedNodes := PopulateByCommonFields(runScopeNodes, spec)
+func (r *RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
+	var runScopeNodes []*Ydb_Maintenance.Node
 
-	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
+	if r.storageOnly {
+		storageNodes := FilterStorageNodes(cluster.AllNodes)
+		runScopeNodes = PopulateByCommonFields(storageNodes, spec)
+	} else if r.dynnodeOnly {
+		tenantNodes := FilterTenantNodes(cluster.AllNodes)
+		preSelectedNodes := PopulateByCommonFields(tenantNodes, spec)
+		runScopeNodes = ExcludeByTenantNames(preSelectedNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
+	}
+
+	filteredNodes := ExcludeByCommonFields(runScopeNodes, spec)
 
 	r.logger.Debugf("Run Restarter selected following nodes for restart: %v", filteredNodes)
 

@@ -43,9 +43,7 @@ func (r TenantSSHRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesIn
 
 	preSelectedNodes := PopulateByCommonFields(tenantNodes, spec)
 
-	selectedByTenantName := PopulateByTenantNames(tenantNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
-
-	preSelectedNodes = MergeAndUnique(preSelectedNodes, selectedByTenantName)
+	preSelectedNodes = ExcludeByTenantNames(preSelectedNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
 
 	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 

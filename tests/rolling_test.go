@@ -144,6 +144,7 @@ var _ = Describe("Test Rolling", func() {
 				"--cms-query-interval", "1",
 				"--started", fmt.Sprintf("<%s", startedFilterValue.Format(time.RFC3339)),
 				"run",
+				"--storage",
 				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
 				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 			},
@@ -205,6 +206,7 @@ var _ = Describe("Test Rolling", func() {
 				"--user", mock.TestUser,
 				"--cms-query-interval", "1",
 				"run",
+				"--storage",
 				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
 				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 			},
@@ -275,6 +277,7 @@ var _ = Describe("Test Rolling", func() {
 				"--user", mock.TestUser,
 				"--cms-query-interval", "1",
 				"run",
+				"--storage",
 				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
 				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 			},
@@ -355,6 +358,7 @@ var _ = Describe("Test Rolling", func() {
 				"--user", mock.TestUser,
 				"--cms-query-interval", "1",
 				"run",
+				"--storage",
 				"--version", ">24.1.0",
 				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
 				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
@@ -470,6 +474,94 @@ var _ = Describe("Test Rolling", func() {
 							TaskUid:  "task-UUID-1",
 							GroupId:  "group-UUID-2",
 							ActionId: "action-UUID-2",
+						},
+					},
+				},
+			},
+		},
+		),
+		Entry("will restart tenants in parallel", testCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3, 4, 5, 6, 7, 8},
+				{9, 10},
+				{11, 12},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				9: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant1",
+				},
+				10: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant1",
+				},
+				11: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant2",
+				},
+				12: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant2",
+				},
+			},
+			ydbopsInvocation: []string{
+				"--endpoint", "grpcs://localhost:2135",
+				"--verbose",
+				"--availability-mode", "strong",
+				"--user", mock.TestUser,
+				"--cms-query-interval", "1",
+				"run",
+				"--tenant",
+				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			},
+			expectedRequests: []proto.Message{
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
+				},
+				&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+					TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+						TaskUid:          "task-UUID-1",
+						Description:      "Rolling restart maintenance task",
+						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+					},
+					ActionGroups: mock.MakeActionGroups(9, 10, 11, 12),
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-1",
+							ActionId: "action-UUID-1",
+						},
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-2",
+							ActionId: "action-UUID-2",
+						},
+					},
+				},
+				&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
+					TaskUid: "task-UUID-1",
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-3",
+							ActionId: "action-UUID-3",
+						},
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-4",
+							ActionId: "action-UUID-4",
 						},
 					},
 				},

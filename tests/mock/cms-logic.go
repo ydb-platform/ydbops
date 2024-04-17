@@ -120,7 +120,7 @@ func (s *YdbMock) cleanupActionByID(actionID string) {
 				}
 
 				s.isNodeCurrentlyPermitted[action.GetLockAction().Scope.GetNodeId()] = false
-				s.actionToActionUID[action] = nil
+				delete(s.actionToActionUID, action)
 				s.cleanupActionGroupState(task, actionID)
 				actionGroup.Actions = deleteFromSlice(actionGroup.Actions, i)
 				break
@@ -130,7 +130,7 @@ func (s *YdbMock) cleanupActionByID(actionID string) {
 				task.actionGroups = deleteFromSlice(task.actionGroups, k)
 
 				if len(task.actionGroups) == 0 {
-					s.tasks[task.options.TaskUid] = nil
+					delete(s.tasks, task.options.TaskUid)
 				}
 
 				return

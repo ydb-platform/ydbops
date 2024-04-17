@@ -159,6 +159,10 @@ func (r *Rolling) DoRestart() error {
 		},
 	)
 
+	if len(nodesToRestart) == 0 {
+		return nil
+	}
+
 	taskParams := cms.MaintenanceTaskParams{
 		TaskUID:          r.state.restartTaskUID,
 		AvailabilityMode: r.opts.GetAvailabilityMode(),

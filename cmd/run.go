@@ -33,7 +33,21 @@ func NewRunCmd() *cobra.Command {
 			restartOpts, rootOpts, restarter.Opts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+			var err error
+
+			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
+
+			if restartOpts.Storage || bothUnspecified {
+				restarter.SetStorageOnly()
+				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+			}
+
+			if err == nil && (restartOpts.Tenant || bothUnspecified) {
+				restarter.SetDynnodeOnly()
+				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+			}
+
+			return err
 		},
 	})
 

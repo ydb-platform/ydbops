@@ -203,11 +203,15 @@ func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 	return filtered
 }
 
-func PopulateByTenantNames(
+func ExcludeByTenantNames(
 	tenantNodes []*Ydb_Maintenance.Node,
 	selectedTenants []string,
 	tenantToNodeIds map[string][]uint32,
 ) []*Ydb_Maintenance.Node {
+	if len(selectedTenants) == 0 {
+		return tenantNodes
+	}
+
 	return collections.FilterBy(tenantNodes, func(node *Ydb_Maintenance.Node) bool {
 		for _, tenant := range selectedTenants {
 			if collections.Contains(tenantToNodeIds[tenant], node.NodeId) {

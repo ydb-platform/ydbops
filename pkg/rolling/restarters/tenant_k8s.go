@@ -36,9 +36,7 @@ func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesI
 
 	selectedNodes := populateWithK8sRules(tenantNodes, spec, r.FQDNToPodName)
 
-	selectedByTenantName := PopulateByTenantNames(tenantNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
-
-	selectedNodes = MergeAndUnique(selectedNodes, selectedByTenantName)
+	selectedNodes = ExcludeByTenantNames(selectedNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
 
 	filteredNodes := ExcludeByCommonFields(selectedNodes, spec)
 
