@@ -568,5 +568,84 @@ var _ = Describe("Test Rolling", func() {
 			},
 		},
 		),
+		Entry("does not restart storage and tenants in parallel (if filters are unspecified)", testCase{
+			nodeConfiguration: [][]uint32{
+				{1},
+				{2},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				2: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant1",
+				},
+			},
+			ydbopsInvocation: []string{
+				"--endpoint", "grpcs://localhost:2135",
+				"--verbose",
+				"--availability-mode", "strong",
+				"--user", mock.TestUser,
+				"--cms-query-interval", "1",
+				"run",
+				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			},
+			expectedRequests: []proto.Message{
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
+				},
+				&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+					TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+						TaskUid:          "task-UUID-1",
+						Description:      "Rolling restart maintenance task",
+						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+					},
+					ActionGroups: mock.MakeActionGroups(1),
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-1",
+							ActionId: "action-UUID-1",
+						},
+					},
+				},
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
+				},
+				&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+					TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+						TaskUid:          "task-UUID-2",
+						Description:      "Rolling restart maintenance task",
+						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+					},
+					ActionGroups: mock.MakeActionGroups(2),
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-2",
+							GroupId:  "group-UUID-2",
+							ActionId: "action-UUID-2",
+						},
+					},
+				},
+			},
+		},
+		),
 	)
 })
