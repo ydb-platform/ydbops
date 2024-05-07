@@ -65,7 +65,7 @@ func (r *StorageK8sRestarter) Filter(
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
-	storageLabelSelector := "app.kubernetes.io/instance=storage"
+	storageLabelSelector := "app.kubernetes.io/component=storage-node"
 
 	r.prepareK8sState(r.Opts.kubeconfigPath, storageLabelSelector, r.Opts.namespace)
 

@@ -37,12 +37,16 @@ func newK8sRestarter(logger *zap.SugaredLogger) k8sRestarter {
 func (r *k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Clientset {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		r.logger.Fatalf("Failed to build config from flags %w", err)
+		r.logger.Fatalf(
+			"Failed to build kubeconfig from kubeconfig file %s: %s",
+			kubeconfigPath,
+			err.Error(),
+		)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		r.logger.Fatalf("Failed to create a k8s client from config: %s", err.Error())
 	}
 
 	return clientset

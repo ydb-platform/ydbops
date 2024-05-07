@@ -28,7 +28,7 @@ func (r TenantK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 }
 
 func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	databaseLabelSelector := "app.kubernetes.io/instance=database"
+	databaseLabelSelector := "app.kubernetes.io/component=dynamic-node"
 
 	r.prepareK8sState(r.Opts.kubeconfigPath, databaseLabelSelector, r.Opts.namespace)
 
