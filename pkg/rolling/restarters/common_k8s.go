@@ -101,6 +101,7 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 	for _, pod := range pods.Items {
 		fullPodFQDN := fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
 		r.FQDNToPodName[fullPodFQDN] = pod.Name
+		r.FQDNToPodName[pod.Spec.NodeName] = pod.Name
 	}
 
 	if err != nil {
@@ -114,7 +115,7 @@ func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) er
 		podName = r.FQDNToPodName[nodeFQDN]
 	}
 
-	r.logger.Infof("Restarting node %s on the %s pod", nodeFQDN, podName)
+	r.logger.Infof("Restarting pod %s on the %s node", podName, nodeFQDN)
 
 	pod, err := r.k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
