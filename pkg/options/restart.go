@@ -208,6 +208,16 @@ func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode 
 	title := strings.ToUpper(fmt.Sprintf("availability_mode_%s", o.AvailabilityMode))
 	value := Ydb_Maintenance.AvailabilityMode_value[title]
 
+	fmt.Sprintf("selected av mode\n arg: %s\n value: %v\n", o.AvailabilityMode, value)
+
+	fmt.Println(`reference: 
+AvailabilityMode_value = map[string]int32{
+	"AVAILABILITY_MODE_UNSPECIFIED": 0,
+	"AVAILABILITY_MODE_STRONG":      1,
+	"AVAILABILITY_MODE_WEAK":        2,
+	"AVAILABILITY_MODE_FORCE":       3,
+}`)
+
 	return Ydb_Maintenance.AvailabilityMode(value)
 }
 

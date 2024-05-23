@@ -66,7 +66,7 @@ type YdbMock struct {
 	tasks map[string]*fakeMaintenanceTask
 	// These two fields are just 'indexes', they can be calculated from `tasks`
 	// but are used for convenience in CMS logic.
-	isNodeCurrentlyPermitted map[uint32]bool
+	isNodeCurrentlyReleased map[uint32]bool
 	actionToActionUID        map[*Action]*ActionUid
 }
 
@@ -125,7 +125,7 @@ func (s *YdbMock) DropMaintenanceTask(ctx context.Context, req *DropMaintenanceT
 		for _, action := range ag.Actions {
 			delete(s.actionToActionUID, action)
 			actionNodeId := action.GetLockAction().Scope.GetNodeId()
-			s.isNodeCurrentlyPermitted[actionNodeId] = false
+			s.isNodeCurrentlyReleased[actionNodeId] = false
 		}
 	}
 	delete(s.tasks, req.TaskUid)
@@ -228,7 +228,7 @@ func NewYdbMockServer() *YdbMock {
 		actionToActionUID:        make(map[*Action]*ActionUid),
 		nodes:                    nil, // cluster node configuration filled by the test itself
 		nodeGroups:               nil, // cluster node configuration filled by the test itself
-		isNodeCurrentlyPermitted: nil, // cluster node configuration filled by the test itself
+		isNodeCurrentlyReleased: nil, // cluster node configuration filled by the test itself
 	}
 
 	return server

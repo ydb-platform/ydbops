@@ -106,12 +106,12 @@ func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestN
 }
 
 func (s *YdbMock) SetNodeConfiguration(nodeGroups [][]uint32, nodeInfo map[uint32]TestNodeInfo) {
-	s.isNodeCurrentlyPermitted = make(map[uint32]bool)
+	s.isNodeCurrentlyReleased = make(map[uint32]bool)
 	s.nodeGroups = nodeGroups
 
 	for _, group := range s.nodeGroups {
 		for _, nodeID := range group {
-			s.isNodeCurrentlyPermitted[nodeID] = false
+			s.isNodeCurrentlyReleased[nodeID] = false
 		}
 	}
 

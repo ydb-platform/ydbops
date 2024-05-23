@@ -11,9 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/internal/collections"
-	"github.com/ydb-platform/ydbops/pkg/auth"
-	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/cms"
+	"github.com/ydb-platform/ydbops/pkg/connection"
 	"github.com/ydb-platform/ydbops/pkg/discovery"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
@@ -22,8 +21,6 @@ import (
 type Rolling struct {
 	cms       *cms.Client
 	discovery *discovery.Client
-
-	factory *client.Factory
 
 	logger    *zap.SugaredLogger
 	state     *state
@@ -49,53 +46,21 @@ const (
 	RestartTaskPrefix = "rolling-restart-"
 )
 
-func initAuthToken(
-	rootOpts options.RootOptions,
-	logger *zap.SugaredLogger,
-	factory *client.Factory,
-) error {
-	switch rootOpts.Auth.Type {
-	case options.Static:
-		authClient := auth.NewAuthClient(logger, factory)
-		staticCreds := rootOpts.Auth.Creds.(*options.AuthStatic)
-		user := staticCreds.User
-		password := staticCreds.Password
-		logger.Debugf("Endpoint: %v", rootOpts.GRPC.Endpoint)
-		token, err := authClient.Auth(rootOpts.GRPC, user, password)
-		if err != nil {
-			return fmt.Errorf("failed to initialize static auth token: %w", err)
-		}
-		factory.SetAuthToken(token)
-	case options.IamToken:
-		factory.SetAuthToken(rootOpts.Auth.Creds.(*options.AuthIAMToken).Token)
-	case options.IamCreds:
-		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
-	case options.None:
-		return fmt.Errorf("determined credentials to be anonymous. Anonymous credentials are currently unsupported")
-	default:
-		return fmt.Errorf(
-			"internal error: authorization type not recognized after options validation, this should never happen",
-		)
-	}
-
-	return nil
-}
-
 func ExecuteRolling(
 	restartOpts options.RestartOptions,
 	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 ) error {
-	factory := client.NewConnectionFactory(rootOpts.Auth, rootOpts.GRPC, restartOpts)
+	cmsClient, discoveryClient, err := connection.PrepareClients(
+		rootOpts,
+		restartOpts.RestartRetryNumber,
+		logger,
+	)
 
-	err := initAuthToken(rootOpts, logger, factory)
 	if err != nil {
-		return fmt.Errorf("failed to receive an auth token, rolling restart not started: %w", err)
+		return err
 	}
-
-	discoveryClient := discovery.NewDiscoveryClient(logger, factory)
-	cmsClient := cms.NewCMSClient(logger, factory)
 
 	r := &Rolling{
 		cms:       cmsClient,
@@ -103,7 +68,6 @@ func ExecuteRolling(
 		logger:    logger,
 		opts:      restartOpts,
 		restarter: restarter,
-		factory:   factory,
 	}
 
 	if restartOpts.Continue {

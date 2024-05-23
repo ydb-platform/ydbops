@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/ydb-platform/ydbops/cmd/maintenance"
 	"github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
@@ -21,6 +22,9 @@ func registerAllSubcommands(root *cobra.Command) {
 	_ = addAndReturnCmd(root,
 		NewRestartCmd(),
 		NewRunCmd(),
+		addAndReturnCmd(NewMaintenanceCmd(),
+			maintenance.NewHostCmd(),
+		),
 	)
 }
 

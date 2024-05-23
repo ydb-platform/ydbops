@@ -27,17 +27,17 @@ type OperationResponse interface {
 }
 
 type Factory struct {
-	auth    options.AuthOptions
-	grpc    options.GRPC
-	restart options.RestartOptions
-	token   string
+	auth        options.AuthOptions
+	grpc        options.GRPC
+	retryNumber int
+	token       string
 }
 
-func NewConnectionFactory(auth options.AuthOptions, grpc options.GRPC, restart options.RestartOptions) *Factory {
+func NewConnectionFactory(auth options.AuthOptions, grpc options.GRPC, retryNumber int) *Factory {
 	return &Factory{
-		auth:    auth,
-		grpc:    grpc,
-		restart: restart,
+		auth:        auth,
+		grpc:        grpc,
+		retryNumber: retryNumber,
 	}
 }
 
@@ -64,6 +64,27 @@ func (f *Factory) OperationParams() *Ydb_Operations.OperationParams {
 		OperationTimeout: durationpb.New(time.Duration(f.grpc.TimeoutSeconds) * time.Second),
 		CancelAfter:      durationpb.New(time.Duration(f.grpc.TimeoutSeconds) * time.Second),
 	}
+}
+
+func (f *Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
+	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
+
+	return metadata.AppendToOutgoingContext(ctx,
+		"x-ydb-auth-ticket", f.token), cf, nil
+}
+
+func (f *Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
+}
+
+func (f *Factory) GetRetryNumber() int {
+	return f.retryNumber
+}
+
+func (f *Factory) endpoint() string {
+	// TODO decide if we want to support multiple endpoints or just one
+	// Endpoint in rootOpts will turn from string -> []string in this case
+	return fmt.Sprintf("%s:%d", f.grpc.Endpoint, f.grpc.GRPCPort)
 }
 
 func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
@@ -98,23 +119,3 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 	return credentials.NewTLS(tlsConfig), nil
 }
 
-func (f *Factory) endpoint() string {
-	// TODO decide if we want to support multiple endpoints or just one
-	// Endpoint in rootOpts will turn from string -> []string in this case
-	return fmt.Sprintf("%s:%d", f.grpc.Endpoint, f.grpc.GRPCPort)
-}
-
-func (f *Factory) ContextWithAuth() (context.Context, context.CancelFunc, error) {
-	ctx, cf := context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
-
-	return metadata.AppendToOutgoingContext(ctx,
-		"x-ydb-auth-ticket", f.token), cf, nil
-}
-
-func (f *Factory) ContextWithoutAuth() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), time.Second*time.Duration(f.grpc.TimeoutSeconds))
-}
-
-func (f *Factory) GetRetryNumber() int {
-	return f.restart.RestartRetryNumber
-}

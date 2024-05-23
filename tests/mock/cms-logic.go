@@ -19,10 +19,10 @@ func (s *YdbMock) setPendingOrPerformed(
 	availabilityMode AvailabilityMode,
 ) ActionState_ActionStatus {
 	for _, nodeGroup := range s.nodeGroups {
-		permittedOutOfGroup := 0
+		alreadyReleased := 0
 		for _, nodeID := range nodeGroup {
-			if s.isNodeCurrentlyPermitted[nodeID] {
-				permittedOutOfGroup++
+			if s.isNodeCurrentlyReleased[nodeID] {
+				alreadyReleased++
 			}
 		}
 
@@ -31,22 +31,24 @@ func (s *YdbMock) setPendingOrPerformed(
 				continue
 			}
 
-			if s.isNodeCurrentlyPermitted[currentNodeID] {
+			if s.isNodeCurrentlyReleased[currentNodeID] {
 				return ActionState_ACTION_STATUS_PERFORMED
 			}
 
-			if permittedOutOfGroup == 0 {
-				s.isNodeCurrentlyPermitted[currentNodeID] = true
+			if alreadyReleased == 0 {
+				s.isNodeCurrentlyReleased[currentNodeID] = true
 				return ActionState_ACTION_STATUS_PERFORMED
 			}
 
-			if permittedOutOfGroup == 1 && availabilityMode != AvailabilityMode_AVAILABILITY_MODE_STRONG {
-				s.isNodeCurrentlyPermitted[currentNodeID] = true
+			if alreadyReleased == 1 &&
+				(availabilityMode == AvailabilityMode_AVAILABILITY_MODE_WEAK ||
+					availabilityMode == AvailabilityMode_AVAILABILITY_MODE_FORCE) {
+				s.isNodeCurrentlyReleased[currentNodeID] = true
 				return ActionState_ACTION_STATUS_PERFORMED
 			}
 
 			if availabilityMode == AvailabilityMode_AVAILABILITY_MODE_FORCE {
-				s.isNodeCurrentlyPermitted[currentNodeID] = true
+				s.isNodeCurrentlyReleased[currentNodeID] = true
 				return ActionState_ACTION_STATUS_PERFORMED
 			}
 		}
@@ -119,7 +121,7 @@ func (s *YdbMock) cleanupActionByID(actionID string) {
 					continue
 				}
 
-				s.isNodeCurrentlyPermitted[action.GetLockAction().Scope.GetNodeId()] = false
+				s.isNodeCurrentlyReleased[action.GetLockAction().Scope.GetNodeId()] = false
 				delete(s.actionToActionUID, action)
 				s.cleanupActionGroupState(task, actionID)
 				actionGroup.Actions = deleteFromSlice(actionGroup.Actions, i)

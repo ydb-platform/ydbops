@@ -265,6 +265,59 @@ var _ = Describe("Test Rolling", func() {
 			},
 		},
 		),
+		Entry("--availability-mode weak should take up to 2 nodes from 8-node storage group", testCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3, 4, 5, 6, 7, 8},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{},
+			ydbopsInvocation: []string{
+				"--endpoint", "grpcs://localhost:2135",
+				"--verbose",
+				"--availability-mode", "weak",
+				"--hosts=1,2",
+				"--user", mock.TestUser,
+				"--cms-query-interval", "1",
+				"run",
+				"--storage",
+				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			},
+			expectedRequests: []proto.Message{
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
+				},
+				&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+					TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+						TaskUid:          "task-UUID-1",
+						Description:      "Rolling restart maintenance task",
+						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_WEAK,
+					},
+					ActionGroups: mock.MakeActionGroups(1, 2),
+				},
+				&Ydb_Maintenance.CompleteActionRequest{
+					ActionUids: []*Ydb_Maintenance.ActionUid{
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-1",
+							ActionId: "action-UUID-1",
+						},
+						{
+							TaskUid:  "task-UUID-1",
+							GroupId:  "group-UUID-2",
+							ActionId: "action-UUID-2",
+						},
+					},
+				},
+			},
+		},
+		),
 		Entry("happy path: restart 3 out of 3 nodes, no --hosts", testCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3},
