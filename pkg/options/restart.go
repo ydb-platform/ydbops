@@ -162,8 +162,10 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&rawSSHUnparsedArgs, "ssh-args", "",
 		`This argument will be used when ssh-ing to the nodes. It may be used to override 
 the ssh command itself, ssh username or any additional arguments.
-E.g.:
-	--ssh-args=pssh,-A,-J,<some jump host>,--yc-profile,<YC profile name>`)
+Double quotes are can be escaped with backward slash '\'.
+Examples:
+1) --ssh-args "pssh -A -J <some jump host> --yc-profile <YC profile name>"
+2) --ssh-args "ssh -o ProxyCommand=\"...\""`)
 
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
 		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
@@ -275,7 +277,7 @@ func parseSSHArgs(rawArgs string) []string {
 			continue
 		}
 
-		if unicode.IsSpace(rawRunes[i]) {
+		if unicode.IsSpace(rawRunes[i]) && !isInsideQuotes {
 			if len(curArg) > 0 {
 				args = append(args, string(curArg))
 			}
