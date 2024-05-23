@@ -6,9 +6,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
-	"github.com/ydb-platform/ydbops/pkg/options"
-
+	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/maintenance"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 func NewHostCmd() *cobra.Command {
@@ -25,7 +25,13 @@ func NewHostCmd() *cobra.Command {
 			maintenanceHostOpts, rootOpts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			taskId, err := maintenance.RequestHost(*rootOpts, options.Logger, maintenanceHostOpts)
+			client.InitConnectionFactory(
+				*rootOpts,
+				options.Logger,
+				options.DefaultRetryCount,
+			)
+
+			taskId, err := maintenance.RequestHost(maintenanceHostOpts)
 			if err != nil {
 				return err
 			}

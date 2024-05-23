@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
+	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
@@ -33,18 +34,24 @@ func NewRunCmd() *cobra.Command {
 			restartOpts, rootOpts, restarter.Opts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			client.InitConnectionFactory(
+				*rootOpts,
+				options.Logger,
+				options.DefaultRetryCount,
+			)
+
 			var err error
 
 			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
 
 			if restartOpts.Storage || bothUnspecified {
 				restarter.SetStorageOnly()
-				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, restarter)
 			}
 
 			if err == nil && (restartOpts.Tenant || bothUnspecified) {
 				restarter.SetDynnodeOnly()
-				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, restarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, restarter)
 			}
 
 			return err

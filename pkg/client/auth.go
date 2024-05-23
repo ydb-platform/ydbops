@@ -1,4 +1,4 @@
-package auth
+package client
 
 import (
 	"context"
@@ -11,26 +11,25 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-type Client struct {
+type Auth struct {
 	logger *zap.SugaredLogger
-	f      *client.Factory
+	f      *Factory
 }
 
-func NewAuthClient(logger *zap.SugaredLogger, f *client.Factory) *Client {
-	return &Client{
+func NewAuthClient(logger *zap.SugaredLogger, f *Factory) *Auth {
+	return &Auth{
 		logger: logger,
 		f:      f,
 	}
 }
 
-func (c *Client) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
+func (c *Auth) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
 	result := Ydb_Auth.LoginResult{}
 
-	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
+	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (OperationResponse, error) {
 		c.logger.Debug("Invoke Auth method")
 		return cl.Login(ctx, &Ydb_Auth.LoginRequest{
 			OperationParams: c.f.OperationParams(),
@@ -45,9 +44,9 @@ func (c *Client) Auth(grpcOpts options.GRPC, user, password string) (string, err
 	return result.Token, nil
 }
 
-func (c *Client) ExecuteAuthMethod(
+func (c *Auth) ExecuteAuthMethod(
 	out proto.Message,
-	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error),
+	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (OperationResponse, error),
 	grpcOpts options.GRPC,
 ) (*Ydb_Operations.Operation, error) {
 	cc, err := c.f.Connection()
@@ -65,7 +64,7 @@ func (c *Client) ExecuteAuthMethod(
 		return nil, err
 	}
 	op := r.GetOperation()
-	client.LogOperation(c.logger, op)
+	LogOperation(c.logger, op)
 
 	if out == nil {
 		return op, nil
@@ -82,10 +81,10 @@ func (c *Client) ExecuteAuthMethod(
 	return op, nil
 }
 
-func InitAuthToken(
+func initAuthToken(
 	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
-	factory *client.Factory,
+	factory *Factory,
 ) error {
 	switch rootOpts.Auth.Type {
 	case options.Static:
@@ -98,9 +97,9 @@ func InitAuthToken(
 		if err != nil {
 			return fmt.Errorf("failed to initialize static auth token: %w", err)
 		}
-		factory.SetAuthToken(token)
+		factory.token = token
 	case options.IamToken:
-		factory.SetAuthToken(rootOpts.Auth.Creds.(*options.AuthIAMToken).Token)
+		factory.token = rootOpts.Auth.Creds.(*options.AuthIAMToken).Token
 	case options.IamCreds:
 		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
 	case options.None:

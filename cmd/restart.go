@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
+	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
@@ -26,6 +27,12 @@ func NewRestartCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var storageRestarter restarters.Restarter
 			var tenantRestarter restarters.Restarter
+
+			client.InitConnectionFactory(
+				*rootOpts,
+				options.Logger,
+				options.DefaultRetryCount,
+			)
 
 			if restartOpts.KubeconfigPath != "" {
 				storageRestarter = restarters.NewStorageK8sRestarter(
@@ -56,11 +63,11 @@ func NewRestartCmd() *cobra.Command {
 			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
 
 			if restartOpts.Storage || bothUnspecified {
-				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, storageRestarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, storageRestarter)
 			}
 
 			if err == nil && (restartOpts.Tenant || bothUnspecified) {
-				err = rolling.ExecuteRolling(*restartOpts, *rootOpts, options.Logger, tenantRestarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, tenantRestarter)
 			}
 
 			return err

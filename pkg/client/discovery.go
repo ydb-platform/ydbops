@@ -1,4 +1,4 @@
-package discovery
+package client
 
 import (
 	"context"
@@ -10,25 +10,23 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
-
-	"github.com/ydb-platform/ydbops/pkg/client"
 )
 
-type Client struct {
+type Discovery struct {
 	logger *zap.SugaredLogger
-	f      *client.Factory
+	f      *Factory
 }
 
-func NewDiscoveryClient(logger *zap.SugaredLogger, f *client.Factory) *Client {
-	return &Client{
+func NewDiscoveryClient(f *Factory, logger *zap.SugaredLogger) *Discovery {
+	return &Discovery{
 		logger: logger,
 		f:      f,
 	}
 }
 
-func (c *Client) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInfo, error) {
+func (c *Discovery) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInfo, error) {
 	result := Ydb_Discovery.ListEndpointsResult{}
-	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error) {
+	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (OperationResponse, error) {
 		c.logger.Debug("Invoke ListEndpoints method")
 		return cl.ListEndpoints(ctx, &Ydb_Discovery.ListEndpointsRequest{
 			Database: database,
@@ -41,9 +39,9 @@ func (c *Client) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInfo, 
 	return result.Endpoints, nil
 }
 
-func (c *Client) WhoAmI() (string, error) {
+func (c *Discovery) WhoAmI() (string, error) {
 	result := Ydb_Discovery.WhoAmIResult{}
-	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error) {
+	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (OperationResponse, error) {
 		c.logger.Debug("Invoke WhoAmI method")
 		return cl.WhoAmI(ctx, &Ydb_Discovery.WhoAmIRequest{IncludeGroups: false})
 	})
@@ -54,9 +52,9 @@ func (c *Client) WhoAmI() (string, error) {
 	return result.User, nil
 }
 
-func (c *Client) ExecuteDiscoveryMethod(
+func (c *Discovery) ExecuteDiscoveryMethod(
 	out proto.Message,
-	method func(context.Context, Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error),
+	method func(context.Context, Ydb_Discovery_V1.DiscoveryServiceClient) (OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
 	cc, err := c.f.Connection()
 	if err != nil {
@@ -76,7 +74,7 @@ func (c *Client) ExecuteDiscoveryMethod(
 		return nil, err
 	}
 	op := r.GetOperation()
-	client.LogOperation(c.logger, op)
+	LogOperation(c.logger, op)
 
 	if out == nil {
 		return op, nil

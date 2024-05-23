@@ -11,16 +11,14 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/internal/collections"
-	"github.com/ydb-platform/ydbops/pkg/cms"
-	"github.com/ydb-platform/ydbops/pkg/connection"
-	"github.com/ydb-platform/ydbops/pkg/discovery"
+	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 type Rolling struct {
-	cms       *cms.Client
-	discovery *discovery.Client
+	cms       *client.Cms
+	discovery *client.Discovery
 
 	logger    *zap.SugaredLogger
 	state     *state
@@ -48,19 +46,11 @@ const (
 
 func ExecuteRolling(
 	restartOpts options.RestartOptions,
-	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 ) error {
-	cmsClient, discoveryClient, err := connection.PrepareClients(
-		rootOpts,
-		restartOpts.RestartRetryNumber,
-		logger,
-	)
-
-	if err != nil {
-		return err
-	}
+	cmsClient := client.GetCmsClient()
+	discoveryClient := client.GetDiscoveryClient()
 
 	r := &Rolling{
 		cms:       cmsClient,
@@ -70,6 +60,7 @@ func ExecuteRolling(
 		restarter: restarter,
 	}
 
+	var err error
 	if restartOpts.Continue {
 		logger.Info("Continue previous rolling restart")
 		err = r.DoRestartPrevious()
@@ -127,7 +118,7 @@ func (r *Rolling) DoRestart() error {
 		return nil
 	}
 
-	taskParams := cms.MaintenanceTaskParams{
+	taskParams := client.MaintenanceTaskParams{
 		TaskUID:          r.state.restartTaskUID,
 		AvailabilityMode: r.opts.GetAvailabilityMode(),
 		Duration:         r.opts.GetRestartDuration(),
@@ -145,7 +136,7 @@ func (r *Rolling) DoRestartPrevious() error {
 	return fmt.Errorf("--continue behavior not implemented yet")
 }
 
-func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask) error {
+func (r *Rolling) cmsWaitingLoop(task client.MaintenanceTask) error {
 	var (
 		err          error
 		delay        time.Duration
@@ -345,7 +336,7 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 	return nil
 }
 
-func (r *Rolling) logTask(task cms.MaintenanceTask) {
+func (r *Rolling) logTask(task client.MaintenanceTask) {
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Uid: %s\n", task.GetTaskUid()))
 

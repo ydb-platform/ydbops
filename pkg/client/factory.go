@@ -6,9 +6,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,6 +24,15 @@ const (
 	BufferSize = 32 << 20
 )
 
+var (
+	factory *Factory
+	once    sync.Once
+	initErr error
+
+	cms       *Cms
+	discovery *Discovery
+)
+
 type OperationResponse interface {
 	GetOperation() *Ydb_Operations.Operation
 }
@@ -33,16 +44,33 @@ type Factory struct {
 	token       string
 }
 
-func NewConnectionFactory(auth options.AuthOptions, grpc options.GRPC, retryNumber int) *Factory {
-	return &Factory{
-		auth:        auth,
-		grpc:        grpc,
-		retryNumber: retryNumber,
-	}
-}
+func InitConnectionFactory(
+	rootOpts options.RootOptions,
+	logger *zap.SugaredLogger,
+	retryNumber int,
+) (*Factory, error) {
+	once.Do(func() {
+		factory = &Factory{
+			auth:        rootOpts.Auth,
+			grpc:        rootOpts.GRPC,
+			retryNumber: retryNumber,
+		}
 
-func (f *Factory) SetAuthToken(t string) {
-	f.token = t
+		initErr = initAuthToken(rootOpts, logger, factory)
+
+		if initErr != nil {
+			initErr = fmt.Errorf("failed to receive an auth token, rolling restart not started: %w", initErr)
+		}
+
+		cms = NewCMSClient(factory, logger)
+		discovery = NewDiscoveryClient(factory, logger)
+	})
+
+	if initErr != nil {
+		return nil, initErr
+	}
+
+	return factory, nil
 }
 
 func (f *Factory) Connection() (*grpc.ClientConn, error) {
@@ -81,9 +109,21 @@ func (f *Factory) GetRetryNumber() int {
 	return f.retryNumber
 }
 
+func GetCmsClient() *Cms {
+	return cms
+}
+
+func GetDiscoveryClient() *Discovery {
+	return discovery
+}
+
 func (f *Factory) endpoint() string {
 	// TODO decide if we want to support multiple endpoints or just one
 	// Endpoint in rootOpts will turn from string -> []string in this case
+	//
+	// for balancers, it does not really matter, one endpoint is enough.
+	// but if you specify node endpoint directly, if this particular node
+	// is dead, things get inconvenient.
 	return fmt.Sprintf("%s:%d", f.grpc.Endpoint, f.grpc.GRPCPort)
 }
 
@@ -100,7 +140,6 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 	if f.grpc.CaFile != "" {
 		b, err := os.ReadFile(f.grpc.CaFile)
 		if err != nil {
-			return nil, err
 		}
 		if !systemPool.AppendCertsFromPEM(b) {
 			return nil, fmt.Errorf("credentials: failed to append certificates")
@@ -118,4 +157,3 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 
 	return credentials.NewTLS(tlsConfig), nil
 }
-

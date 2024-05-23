@@ -67,7 +67,7 @@ type YdbMock struct {
 	// These two fields are just 'indexes', they can be calculated from `tasks`
 	// but are used for convenience in CMS logic.
 	isNodeCurrentlyReleased map[uint32]bool
-	actionToActionUID        map[*Action]*ActionUid
+	actionToActionUID       map[*Action]*ActionUid
 }
 
 func makeSuccessfulOperation() *Ydb_Operations.Operation {
@@ -224,10 +224,10 @@ func (s *YdbMock) ListDatabases(ctx context.Context, req *Ydb_Cms.ListDatabasesR
 
 func NewYdbMockServer() *YdbMock {
 	server := &YdbMock{
-		tasks:                    make(map[string]*fakeMaintenanceTask),
-		actionToActionUID:        make(map[*Action]*ActionUid),
-		nodes:                    nil, // cluster node configuration filled by the test itself
-		nodeGroups:               nil, // cluster node configuration filled by the test itself
+		tasks:                   make(map[string]*fakeMaintenanceTask),
+		actionToActionUID:       make(map[*Action]*ActionUid),
+		nodes:                   nil, // cluster node configuration filled by the test itself
+		nodeGroups:              nil, // cluster node configuration filled by the test itself
 		isNodeCurrentlyReleased: nil, // cluster node configuration filled by the test itself
 	}
 

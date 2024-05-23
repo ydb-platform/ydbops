@@ -1,4 +1,4 @@
-package cms
+package client
 
 import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
