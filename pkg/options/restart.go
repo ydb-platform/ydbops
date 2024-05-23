@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/spf13/pflag"
@@ -66,6 +67,7 @@ type RestartOptions struct {
 var (
 	startedUnparsedFlag string
 	versionUnparsedFlag string
+	rawSSHUnparsedArgs  string
 )
 
 var RestartOptionsInstance = &RestartOptions{}
@@ -132,6 +134,8 @@ func (o *RestartOptions) Validate() error {
 		}
 	}
 
+	o.SSHArgs = parseSSHArgs(rawSSHUnparsedArgs)
+
 	_, errFromIds := o.GetNodeIds()
 	_, errFromFQDNs := o.GetNodeFQDNs()
 	if errFromIds != nil && errFromFQDNs != nil {
@@ -155,7 +159,7 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&o.CustomSystemdUnitName, "systemd-unit", "", "Specify custom systemd unit name to restart")
 
-	fs.StringSliceVarP(&o.SSHArgs, "ssh-args", "", nil,
+	fs.StringVar(&rawSSHUnparsedArgs, "ssh-args", "",
 		`This argument will be used when ssh-ing to the nodes. It may be used to override 
 the ssh command itself, ssh username or any additional arguments.
 E.g.:
@@ -255,4 +259,35 @@ func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 	}
 
 	return ids, nil
+}
+
+func parseSSHArgs(rawArgs string) []string {
+	args := []string{}
+	isInsideQuotes := false
+
+	rawRunes := []rune(rawArgs)
+	curArg := []rune{}
+	for i := 0; i < len(rawRunes); i++ {
+		if rawRunes[i] == '\\' && i+1 < len(rawRunes) && rawRunes[i+1] == '"' {
+			isInsideQuotes = !isInsideQuotes
+			i++
+			curArg = append(curArg, '"')
+			continue
+		}
+
+		if unicode.IsSpace(rawRunes[i]) {
+			if len(curArg) > 0 {
+				args = append(args, string(curArg))
+			}
+			curArg = []rune{}
+		} else {
+			curArg = append(curArg, rawRunes[i])
+		}
+	}
+
+	if len(curArg) > 0 {
+		args = append(args, string(curArg))
+	}
+
+	return args
 }

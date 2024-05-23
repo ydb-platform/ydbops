@@ -15,7 +15,7 @@ func NewMaintenanceCmd() *cobra.Command {
 		Use:   "maintenance",
 		Short: "Request hosts from the Cluster Management System",
 		Long: `ydbops maintenance [command]: 
-    Manage host maintenance operations: request and return nodes 
+    Manage host maintenance operations: request and return hosts
     with performed maintenance back to the cluster.`,
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
 			restartOpts, rootOpts,
