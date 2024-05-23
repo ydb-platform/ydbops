@@ -43,7 +43,7 @@ func (r sshRestarter) restartNodeBySystemdUnit(
 	r.logger.Debugf("Restarting %s systemd unit", unitName)
 
 	remoteRestartCommand := fmt.Sprintf(
-		`(test -x /bin/systemctl && sudo systemctl restart %s)`,
+		`"(test -x /bin/systemctl && sudo systemctl restart %s)"`,
 		unitName,
 	)
 
@@ -60,7 +60,16 @@ func (r sshRestarter) restartNodeBySystemdUnit(
 		return fmt.Errorf("supported ssh commands: ssh, pssh, nssh. Specified: %s", sshCommand)
 	}
 
-	cmd := exec.Command(sshCommand, fullSSHArgs...)
+	bashPath, err := exec.LookPath("bash")
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(
+		bashPath,
+		"-c",
+		sshCommand+" "+strings.Join(fullSSHArgs, " "),
+	)
 
 	r.logger.Debugf("Full ssh command: `%s %v`", sshCommand, strings.Join(fullSSHArgs, " "))
 

@@ -25,11 +25,14 @@ func NewHostCmd() *cobra.Command {
 			maintenanceHostOpts, rootOpts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client.InitConnectionFactory(
+			err := client.InitConnectionFactory(
 				*rootOpts,
 				options.Logger,
 				options.DefaultRetryCount,
 			)
+			if err != nil {
+				return err
+			}
 
 			taskId, err := maintenance.RequestHost(maintenanceHostOpts)
 			if err != nil {

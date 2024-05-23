@@ -39,6 +39,9 @@ func RequestHost(opts *options.MaintenanceHostOpts) (string, error) {
 	taskUID := MaintenanceTaskPrefix + uuid.New().String()
 
 	nodes, err := getNodesOnHost(cms, opts.HostFQDN)
+	if err != nil {
+		return "", err
+	}
 
 	taskParams := client.MaintenanceTaskParams{
 		TaskUID:          taskUID,

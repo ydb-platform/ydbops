@@ -48,7 +48,7 @@ func InitConnectionFactory(
 	rootOpts options.RootOptions,
 	logger *zap.SugaredLogger,
 	retryNumber int,
-) (*Factory, error) {
+) error {
 	once.Do(func() {
 		factory = &Factory{
 			auth:        rootOpts.Auth,
@@ -67,10 +67,10 @@ func InitConnectionFactory(
 	})
 
 	if initErr != nil {
-		return nil, initErr
+		return initErr
 	}
 
-	return factory, nil
+	return nil
 }
 
 func (f *Factory) Connection() (*grpc.ClientConn, error) {
@@ -140,6 +140,7 @@ func (f *Factory) makeCredentials() (credentials.TransportCredentials, error) {
 	if f.grpc.CaFile != "" {
 		b, err := os.ReadFile(f.grpc.CaFile)
 		if err != nil {
+			return nil, fmt.Errorf("failed to read the ca file: %w", err)
 		}
 		if !systemPool.AppendCertsFromPEM(b) {
 			return nil, fmt.Errorf("credentials: failed to append certificates")

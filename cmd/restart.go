@@ -28,11 +28,14 @@ func NewRestartCmd() *cobra.Command {
 			var storageRestarter restarters.Restarter
 			var tenantRestarter restarters.Restarter
 
-			client.InitConnectionFactory(
+			err := client.InitConnectionFactory(
 				*rootOpts,
 				options.Logger,
 				options.DefaultRetryCount,
 			)
+			if err != nil {
+				return err
+			}
 
 			if restartOpts.KubeconfigPath != "" {
 				storageRestarter = restarters.NewStorageK8sRestarter(
@@ -57,8 +60,6 @@ func NewRestartCmd() *cobra.Command {
 					restartOpts.CustomSystemdUnitName,
 				)
 			}
-
-			var err error
 
 			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
 

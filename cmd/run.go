@@ -34,13 +34,14 @@ func NewRunCmd() *cobra.Command {
 			restartOpts, rootOpts, restarter.Opts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client.InitConnectionFactory(
+			err := client.InitConnectionFactory(
 				*rootOpts,
 				options.Logger,
 				options.DefaultRetryCount,
 			)
-
-			var err error
+			if err != nil {
+				return err
+			}
 
 			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
 
