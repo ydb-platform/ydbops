@@ -275,7 +275,7 @@ func parseSSHArgs(rawArgs string) []string {
 			continue
 		}
 
-		if unicode.IsSpace(rawRunes[i]) {
+		if unicode.IsSpace(rawRunes[i]) && !isInsideQuotes {
 			if len(curArg) > 0 {
 				args = append(args, string(curArg))
 			}
