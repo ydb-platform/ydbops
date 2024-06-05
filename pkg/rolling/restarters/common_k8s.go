@@ -100,6 +100,7 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 
 	for _, pod := range pods.Items {
 		fullPodFQDN := fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
+		r.FQDNToPodName[pod.Name] = pod.Name
 		r.FQDNToPodName[fullPodFQDN] = pod.Name
 		r.FQDNToPodName[pod.Spec.NodeName] = pod.Name
 	}
@@ -110,9 +111,12 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 }
 
 func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) error {
-	podName := nodeFQDN
-	if _, present := r.FQDNToPodName[nodeFQDN]; present {
-		podName = r.FQDNToPodName[nodeFQDN]
+	podName, present := r.FQDNToPodName[nodeFQDN]
+	if !present {
+		return fmt.Errorf(
+			"failed to determine which pod corresponds to node fqdn %s\n"+
+				"This is most likely a bug, contact the developers.\n"+
+				"If possible, attach logs from invocation with --verbose flag", nodeFQDN)
 	}
 
 	r.logger.Infof("Restarting pod %s on the %s node", podName, nodeFQDN)

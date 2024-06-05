@@ -32,6 +32,7 @@ type Rolling struct {
 
 type state struct {
 	nodes                          map[uint32]*Ydb_Maintenance.Node
+	inactiveNodes                  map[uint32]*Ydb_Maintenance.Node
 	tenantNameToNodeIds            map[string][]uint32
 	retriesMadeForNode             map[uint32]int
 	tenants                        []string
@@ -114,7 +115,20 @@ func (r *Rolling) DoRestart() error {
 		},
 	)
 
-	if len(nodesToRestart) == 0 {
+	excludedNodes := 0
+	for _, node := range nodesToRestart {
+		if _, present := r.state.inactiveNodes[node.NodeId]; present {
+			excludedNodes++
+			r.logger.Warn(
+				"the node with nodeId: %v and host: %s is currently down and will be excluded from restart",
+				node.Host,
+				node.NodeId,
+			)
+		}
+	}
+
+	if len(nodesToRestart)-excludedNodes == 0 {
+		r.logger.Warn("There are no nodes that satisfy the specified filters")
 		return nil
 	}
 
@@ -289,6 +303,15 @@ func (r *Rolling) populateTenantToNodesMapping(nodes []*Ydb_Maintenance.Node) ma
 
 func (r *Rolling) prepareState() (*state, error) {
 	nodes, err := r.cms.Nodes()
+
+	inactiveNodes := collections.FilterBy(nodes, func(node *Ydb_Maintenance.Node) bool {
+		return node.GetState() != Ydb_Maintenance.ItemState_ITEM_STATE_UP
+	})
+
+	activeNodes := collections.FilterBy(nodes, func(node *Ydb_Maintenance.Node) bool {
+		return node.GetState() == Ydb_Maintenance.ItemState_ITEM_STATE_UP
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to list available nodes: %w", err)
 	}
@@ -309,10 +332,11 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
-		tenantNameToNodeIds:            r.populateTenantToNodesMapping(nodes),
+		tenantNameToNodeIds:            r.populateTenantToNodesMapping(activeNodes),
 		tenants:                        tenants,
 		userSID:                        userSID,
-		nodes:                          collections.ToMap(nodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		nodes:                          collections.ToMap(activeNodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
+		inactiveNodes:                  collections.ToMap(inactiveNodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
 		retriesMadeForNode:             make(map[uint32]int),
 		unreportedButFinishedActionIds: []string{},
 		restartTaskUID:                 RestartTaskPrefix + uuid.New().String(),
