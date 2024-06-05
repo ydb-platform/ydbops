@@ -33,7 +33,7 @@ func getNodesOnHost(cms *client.Cms, hostFQDN string) ([]*Ydb_Maintenance.Node, 
 	return res, nil
 }
 
-func RequestHost(opts *options.MaintenanceHostOpts) (string, error) {
+func CreateTask(opts *options.MaintenanceCreateOpts) (string, error) {
 	cms := client.GetCmsClient()
 
 	taskUID := MaintenanceTaskPrefix + uuid.New().String()
@@ -56,4 +56,36 @@ func RequestHost(opts *options.MaintenanceHostOpts) (string, error) {
 	}
 
 	return task.GetTaskUid(), nil
+}
+
+func GetTask(opts *options.TaskIdOpts) error {
+	return nil
+}
+
+func RefreshTask(opts *options.TaskIdOpts) error {
+	return nil
+}
+
+func DropTask(opts *options.TaskIdOpts) error {
+	return nil
+}
+
+func CompleteTask(opts *options.TaskIdOpts) error {
+	return nil
+}
+
+func ListTasks() ([]string, error) {
+	discoveryClient := client.GetDiscoveryClient()
+	userSID, err := discoveryClient.WhoAmI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine the user SID: %w", err)
+	}
+
+	cmsClient := client.GetCmsClient()
+	tasks, err := cmsClient.MaintenanceTasks(userSID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all maintenance tasks: %w", err)
+	}
+
+	return tasks, nil
 }

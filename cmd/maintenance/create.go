@@ -11,10 +11,10 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-func NewHostCmd() *cobra.Command {
+func NewCreateCmd() *cobra.Command {
 	rootOpts := options.RootOptionsInstance
 
-	maintenanceHostOpts := &options.MaintenanceHostOpts{}
+	maintenanceCreateOpts := &options.MaintenanceCreateOpts{}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "host",
@@ -22,7 +22,7 @@ func NewHostCmd() *cobra.Command {
 		Long: `ydbops maintenance host: 
   Make a request to take the host out of the cluster.`,
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
-			maintenanceHostOpts, rootOpts,
+			maintenanceCreateOpts, rootOpts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := client.InitConnectionFactory(
@@ -34,7 +34,7 @@ func NewHostCmd() *cobra.Command {
 				return err
 			}
 
-			taskId, err := maintenance.RequestHost(maintenanceHostOpts)
+			taskId, err := maintenance.CreateTask(maintenanceCreateOpts)
 			if err != nil {
 				return err
 			}
@@ -48,7 +48,7 @@ func NewHostCmd() *cobra.Command {
 		},
 	})
 
-	maintenanceHostOpts.DefineFlags(cmd.PersistentFlags())
+	maintenanceCreateOpts.DefineFlags(cmd.PersistentFlags())
 	options.RootOptionsInstance.DefineFlags(cmd.PersistentFlags())
 
 	return cmd

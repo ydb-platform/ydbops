@@ -12,7 +12,7 @@ import (
 	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
-type MaintenanceHostOpts struct {
+type MaintenanceCreateOpts struct {
 	HostFQDN            string
 	MaintenanceDuration int
 	AvailabilityMode    string
@@ -22,7 +22,7 @@ const (
 	DefaultMaintenanceDurationSeconds = 3600
 )
 
-func (o *MaintenanceHostOpts) DefineFlags(fs *pflag.FlagSet) {
+func (o *MaintenanceCreateOpts) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.HostFQDN, "host-fqdn", "",
 		"Request the host with this FQDN from the cluster")
 
@@ -34,11 +34,11 @@ func (o *MaintenanceHostOpts) DefineFlags(fs *pflag.FlagSet) {
 			DefaultMaintenanceDurationSeconds))
 }
 
-func (o *MaintenanceHostOpts) GetMaintenanceDuration() *durationpb.Duration {
+func (o *MaintenanceCreateOpts) GetMaintenanceDuration() *durationpb.Duration {
 	return durationpb.New(time.Second * time.Duration(o.MaintenanceDuration))
 }
 
-func (o *MaintenanceHostOpts) Validate() error {
+func (o *MaintenanceCreateOpts) Validate() error {
 	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
 		return fmt.Errorf("specified a non-existing availability mode: %s", o.AvailabilityMode)
 	}
@@ -49,7 +49,7 @@ func (o *MaintenanceHostOpts) Validate() error {
 	return nil
 }
 
-func (o *MaintenanceHostOpts) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
+func (o *MaintenanceCreateOpts) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
 	title := strings.ToUpper(fmt.Sprintf("availability_mode_%s", o.AvailabilityMode))
 	value := Ydb_Maintenance.AvailabilityMode_value[title]
 
