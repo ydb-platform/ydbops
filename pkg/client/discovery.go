@@ -41,8 +41,8 @@ func (c *Discovery) ListEndpoints(database string) ([]*Ydb_Discovery.EndpointInf
 
 func (c *Discovery) WhoAmI() (string, error) {
 	result := Ydb_Discovery.WhoAmIResult{}
+	c.logger.Debug("Invoke WhoAmI method")
 	_, err := c.ExecuteDiscoveryMethod(&result, func(ctx context.Context, cl Ydb_Discovery_V1.DiscoveryServiceClient) (OperationResponse, error) {
-		c.logger.Debug("Invoke WhoAmI method")
 		return cl.WhoAmI(ctx, &Ydb_Discovery.WhoAmIRequest{IncludeGroups: false})
 	})
 	if err != nil {

@@ -29,8 +29,8 @@ func NewAuthClient(logger *zap.SugaredLogger, f *Factory) *Auth {
 func (c *Auth) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
 	result := Ydb_Auth.LoginResult{}
 
+	c.logger.Debug("Invoke Auth method")
 	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (OperationResponse, error) {
-		c.logger.Debug("Invoke Auth method")
 		return cl.Login(ctx, &Ydb_Auth.LoginRequest{
 			OperationParams: c.f.OperationParams(),
 			User:            user,

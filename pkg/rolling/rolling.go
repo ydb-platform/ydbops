@@ -241,7 +241,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 				if retriesUntilNow+1 == r.opts.RestartRetryNumber {
 					r.atomicRememberComplete(rollingStateMutex, as.ActionUid)
-					r.logger.Warnf("Failed to retry node %v specified number of times %v", node.NodeId, r.opts.RestartRetryNumber)
+					r.logger.Warnf("Failed to retry node %v specified number of times (%v)", node.NodeId, r.opts.RestartRetryNumber)
 				}
 			} else {
 				r.atomicRememberComplete(rollingStateMutex, as.ActionUid)
