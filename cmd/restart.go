@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
@@ -25,6 +27,10 @@ func NewRestartCmd() *cobra.Command {
 			restartOpts, rootOpts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("Free args not expected: %v", args)
+			}
+
 			var storageRestarter restarters.Restarter
 			var tenantRestarter restarters.Restarter
 

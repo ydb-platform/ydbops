@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
@@ -34,6 +36,10 @@ func NewRunCmd() *cobra.Command {
 			restartOpts, rootOpts, restarter.Opts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("Free args not expected: %v", args)
+			}
+
 			err := client.InitConnectionFactory(
 				*rootOpts,
 				options.Logger,
