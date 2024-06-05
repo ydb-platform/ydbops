@@ -66,37 +66,51 @@ type TestNodeInfo struct {
 	IsDynnode  bool
 	TenantName string
 	Version    string
+	State      Ydb_Maintenance.ItemState
 }
 
 func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestNodeInfo) []*Ydb_Maintenance.Node {
 	nodes := []*Ydb_Maintenance.Node{}
 	for _, group := range nodeGroups {
 		for _, nodeID := range group {
-			testNodeInfo, ok := nodeInfo[nodeID]
+			testNodeInfo, moreInfoPresent := nodeInfo[nodeID]
 			node := makeNode(nodeID)
 
-			if ok && testNodeInfo.IsDynnode {
+			if !moreInfoPresent {
+				node.Type = &Ydb_Maintenance.Node_Storage{
+					Storage: &Ydb_Maintenance.Node_StorageNode{},
+				}
+
+				node.State = Ydb_Maintenance.ItemState_ITEM_STATE_UP
+
+				node.StartTime = timestamppb.New(time.Now())
+
+				node.Version = "some-fake-version-will-fail-when-parsing"
+
+				nodes = append(nodes, node)
+
+				continue
+			}
+
+			if testNodeInfo.IsDynnode {
 				node.Type = &Ydb_Maintenance.Node_Dynamic{
 					Dynamic: &Ydb_Maintenance.Node_DynamicNode{
 						Tenant: testNodeInfo.TenantName,
 					},
 				}
-			} else {
-				node.Type = &Ydb_Maintenance.Node_Storage{
-					Storage: &Ydb_Maintenance.Node_StorageNode{},
-				}
 			}
 
-			if ok && !testNodeInfo.StartTime.IsZero() {
+			if !testNodeInfo.StartTime.IsZero() {
 				node.StartTime = timestamppb.New(testNodeInfo.StartTime)
-			} else {
-				node.StartTime = timestamppb.New(time.Now())
 			}
 
-			if ok && len(testNodeInfo.Version) > 0 {
+			if len(testNodeInfo.Version) > 0 {
 				node.Version = testNodeInfo.Version
-			} else {
-				node.Version = "some-fake-version-will-fail-when-parsing"
+			}
+
+			if testNodeInfo.State == Ydb_Maintenance.ItemState_ITEM_STATE_MAINTENANCE ||
+				testNodeInfo.State == Ydb_Maintenance.ItemState_ITEM_STATE_DOWN {
+				node.State = testNodeInfo.State
 			}
 
 			nodes = append(nodes, node)

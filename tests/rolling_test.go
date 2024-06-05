@@ -79,7 +79,6 @@ var _ = Describe("Test Rolling", func() {
 
 		_, err := cmd.CombinedOutput()
 		// output, err := cmd.CombinedOutput()
-		// fmt.Println(string(output))
 		Expect(err).To(BeNil())
 
 		if err != nil {
@@ -113,7 +112,7 @@ var _ = Describe("Test Rolling", func() {
 		expectedPlaceholders := make(map[string]int)
 		actualPlaceholders := make(map[string]int)
 
-		// Expect(len(tc.expectedRequests)).To(Equal(len(actualRequests)))
+		Expect(len(tc.expectedRequests)).To(Equal(len(actualRequests)))
 
 		for i, expected := range tc.expectedRequests {
 			actual := actualRequests[i]
@@ -617,6 +616,46 @@ var _ = Describe("Test Rolling", func() {
 							ActionId: "action-UUID-4",
 						},
 					},
+				},
+			},
+		},
+		),
+		Entry("do not restart nodes that are down", testCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				1: {
+					State: Ydb_Maintenance.ItemState_ITEM_STATE_DOWN,
+				},
+				2: {
+					State: Ydb_Maintenance.ItemState_ITEM_STATE_DOWN,
+				},
+				3: {
+					State: Ydb_Maintenance.ItemState_ITEM_STATE_MAINTENANCE,
+				},
+			},
+			ydbopsInvocation: []string{
+				"--endpoint", "grpcs://localhost:2135",
+				"--verbose",
+				"--availability-mode", "strong",
+				"--user", mock.TestUser,
+				"--cms-query-interval", "1",
+				"run",
+				"--storage",
+				"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+				"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+			},
+			expectedRequests: []proto.Message{
+				&Ydb_Auth.LoginRequest{
+					User:     mock.TestUser,
+					Password: mock.TestPassword,
+				},
+				&Ydb_Maintenance.ListClusterNodesRequest{},
+				&Ydb_Cms.ListDatabasesRequest{},
+				&Ydb_Discovery.WhoAmIRequest{},
+				&Ydb_Maintenance.ListMaintenanceTasksRequest{
+					User: &mock.TestUser,
 				},
 			},
 		},
