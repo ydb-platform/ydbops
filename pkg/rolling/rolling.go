@@ -143,20 +143,22 @@ func (r *Rolling) DoRestart() error {
 		return fmt.Errorf("failed to create maintenance task: %w", err)
 	}
 
-	return r.cmsWaitingLoop(task)
+	return r.cmsWaitingLoop(task, len(nodesToRestart))
 }
 
 func (r *Rolling) DoRestartPrevious() error {
 	return fmt.Errorf("--continue behavior not implemented yet")
 }
 
-func (r *Rolling) cmsWaitingLoop(task client.MaintenanceTask) error {
+func (r *Rolling) cmsWaitingLoop(task client.MaintenanceTask, totalNodes int) error {
 	var (
 		err          error
 		delay        time.Duration
 		taskID       = task.GetTaskUid()
 		defaultDelay = time.Duration(r.opts.CMSQueryInterval) * time.Second
 	)
+
+	restartedNodes := 0
 
 	r.logger.Infof("Maintenance task %v, processing loop started", taskID)
 	for {
@@ -174,12 +176,12 @@ func (r *Rolling) cmsWaitingLoop(task client.MaintenanceTask) error {
 				}
 			}
 
-			if completed := r.processActionGroupStates(task.GetActionGroupStates()); completed {
+			if completed := r.processActionGroupStates(task.GetActionGroupStates(), &restartedNodes); completed {
 				break
 			}
 		}
 
-		r.logger.Infof("Wait next %s delay", delay)
+		r.logger.Infof("Wait next %s delay. Total node progress: %v out of %v", delay, restartedNodes, totalNodes)
 		time.Sleep(delay)
 
 		r.logger.Infof("Refresh maintenance task with id: %s", taskID)
@@ -193,7 +195,7 @@ func (r *Rolling) cmsWaitingLoop(task client.MaintenanceTask) error {
 	return nil
 }
 
-func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
+func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates, restartedNodes *int) bool {
 	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
 	performed := collections.FilterBy(actions,
 		func(gs *Ydb_Maintenance.ActionGroupStates) bool {
@@ -254,11 +256,11 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 				)
 
 				if retriesUntilNow+1 == r.opts.RestartRetryNumber {
-					r.atomicRememberComplete(rollingStateMutex, as.ActionUid)
+					r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
 					r.logger.Warnf("Failed to retry node %v specified number of times (%v)", node.NodeId, r.opts.RestartRetryNumber)
 				}
 			} else {
-				r.atomicRememberComplete(rollingStateMutex, as.ActionUid)
+				r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
 				r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
 			}
 		}()
@@ -278,12 +280,13 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	return len(actions) == len(result.ActionStatuses)
 }
 
-func (r *Rolling) atomicRememberComplete(m *sync.Mutex, actionUID *Ydb_Maintenance.ActionUid) {
+func (r *Rolling) atomicRememberComplete(m *sync.Mutex, actionUID *Ydb_Maintenance.ActionUid, restartedNodes *int) {
 	m.Lock()
 	defer m.Unlock()
 
 	r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, actionUID.ActionId)
 	r.completedActions = append(r.completedActions, actionUID)
+	(*restartedNodes)++
 }
 
 func (r *Rolling) populateTenantToNodesMapping(nodes []*Ydb_Maintenance.Node) map[string][]uint32 {
