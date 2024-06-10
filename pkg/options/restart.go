@@ -93,6 +93,11 @@ func (o *RestartOptions) Validate() error {
 		return fmt.Errorf("specified invalid restart retry number: %d. Must be positive", o.RestartRetryNumber)
 	}
 
+	if len(o.TenantList) > 0 && !o.Tenant {
+		return fmt.Errorf("--tenant-list specified, but --tenant is not explicitly specified." +
+			"Please specify --tenant as well to clearly indicate your intentions.")
+	}
+
 	if startedUnparsedFlag != "" {
 		directionRune, _ := utf8.DecodeRuneInString(startedUnparsedFlag)
 		if directionRune != '<' && directionRune != '>' {
@@ -170,7 +175,7 @@ Examples:
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
 		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
 but you can not mix host FQDNs and node ids in this option. The list is comma-delimited.
-  E.g.: '--hosts 1,2,3' or '--hosts fqdn1,fqdn2,fqdn3'`)
+  E.g.: '--hosts=1,2,3' or '--hosts=fqdn1,fqdn2,fqdn3'`)
 
 	fs.StringSliceVar(&o.ExcludeHosts, "exclude-hosts", []string{},
 		`Comma-delimited list. Do not restart these hosts, even if they are explicitly specified in --hosts.`)
