@@ -8,12 +8,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
-	"github.com/ydb-platform/ydbops/pkg/options"
-	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
-func determinePadding(curCommand, subCommandLineNumber, totalCommands int) string {
+func DeterminePadding(curCommand, subCommandLineNumber, totalCommands int) string {
 	if curCommand == totalCommands-1 {
 		if subCommandLineNumber == 0 {
 			return "└─ "
@@ -27,7 +24,7 @@ func determinePadding(curCommand, subCommandLineNumber, totalCommands int) strin
 	return "│  "
 }
 
-func generateUsage(cmd *cobra.Command) string {
+func GenerateUsage(cmd *cobra.Command) string {
 	boldUsage := color.New(color.Bold).Sprint("Usage:")
 	if cmd == cmd.Root() {
 		return fmt.Sprintf("%s ydbops [global options...] <subcommand", boldUsage)
@@ -53,7 +50,7 @@ func generateUsage(cmd *cobra.Command) string {
 	)
 }
 
-func generateCommandTree(cmd *cobra.Command, paddingSize int) []string {
+func GenerateCommandTree(cmd *cobra.Command, paddingSize int) []string {
 	bold := color.New(color.Bold)
 
 	result := []string{bold.Sprint(cmd.Name()) + strings.Repeat(" ", paddingSize-len(cmd.Name())) + cmd.Short}
@@ -62,9 +59,9 @@ func generateCommandTree(cmd *cobra.Command, paddingSize int) []string {
 		for i := 0; i < len(cmd.Commands()); i++ {
 			subCmd := cmd.Commands()[i]
 			if !subCmd.Hidden {
-				subCmdTree := generateCommandTree(subCmd, paddingSize-3)
+				subCmdTree := GenerateCommandTree(subCmd, paddingSize-3)
 				for j, line := range subCmdTree {
-					result = append(result, determinePadding(i, j, subCommandLen)+line)
+					result = append(result, DeterminePadding(i, j, subCommandLen)+line)
 				}
 			}
 		}
@@ -72,7 +69,7 @@ func generateCommandTree(cmd *cobra.Command, paddingSize int) []string {
 	return result
 }
 
-func generateShortGlobalOptions(rootCmd *cobra.Command) []string {
+func GenerateShortGlobalOptions(rootCmd *cobra.Command) []string {
 	flagNames := []string{}
 	rootCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		var flagString string
@@ -94,7 +91,7 @@ func generateShortGlobalOptions(rootCmd *cobra.Command) []string {
 	}
 }
 
-func colorizeUsages(cmd *cobra.Command) string {
+func ColorizeUsages(cmd *cobra.Command) string {
 	flagOccurences := []string{}
 	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
 		longFlagName := fmt.Sprintf("--%s", f.Name)
@@ -125,88 +122,21 @@ func colorizeUsages(cmd *cobra.Command) string {
 	return replacer.Replace(flagUsages)
 }
 
-func generateCommandOptionsMessage(cmd *cobra.Command) []string {
+func GenerateCommandOptionsMessage(cmd *cobra.Command) []string {
 	result := []string{}
 
 	local := cmd.LocalFlags()
 	if len(local.FlagUsages()) > 0 {
 		if cmd == cmd.Root() {
-			return generateShortGlobalOptions(cmd)
+			return GenerateShortGlobalOptions(cmd)
 		}
 
-		result = append(result, colorizeUsages(cmd))
+		result = append(result, ColorizeUsages(cmd))
 	}
 
 	if cmd.HasParent() {
-		result = append(result, generateCommandOptionsMessage(cmd.Parent())...)
+		result = append(result, GenerateCommandOptionsMessage(cmd.Parent())...)
 	}
 
 	return result
-}
-
-func PopulateProfileDefaultsAndValidate(optsArgs ...options.Options) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		rootOpts := options.RootOptionsInstance
-		err := profile.FillDefaultsFromActiveProfile(rootOpts.ProfileFile, rootOpts.ActiveProfile)
-		if err != nil {
-			return err
-		}
-
-		for _, opts := range optsArgs {
-			if err := opts.Validate(); err != nil {
-				return fmt.Errorf("%w\nTry '--help' option for more info", err)
-			}
-		}
-		return nil
-	}
-}
-
-func RequireSubcommand(cmd *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("you have not selected a subcommand\nTry '--help' option for more info")
-	}
-	return nil
-}
-
-func SetDefaultsOn(cmd *cobra.Command) *cobra.Command {
-	cmd.Flags().SortFlags = false
-	cmd.PersistentFlags().SortFlags = false
-
-	cobra.AddTemplateFunc("drawNiceTree", func(cmd *cobra.Command) string {
-		if cmd.HasAvailableSubCommands() {
-			var builder strings.Builder
-			builder.WriteString("Subcommands:")
-			for _, line := range generateCommandTree(cmd, 23) {
-				builder.WriteString("\n")
-				builder.WriteString(line)
-			}
-			builder.WriteString("\n")
-			return builder.String()
-		}
-		return ""
-	})
-
-	cobra.AddTemplateFunc("generateUsage", generateUsage)
-
-	cobra.AddTemplateFunc("listAllFlagsInNiceGroups", func(cmd *cobra.Command) string {
-		if cmd == cmd.Root() {
-			return "Global options:\n" + colorizeUsages(cmd)
-		}
-
-		if cmd.HasAvailableSubCommands() {
-			return strings.Join(generateShortGlobalOptions(cmd.Root()), "\n")
-		}
-
-		if cmd.HasFlags() {
-			return fmt.Sprintf(
-				"Options:\n%s",
-				strings.Join(generateCommandOptionsMessage(cmd), "\n"),
-			)
-		}
-		return ""
-	})
-
-	cmd.SetUsageTemplate(UsageTemplate)
-
-	return cmd
 }

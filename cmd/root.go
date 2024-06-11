@@ -7,7 +7,8 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
-	"github.com/ydb-platform/ydbops/internal/cli"
+	iCli "github.com/ydb-platform/ydbops/internal/cli"
+	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -77,5 +78,5 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 
 	registerAllSubcommands(RootCmd)
 
-	RootCmd.SetUsageTemplate(cli.UsageTemplate)
+	RootCmd.SetUsageTemplate(iCli.UsageTemplate)
 }
