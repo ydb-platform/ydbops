@@ -7,13 +7,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
+	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
-func PopulateProfileDefaultsAndValidate(optsArgs ...options.Options) func(*cobra.Command, []string) error {
+func PopulateProfileDefaultsAndValidate(rootOpts *command.BaseOptions, optsArgs ...options.Options) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		rootOpts := options.RootOptionsInstance
 		err := profile.FillDefaultsFromActiveProfile(rootOpts.ProfileFile, rootOpts.ActiveProfile)
 		if err != nil {
 			return err
@@ -24,7 +24,7 @@ func PopulateProfileDefaultsAndValidate(optsArgs ...options.Options) func(*cobra
 				return fmt.Errorf("%w\nTry '--help' option for more info", err)
 			}
 		}
-		return nil
+		return rootOpts.Validate()
 	}
 }
 

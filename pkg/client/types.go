@@ -2,8 +2,8 @@ package client
 
 import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MaintenanceScopeType int
@@ -24,19 +24,6 @@ type MaintenanceTaskParams struct {
 	Hosts []string
 }
 
-type MaintenanceTask interface {
-	GetRetryAfter() *timestamppb.Timestamp
-	GetActionGroupStates() []*Ydb_Maintenance.ActionGroupStates
-	GetTaskUid() string
+type OperationResponse interface {
+	GetOperation() *Ydb_Operations.Operation
 }
-
-type maintenanceTaskResult struct {
-	TaskUID           string
-	ActionGroupStates []*Ydb_Maintenance.ActionGroupStates
-}
-
-func (g *maintenanceTaskResult) GetRetryAfter() *timestamppb.Timestamp { return nil }
-func (g *maintenanceTaskResult) GetActionGroupStates() []*Ydb_Maintenance.ActionGroupStates {
-	return g.ActionGroupStates
-}
-func (g *maintenanceTaskResult) GetTaskUid() string { return g.TaskUID }

@@ -1,6 +1,8 @@
 package restarters
 
 import (
+	"time"
+
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
 )
@@ -11,15 +13,27 @@ type TenantK8sRestarter struct {
 	k8sRestarter
 }
 
-func NewTenantK8sRestarter(logger *zap.SugaredLogger, kubeconfigPath, namespace string) *TenantK8sRestarter {
+type K8sRestarterOptions struct {
+	RestartDuration time.Duration
+	KubeconfigPath  string
+	Namespace       string
+}
+
+type TenantK8sRestarterOptions struct {
+	*K8sRestarterOptions
+}
+
+func NewTenantK8sRestarter(logger *zap.SugaredLogger, params *TenantK8sRestarterOptions) *TenantK8sRestarter {
 	return &TenantK8sRestarter{
 		Opts: &TenantK8sOpts{
 			k8sOpts: k8sOpts{
-				kubeconfigPath: kubeconfigPath,
-				namespace:      namespace,
+				kubeconfigPath: params.KubeconfigPath,
+				namespace:      params.Namespace,
 			},
 		},
-		k8sRestarter: newK8sRestarter(logger),
+		k8sRestarter: newK8sRestarter(logger, &k8sRestarterOptions{
+			restartDuration: params.RestartDuration,
+		}),
 	}
 }
 
