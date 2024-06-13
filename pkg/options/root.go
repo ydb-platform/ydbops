@@ -10,6 +10,14 @@ type RootOptions struct {
 	Verbose       bool
 	ProfileFile   string
 	ActiveProfile string
+
+	additionalFlags []AdditionalFlag
+}
+
+func NewRootOptions(additionalFlags ...AdditionalFlag) *RootOptions {
+	return &RootOptions{
+		additionalFlags: additionalFlags,
+	}
 }
 
 var RootOptionsInstance = &RootOptions{}
@@ -40,4 +48,8 @@ func (o *RootOptions) DefineFlags(fs *pflag.FlagSet) {
 		"Override currently set profile name from --config-file")
 
 	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
+
+	for _, v := range o.additionalFlags {
+		v(fs)
+	}
 }

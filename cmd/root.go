@@ -9,6 +9,7 @@ import (
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/cli"
+	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -29,13 +30,37 @@ func registerAllSubcommands(root *cobra.Command) {
 	)
 }
 
-var RootCmd *cobra.Command
+type RootCommand struct {
+	description    *command.BaseCommandDescription
+	commandOptions *options.RootOptions
+	cobraCommand   *cobra.Command
+	logger         *zap.SugaredLogger
+	logLevelSetter zap.AtomicLevel
+}
 
-func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
-	RootCmd = &cobra.Command{
-		Use:   "ydbops",
-		Short: "ydbops: a CLI tool for performing YDB cluster maintenance operations",
-		Long:  "ydbops: a CLI tool for performing YDB cluster maintenance operations",
+func NewRootCommand(
+	description *command.BaseCommandDescription,
+	logLevelSetter zap.AtomicLevel,
+	logger *zap.SugaredLogger,
+	commandOptions *options.RootOptions,
+) command.Command {
+	return &RootCommand{
+		description:    description,
+		commandOptions: commandOptions,
+		logger:         logger,
+		logLevelSetter: logLevelSetter,
+	}
+}
+
+func (r *RootCommand) ToCobraCommand() *cobra.Command {
+	if r.cobraCommand != nil {
+		return r.cobraCommand
+	}
+
+	r.cobraCommand = &cobra.Command{
+		Use:   r.description.GetUse(),
+		Short: r.description.GetShortDescription(),
+		Long:  r.description.GetLongDescription(),
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
 			if options.RootOptionsInstance.Verbose {
@@ -44,10 +69,10 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 
 			lvc, err := zapcore.ParseLevel(logLevel)
 			if err != nil {
-				logger.Warn("Failed to set level")
+				r.logger.Warn("Failed to set level")
 				return err
 			}
-			logLevelSetter.SetLevel(lvc)
+			r.logLevelSetter.SetLevel(lvc)
 
 			zap.S().Debugf("Current logging level enabled: %s", logLevel)
 
@@ -61,22 +86,46 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 		RunE:         cli.RequireSubcommand,
 	}
 
-	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	r.cobraCommand.SetHelpCommand(&cobra.Command{
+		Hidden: true,
+	})
 
-	RootCmd.Flags().SortFlags = false
-	RootCmd.PersistentFlags().SortFlags = false
+	r.cobraCommand.Flags().SortFlags = false
+	r.cobraCommand.PersistentFlags().SortFlags = false
 
-	RootCmd.SetOutput(color.Output)
+	r.cobraCommand.SetOutput(color.Output)
 
-	defer func() {
-		_ = logger.Sync()
-	}()
+	//	defer func() {
+	//		// NOTE(shmel1k@): does not work. Sync will happen after end of the function
+	//		_ = r.logger.Sync()
+	//	}()
 
-	options.Logger = logger
+	r.cobraCommand.SetUsageTemplate(iCli.UsageTemplate)
 
-	options.RootOptionsInstance.DefineFlags(RootCmd.PersistentFlags())
+	return r.cobraCommand
+}
 
-	registerAllSubcommands(RootCmd)
+func (r *RootCommand) RegisterSubcommands(c ...command.Command) {
+	// TODO(shmel1k@): add BaseCommand in order no to copypaste this method.
+	for _, v := range c {
+		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
+	}
+}
 
-	RootCmd.SetUsageTemplate(iCli.UsageTemplate)
+var RootCmd *cobra.Command
+
+func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
+	rootCmd := NewRootCommand(
+		command.NewDescription(
+			"ydbops",
+			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
+			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
+		),
+		logLevelSetter,
+		logger,
+		nil,
+	)
+
+	RootCmd = rootCmd.ToCobraCommand()
+	RootCmd.AddCommand(NewRestartCmd())
 }

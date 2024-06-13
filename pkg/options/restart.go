@@ -64,6 +64,10 @@ type RestartOptions struct {
 	K8sNamespace   string
 }
 
+type RunOptions struct {
+	*RestartOptions
+}
+
 var (
 	startedUnparsedFlag string
 	versionUnparsedFlag string
@@ -159,13 +163,13 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 
 	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes. Otherwise, include all nodes by default`)
 
-	fs.StringSliceVar(&o.TenantList, "tenant-list", []string{}, `Comma-delimited list of tenant names to restart. 
+	fs.StringSliceVar(&o.TenantList, "tenant-list", []string{}, `Comma-delimited list of tenant names to restart.
   E.g.:'--tenant-list=name1,name2,name3'`)
 
 	fs.StringVar(&o.CustomSystemdUnitName, "systemd-unit", "", "Specify custom systemd unit name to restart")
 
 	fs.StringVar(&rawSSHUnparsedArgs, "ssh-args", "",
-		`This argument will be used when ssh-ing to the nodes. It may be used to override 
+		`This argument will be used when ssh-ing to the nodes. It may be used to override
 the ssh command itself, ssh username or any additional arguments.
 Double quotes are can be escaped with backward slash '\'.
 Examples:
@@ -173,7 +177,7 @@ Examples:
 2) --ssh-args "ssh -o ProxyCommand=\"...\""`)
 
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
-		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
+		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids,
 but you can not mix host FQDNs and node ids in this option. The list is comma-delimited.
   E.g.: '--hosts=1,2,3' or '--hosts=fqdn1,fqdn2,fqdn3'`)
 
@@ -200,8 +204,8 @@ after that would be considered a regular cluster failure`)
 		`Apply filter by node version. Format: [<|>|!=|==MAJOR.MINOR.PATCH], e.g. '--version !=24.1.2'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
-		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
-for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since 
+		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes
+for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since
 the ydbops utility is stateless. Use at your own risk.`)
 
 	profile.PopulateFromProfileLater(
