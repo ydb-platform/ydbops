@@ -2,7 +2,6 @@ package rolling
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
@@ -136,6 +136,7 @@ func (r *Rolling) DoRestart() error {
 		TaskUID:          r.state.restartTaskUID,
 		AvailabilityMode: r.opts.GetAvailabilityMode(),
 		Duration:         r.opts.GetRestartDuration(),
+		ScopeType:        client.NodeScope,
 		Nodes:            nodesToRestart,
 	}
 	task, err := r.cms.CreateMaintenanceTask(taskParams)
@@ -364,24 +365,7 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 }
 
 func (r *Rolling) logTask(task client.MaintenanceTask) {
-	sb := strings.Builder{}
-	sb.WriteString(fmt.Sprintf("Uid: %s\n", task.GetTaskUid()))
-
-	if task.GetRetryAfter() != nil {
-		sb.WriteString(fmt.Sprintf("Retry after: %s\n", task.GetRetryAfter().AsTime().Format(time.DateTime)))
-	}
-
-	for _, gs := range task.GetActionGroupStates() {
-		as := gs.ActionStates[0]
-		sb.WriteString(fmt.Sprintf("  Lock on node %d ", as.Action.GetLockAction().Scope.GetNodeId()))
-		if as.Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED {
-			sb.WriteString(fmt.Sprintf("PERFORMED, until: %s", as.Deadline.AsTime().Format(time.DateTime)))
-		} else {
-			sb.WriteString(fmt.Sprintf("PENDING, %s", as.GetReason().String()))
-		}
-		sb.WriteString("\n")
-	}
-	r.logger.Debugf("Maintenance task result:\n%s", sb.String())
+	r.logger.Debugf("Maintenance task result:\n%s", prettyprint.TaskToString(task))
 }
 
 func (r *Rolling) logCompleteResult(result *Ydb_Maintenance.ManageActionResult) {
@@ -389,11 +373,5 @@ func (r *Rolling) logCompleteResult(result *Ydb_Maintenance.ManageActionResult) 
 		return
 	}
 
-	sb := strings.Builder{}
-
-	for _, status := range result.ActionStatuses {
-		sb.WriteString(fmt.Sprintf("  Action: %s, status: %s", status.ActionUid, status.Status))
-	}
-
-	r.logger.Debugf("Manage action result:\n%s", sb.String())
+	r.logger.Debugf("Manage action result:\n%s", prettyprint.ResultToString(result))
 }

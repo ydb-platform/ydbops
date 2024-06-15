@@ -3,6 +3,8 @@ package mock
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,8 +59,31 @@ func (s *YdbMock) setPendingOrPerformed(
 	return ActionState_ACTION_STATUS_PENDING
 }
 
+func whichStorageNodeIs(host string) uint32 {
+	// fake host fqdns look like this: ydb-%d.ydb.tech
+	parts := strings.Split(host, "-")
+	numStr := strings.Split(parts[1], ".")[0]
+	num, err := strconv.ParseUint(numStr, 10, 32)
+	if err != nil {
+		panic(err)
+	}
+
+	return uint32(num)
+}
+
+func nodeIdFromAction(action *Action) uint32 {
+	nodeId := action.GetLockAction().Scope.GetNodeId()
+	if nodeId == 0 { // Scope is Host
+		host := action.GetLockAction().Scope.GetHost()
+		nodeId = whichStorageNodeIs(host)
+	}
+
+	return nodeId
+}
+
 func (s *YdbMock) givePerformedOrPendingStatus(taskOptions *MaintenanceTaskOptions, action *Action) *ActionState {
-	currentNodeID := action.GetLockAction().Scope.GetNodeId()
+	currentNodeID := nodeIdFromAction(action)
+
 	status := s.setPendingOrPerformed(currentNodeID, taskOptions.AvailabilityMode)
 
 	return &ActionState{
@@ -121,7 +146,9 @@ func (s *YdbMock) cleanupActionByID(actionID string) {
 					continue
 				}
 
-				s.isNodeCurrentlyReleased[action.GetLockAction().Scope.GetNodeId()] = false
+				nodeId := nodeIdFromAction(action)
+
+				s.isNodeCurrentlyReleased[nodeId] = false
 				delete(s.actionToActionUID, action)
 				s.cleanupActionGroupState(task, actionID)
 				actionGroup.Actions = deleteFromSlice(actionGroup.Actions, i)
@@ -145,7 +172,7 @@ func (s *YdbMock) refreshStatesForTask(taskUID string) {
 	task := s.tasks[taskUID]
 	for _, ags := range task.actionGroupStates {
 		for _, as := range ags.ActionStates {
-			nodeID := as.Action.GetLockAction().Scope.GetNodeId()
+			nodeID := nodeIdFromAction(as.Action)
 			as.Status = s.setPendingOrPerformed(nodeID, task.options.AvailabilityMode)
 		}
 	}

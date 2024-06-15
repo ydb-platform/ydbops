@@ -35,10 +35,10 @@ func NewDropCmd() *cobra.Command {
 			}
 
 			err = maintenance.DropTask(taskIdOpts)
-
 			if err != nil {
 				return err
 			}
+
 			return nil
 		},
 	})

@@ -9,6 +9,7 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/maintenance"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 )
 
 func NewListCmd() *cobra.Command {
@@ -33,15 +34,20 @@ func NewListCmd() *cobra.Command {
 				return err
 			}
 
-			taskIDs, err := maintenance.ListTasks()
-
-			for _, taskID := range taskIDs {
-				fmt.Printf("%s\n", taskID)
-			}
-
+			tasks, err := maintenance.ListTasks()
 			if err != nil {
 				return err
 			}
+
+			if len(tasks) == 0 {
+				fmt.Println("There are no maintenance tasks, associated with your user, at the moment.")
+			} else {
+				for _, task := range tasks {
+					taskInfo := prettyprint.TaskToString(task)
+					fmt.Println(taskInfo)
+				}
+			}
+
 			return nil
 		},
 	})

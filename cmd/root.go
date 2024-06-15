@@ -25,6 +25,10 @@ func registerAllSubcommands(root *cobra.Command) {
 		NewRunCmd(),
 		addAndReturnCmd(NewMaintenanceCmd(),
 			maintenance.NewCreateCmd(),
+			maintenance.NewListCmd(),
+			maintenance.NewDropCmd(),
+			maintenance.NewRefreshCmd(),
+			maintenance.NewCompleteCmd(),
 		),
 	)
 }

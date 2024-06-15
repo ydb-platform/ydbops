@@ -1,12 +1,15 @@
 package maintenance
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/maintenance"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 )
 
 func NewRefreshCmd() *cobra.Command {
@@ -32,11 +35,13 @@ func NewRefreshCmd() *cobra.Command {
 				return err
 			}
 
-			err = maintenance.RefreshTask(taskIdOpts)
-
+			task, err := maintenance.RefreshTask(taskIdOpts)
 			if err != nil {
 				return err
 			}
+
+			fmt.Println(prettyprint.TaskToString(task))
+
 			return nil
 		},
 	})

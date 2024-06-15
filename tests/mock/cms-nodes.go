@@ -36,7 +36,7 @@ func makeNode(nodeID uint32) *Ydb_Maintenance.Node {
 	}
 }
 
-func MakeActionGroups(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
+func MakeActionGroupsFromNodeIds(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
 	result := []*Ydb_Maintenance.ActionGroup{}
 	for _, nodeID := range nodeIDs {
 		result = append(result,
@@ -51,6 +51,31 @@ func MakeActionGroups(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
 									},
 								},
 								Duration: durationpb.New(time.Duration(180) * time.Second),
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+	return result
+}
+
+func MakeActionGroupsFromHostFQDNs(hostFQDNs ...string) []*Ydb_Maintenance.ActionGroup {
+	result := []*Ydb_Maintenance.ActionGroup{}
+	for _, hostFQDN := range hostFQDNs {
+		result = append(result,
+			&Ydb_Maintenance.ActionGroup{
+				Actions: []*Ydb_Maintenance.Action{
+					{
+						Action: &Ydb_Maintenance.Action_LockAction{
+							LockAction: &Ydb_Maintenance.LockAction{
+								Scope: &Ydb_Maintenance.ActionScope{
+									Scope: &Ydb_Maintenance.ActionScope_Host{
+										Host: hostFQDN,
+									},
+								},
+								Duration: durationpb.New(time.Duration(1) * time.Hour),
 							},
 						},
 					},

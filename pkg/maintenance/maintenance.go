@@ -11,43 +11,20 @@ import (
 )
 
 const (
-	MaintenanceTaskPrefix = "maintenance-"
+	TaskUuidPrefix = "maintenance-"
 )
-
-func getNodesOnHost(cms *client.Cms, hostFQDN string) ([]*Ydb_Maintenance.Node, error) {
-	nodes, err := cms.Nodes()
-	if err != nil {
-		return nil, err
-	}
-
-	res := []*Ydb_Maintenance.Node{}
-
-	for _, node := range nodes {
-		// TODO here is the non-trivial part with Kubernetes, surgically create a shared logic
-		// with Kubernetes restarters
-		if node.Host == hostFQDN {
-			res = append(res, node)
-		}
-	}
-
-	return res, nil
-}
 
 func CreateTask(opts *options.MaintenanceCreateOpts) (string, error) {
 	cms := client.GetCmsClient()
 
-	taskUID := MaintenanceTaskPrefix + uuid.New().String()
-
-	nodes, err := getNodesOnHost(cms, opts.HostFQDN)
-	if err != nil {
-		return "", err
-	}
+	taskUID := TaskUuidPrefix + uuid.New().String()
 
 	taskParams := client.MaintenanceTaskParams{
 		TaskUID:          taskUID,
 		AvailabilityMode: opts.GetAvailabilityMode(),
 		Duration:         opts.GetMaintenanceDuration(),
-		Nodes:            nodes,
+		ScopeType:        client.HostScope,
+		Hosts:            opts.HostFQDNs,
 	}
 
 	task, err := cms.CreateMaintenanceTask(taskParams)
@@ -58,23 +35,36 @@ func CreateTask(opts *options.MaintenanceCreateOpts) (string, error) {
 	return task.GetTaskUid(), nil
 }
 
-func GetTask(opts *options.TaskIdOpts) error {
-	return nil
-}
-
-func RefreshTask(opts *options.TaskIdOpts) error {
-	return nil
-}
-
 func DropTask(opts *options.TaskIdOpts) error {
+	cmsClient := client.GetCmsClient()
+	status, err := cmsClient.DropMaintenanceTask(opts.TaskID)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Drop task %v status: %s\n", opts.TaskID, status)
+
 	return nil
 }
 
-func CompleteTask(opts *options.TaskIdOpts) error {
-	return nil
+func queryEachTaskForActions(cmsClient *client.Cms, taskIds []string) ([]client.MaintenanceTask, error) {
+	tasks := []client.MaintenanceTask{}
+	for _, taskId := range taskIds {
+		task, err := cmsClient.GetMaintenanceTask(taskId)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to list all maintenance tasks, failure to obtain detailed info about task %v: %w",
+				taskId,
+				err,
+			)
+		}
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
 }
 
-func ListTasks() ([]string, error) {
+func ListTasks() ([]client.MaintenanceTask, error) {
 	discoveryClient := client.GetDiscoveryClient()
 	userSID, err := discoveryClient.WhoAmI()
 	if err != nil {
@@ -82,10 +72,65 @@ func ListTasks() ([]string, error) {
 	}
 
 	cmsClient := client.GetCmsClient()
-	tasks, err := cmsClient.MaintenanceTasks(userSID)
+	taskIds, err := cmsClient.MaintenanceTasks(userSID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all maintenance tasks: %w", err)
 	}
 
+	tasks, err := queryEachTaskForActions(cmsClient, taskIds)
+	if err != nil {
+		return nil, err
+	}
+
 	return tasks, nil
+}
+
+func CompleteActions(
+	taskIdOpts *options.TaskIdOpts,
+	completeOpts *options.CompleteOpts,
+) (*Ydb_Maintenance.ManageActionResult, error) {
+	cmsClient := client.GetCmsClient()
+	task, err := cmsClient.GetMaintenanceTask(taskIdOpts.TaskID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get maintenance task %v: %w", taskIdOpts.TaskID, err)
+	}
+
+	hostToActionUID := make(map[string]*Ydb_Maintenance.ActionUid)
+	for _, gs := range task.GetActionGroupStates() {
+		as := gs.ActionStates[0]
+		scope := as.Action.GetLockAction().Scope
+		host := scope.GetHost()
+		if host == "" {
+			return nil, fmt.Errorf("Trying to complete an action with nodeId scope, currently unimplemented")
+		}
+
+		hostToActionUID[host] = as.ActionUid
+	}
+
+	completedActions := []*Ydb_Maintenance.ActionUid{}
+	for _, host := range completeOpts.HostFQDNs {
+		actionUid, present := hostToActionUID[host]
+		if !present {
+			return nil, fmt.Errorf("Failed to complete host %s, corresponding CMS action not found.\n"+
+				"This host either was never requested or already completed", host)
+		}
+		completedActions = append(completedActions, actionUid)
+	}
+
+	result, err := cmsClient.CompleteAction(completedActions)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, err
+}
+
+func RefreshTask(opts *options.TaskIdOpts) (client.MaintenanceTask, error) {
+	cmsClient := client.GetCmsClient()
+	task, err := cmsClient.RefreshMaintenanceTask(opts.TaskID)
+	if err != nil {
+		return nil, err
+	}
+
+	return task, nil
 }

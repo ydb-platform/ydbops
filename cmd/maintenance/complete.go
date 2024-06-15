@@ -1,18 +1,22 @@
 package maintenance
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/maintenance"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 )
 
 func NewCompleteCmd() *cobra.Command {
 	rootOpts := options.RootOptionsInstance
 
 	taskIdOpts := &options.TaskIdOpts{}
+	completeOpts := &options.CompleteOpts{}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "complete",
@@ -33,16 +37,20 @@ func NewCompleteCmd() *cobra.Command {
 				return err
 			}
 
-			err = maintenance.CompleteTask(taskIdOpts)
-
+			result, err := maintenance.CompleteActions(taskIdOpts, completeOpts)
 			if err != nil {
 				return err
 			}
+
+			fmt.Println(prettyprint.ResultToString(result))
+
 			return nil
 		},
 	})
 
 	taskIdOpts.DefineFlags(cmd.PersistentFlags())
+	completeOpts.DefineFlags(cmd.PersistentFlags())
+
 	options.RootOptionsInstance.DefineFlags(cmd.PersistentFlags())
 
 	return cmd

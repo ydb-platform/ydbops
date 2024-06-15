@@ -14,14 +14,6 @@ type StorageSSHRestarter struct {
 func (r StorageSSHRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	r.logger.Infof("Restarting storage node %s", node.Host)
 
-	// It is theoretically possible to guess the systemd-unit, but it is a fragile
-	// solution. tarasov-egor@ will keep it here during development time for reference:
-	//
-	// YDBD_PORT=2135
-	// YDBD_PID=$(sudo lsof -i :$YDBD_PORT | grep LISTEN | awk '{print $2}' | head -n 1)
-	// YDBD_UNIT=$(sudo ps -A -o'pid,unit' | grep $YDBD_PID | awk '{print $2}')
-	// sudo systemctl restart $YDBD_UNIT
-
 	systemdUnitName := defaultStorageSystemdUnit
 	if r.Opts.storageUnit != "" {
 		systemdUnitName = r.Opts.storageUnit

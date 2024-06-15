@@ -147,10 +147,19 @@ func (s *YdbMock) ListMaintenanceTasks(ctx context.Context, req *ListMaintenance
 	return &ListMaintenanceTasksResponse{Operation: wrapIntoOperation(result)}, nil
 }
 
-// TODO might need to implement later, but it is not used in rolling restart now, so why bother
-// func (s *YdbMock) GetMaintenanceTask(ctx context.Context, req *GetMaintenanceTaskRequest) (*GetMaintenanceTaskResponse, error) {
-//
-// }
+func (s *YdbMock) GetMaintenanceTask(
+	ctx context.Context,
+	req *GetMaintenanceTaskRequest,
+) (*GetMaintenanceTaskResponse, error) {
+	s.RequestLog = append(s.RequestLog, req)
+
+	result := &GetMaintenanceTaskResult{
+		TaskOptions:       s.tasks[req.TaskUid].options,
+		ActionGroupStates: s.tasks[req.TaskUid].actionGroupStates,
+	}
+
+	return &GetMaintenanceTaskResponse{Operation: wrapIntoOperation(result)}, nil
+}
 
 func (s *YdbMock) CompleteAction(ctx context.Context, req *CompleteActionRequest) (*ManageActionResponse, error) {
 	s.RequestLog = append(s.RequestLog, req)

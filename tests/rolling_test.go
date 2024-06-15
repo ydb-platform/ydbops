@@ -166,7 +166,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(3, 7),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(3, 7),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -226,7 +226,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(1, 2, 3),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(1, 2, 3),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -298,7 +298,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_WEAK,
 					},
-					ActionGroups: mock.MakeActionGroups(1, 2),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(1, 2),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -350,7 +350,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(1, 2, 3),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(1, 2, 3),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -432,7 +432,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(2, 3),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(2, 3),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -506,7 +506,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(10, 11),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(10, 11),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -584,7 +584,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(9, 10, 11, 12),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(9, 10, 11, 12),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -698,7 +698,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(1),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(1),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -721,7 +721,7 @@ var _ = Describe("Test Rolling", func() {
 						Description:      "Rolling restart maintenance task",
 						AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 					},
-					ActionGroups: mock.MakeActionGroups(2),
+					ActionGroups: mock.MakeActionGroupsFromNodeIds(2),
 				},
 				&Ydb_Maintenance.CompleteActionRequest{
 					ActionUids: []*Ydb_Maintenance.ActionUid{

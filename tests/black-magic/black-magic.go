@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 )
 
-var uuidRegex = regexp.MustCompile(`^(rolling-restart-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+var uuidRegex = regexp.MustCompile(`^(rolling-restart-|maintenance-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 // Here is some black magic. Problem is: `ydbops` produces random UUIDs during execution. This
 // is a stateful checker that checks all the string fields in test scenario, and if you specified equal string labels

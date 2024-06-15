@@ -12,6 +12,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/ydb-platform/ydbops/internal/collections"
 )
@@ -108,6 +109,56 @@ func (c *Cms) GetMaintenanceTask(taskID string) (MaintenanceTask, error) {
 	}, nil
 }
 
+func wrapSingleScopeInActionGroup(
+	scope *Ydb_Maintenance.ActionScope,
+	duration *durationpb.Duration,
+) *Ydb_Maintenance.ActionGroup {
+	return &Ydb_Maintenance.ActionGroup{
+		Actions: []*Ydb_Maintenance.Action{
+			{
+				Action: &Ydb_Maintenance.Action_LockAction{
+					LockAction: &Ydb_Maintenance.LockAction{
+						Scope:    scope,
+						Duration: duration,
+					},
+				},
+			},
+		},
+	}
+}
+
+func actionGroupsFromNodes(params MaintenanceTaskParams) []*Ydb_Maintenance.ActionGroup {
+	ags := []*Ydb_Maintenance.ActionGroup{}
+
+	for _, node := range params.Nodes {
+		scope := &Ydb_Maintenance.ActionScope{
+			Scope: &Ydb_Maintenance.ActionScope_NodeId{
+				NodeId: node.NodeId,
+			},
+		}
+
+		ags = append(ags, wrapSingleScopeInActionGroup(scope, params.Duration))
+	}
+
+	return ags
+}
+
+func actionGroupsFromHosts(params MaintenanceTaskParams) []*Ydb_Maintenance.ActionGroup {
+	ags := []*Ydb_Maintenance.ActionGroup{}
+
+	for _, hostFQDN := range params.Hosts {
+		scope := &Ydb_Maintenance.ActionScope{
+			Scope: &Ydb_Maintenance.ActionScope_Host{
+				Host: hostFQDN,
+			},
+		}
+
+		ags = append(ags, wrapSingleScopeInActionGroup(scope, params.Duration))
+	}
+
+	return ags
+}
+
 func (c *Cms) CreateMaintenanceTask(params MaintenanceTaskParams) (MaintenanceTask, error) {
 	request := &Ydb_Maintenance.CreateMaintenanceTaskRequest{
 		OperationParams: c.f.OperationParams(),
@@ -116,28 +167,12 @@ func (c *Cms) CreateMaintenanceTask(params MaintenanceTaskParams) (MaintenanceTa
 			AvailabilityMode: params.AvailabilityMode,
 			Description:      "Rolling restart maintenance task",
 		},
-		ActionGroups: make([]*Ydb_Maintenance.ActionGroup, 0, len(params.Nodes)),
 	}
 
-	for _, node := range params.Nodes {
-		request.ActionGroups = append(request.ActionGroups,
-			&Ydb_Maintenance.ActionGroup{
-				Actions: []*Ydb_Maintenance.Action{
-					{
-						Action: &Ydb_Maintenance.Action_LockAction{
-							LockAction: &Ydb_Maintenance.LockAction{
-								Scope: &Ydb_Maintenance.ActionScope{
-									Scope: &Ydb_Maintenance.ActionScope_NodeId{
-										NodeId: node.NodeId,
-									},
-								},
-								Duration: params.Duration,
-							},
-						},
-					},
-				},
-			},
-		)
+	if params.ScopeType == NodeScope {
+		request.ActionGroups = actionGroupsFromNodes(params)
+	} else { // HostScope
+		request.ActionGroups = actionGroupsFromHosts(params)
 	}
 
 	result := &Ydb_Maintenance.MaintenanceTaskResult{}

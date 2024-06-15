@@ -17,10 +17,10 @@ func NewCreateCmd() *cobra.Command {
 	maintenanceCreateOpts := &options.MaintenanceCreateOpts{}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
-		Use:   "host",
-		Short: "Request host from the CMS (Cluster Management System)",
-		Long: `ydbops maintenance host: 
-  Make a request to take the host out of the cluster.`,
+		Use:   "create",
+		Short: "Create a maintenance task to obtain a set of hosts",
+		Long: `ydbops maintenance create: 
+  Create a maintenance task, which allows taking the set of hosts out of the cluster.`,
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
 			maintenanceCreateOpts, rootOpts,
 		),

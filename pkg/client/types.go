@@ -6,11 +6,22 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+type MaintenanceScopeType int
+
+const (
+	NodeScope MaintenanceScopeType = 1
+	HostScope MaintenanceScopeType = 2
+)
+
 type MaintenanceTaskParams struct {
 	TaskUID          string
 	AvailabilityMode Ydb_Maintenance.AvailabilityMode
 	Duration         *durationpb.Duration
-	Nodes            []*Ydb_Maintenance.Node
+
+	ScopeType MaintenanceScopeType
+
+	Nodes []*Ydb_Maintenance.Node
+	Hosts []string
 }
 
 type MaintenanceTask interface {
