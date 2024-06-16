@@ -15,19 +15,24 @@ type option struct {
 // TODO make a generic solution, at this moment only string values are supported
 var pointersToProgramOptions = make(map[string]option)
 
-func FillDefaultsFromActiveProfile(profileFile, profileName string) error {
-	if profileFile == "" && profileName == "" {
+const (
+	activeProfileKeyName = "active_profile"
+	profileArrayKeyName  = "profiles"
+)
+
+func FillDefaultsFromActiveProfile(configFile, profileName string) error {
+	if configFile == "" && profileName == "" {
 		return nil
 	}
 
-	if profileFile == "" && profileName != "" {
-		return fmt.Errorf("specified --profile, but unspecified --profile-path")
+	if configFile == "" && profileName != "" {
+		return fmt.Errorf("specified --profile, but unspecified --config-path")
 	}
 
 	data := make(map[string]any)
-	fileContent, err := os.ReadFile(profileFile)
+	fileContent, err := os.ReadFile(configFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read the config file on path %s: %w", configFile, err)
 	}
 
 	err = yaml.Unmarshal(fileContent, &data)
@@ -35,16 +40,24 @@ func FillDefaultsFromActiveProfile(profileFile, profileName string) error {
 		return err
 	}
 
-	if currentProfile, present := data["current-profile"]; profileName == "" && present {
+	if currentProfile, present := data[activeProfileKeyName]; profileName == "" && present {
 		profileName = currentProfile.(string)
-		delete(data, "current-profile")
+		delete(data, activeProfileKeyName)
 	} else if profileName == "" {
-		return fmt.Errorf("failed to get current profile: field `current-profile` absent in config, and --profile flag unspecified")
+		return fmt.Errorf(
+			"failed to get current profile: field `%s` absent in config, and --profile flag unspecified",
+			activeProfileKeyName,
+		)
 	}
 
-	profile, ok := data[profileName]
+	profilesArray, ok := data[profileArrayKeyName]
 	if !ok {
-		return fmt.Errorf("profile %s not found in your profile file", profileName)
+		return fmt.Errorf("config file is malformed, `%s` field not found", profileArrayKeyName)
+	}
+
+	profile, ok := profilesArray.(map[any]any)[profileName]
+	if !ok {
+		return fmt.Errorf("profile `%s` not found in your profile file", profileName)
 	}
 
 	for optionName, defValue := range profile.(map[any]any) {

@@ -1,0 +1,5 @@
+profiles:
+  my-profile:
+    endpoint: grpcs://localhost:2135
+    user: test-user
+    ca-file: ./test-data/ssl-data/ca.crt

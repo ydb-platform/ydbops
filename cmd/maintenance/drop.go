@@ -3,7 +3,7 @@ package maintenance
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/ydb-platform/ydbops/internal/cli"
+	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/maintenance"
 	"github.com/ydb-platform/ydbops/pkg/options"
