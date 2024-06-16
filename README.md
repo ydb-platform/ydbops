@@ -2,6 +2,12 @@
 
 `ydbops` utility is used to perform various ad-hoc and maintenance operations on YDB clusters.
 
+## On the up-to-date'ness of this readme
+
+Soon an official documentation on [ydb.tech](https://ydb.tech) will be available. 
+
+For now, please use the below info for reference only, it might be slightly outdated.
+
 ## Prerequisites:
 
 1. Go 1.21
@@ -28,7 +34,7 @@ Please browse the `ydbops --help` first. Then read along for examples (substitut
 ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
   --ssh-args=pssh,-A,-J,<bastion-fqdn>,--ycp-profile,prod,--no-yubikey \
-  --verbose --hosts <node1-fqdn>,<node2-fqdn>,<node3-fqdn>
+  --verbose --hosts=<node1-fqdn>,<node2-fqdn>,<node3-fqdn>
 ```
 
 #### Restarting hosts without specifying filters will restart all of them
@@ -45,7 +51,7 @@ ydbops restart --storage \
 ```
 ydbops run \
   --endpoint grpc://<cluster-fqdn> \
-  --availability-mode strong --verbose --hosts 7,8 \
+  --availability-mode strong --verbose --hosts=7,8 \
   --payload ./tests/payloads/payload-echo-helloworld.sh
 ```
 
@@ -54,7 +60,7 @@ ydbops run \
 ```
 ydbops run \
   --endpoint grpc://<cluster-fqdn> \
-  --availability-mode strong --verbose --hosts 5,6 \
+  --availability-mode strong --verbose --hosts=5,6 \
   --payload ./tests/payloads/payload-restart-ydbd.sh
 ```
 
@@ -66,6 +72,6 @@ An example of authenticating with static credentials:
 export YDB_PASSWORD=password_123
 ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
-  --availability-mode strong --verbose --hosts 7,8 \
+  --availability-mode strong --verbose --hosts=7,8 \
   --user jorres --kubeconfig ~/.kube/config
 ```
