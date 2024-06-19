@@ -6,53 +6,42 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/ydb-platform/ydbops/cmd/maintenance"
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/command"
-	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-func addAndReturnCmd(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {
-	for _, subCmd := range rest {
-		cmd.AddCommand(subCmd)
-	}
-	return cmd
-}
-
-func registerAllSubcommands(root *cobra.Command) {
-	_ = addAndReturnCmd(root,
-		NewRestartCmd(),
-		NewRunCmd(),
-		addAndReturnCmd(NewMaintenanceCmd(),
-			maintenance.NewHostCmd(),
-		),
-	)
-}
-
 type RootCommand struct {
-	description    *command.BaseCommandDescription
-	commandOptions *options.RootOptions
+	description    *command.Description
 	cobraCommand   *cobra.Command
 	logger         *zap.SugaredLogger
 	logLevelSetter zap.AtomicLevel
+	opts           *command.BaseOptions
 }
 
 func NewRootCommand(
-	description *command.BaseCommandDescription,
+	description *command.Description,
 	logLevelSetter zap.AtomicLevel,
 	logger *zap.SugaredLogger,
-	commandOptions *options.RootOptions,
+	opts *command.BaseOptions,
 ) command.Command {
 	return &RootCommand{
 		description:    description,
-		commandOptions: commandOptions,
 		logger:         logger,
 		logLevelSetter: logLevelSetter,
+		opts:           opts,
 	}
 }
 
-func (r *RootCommand) ToCobraCommand() *cobra.Command {
+func (r *RootCommand) RunCallback(opts *command.BaseOptions) func(cmd *cobra.Command, args []string) error {
+	// TODO(shmel1k@): nil nil?
+	return cli.RequireSubcommand
+}
+
+func (r *RootCommand) RegisterOptions(opts *command.BaseOptions) {
+}
+
+func (r *RootCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
 	if r.cobraCommand != nil {
 		return r.cobraCommand
 	}
@@ -63,7 +52,7 @@ func (r *RootCommand) ToCobraCommand() *cobra.Command {
 		Long:  r.description.GetLongDescription(),
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
-			if options.RootOptionsInstance.Verbose {
+			if opts.Verbose {
 				logLevel = "debug"
 			}
 
@@ -83,7 +72,7 @@ func (r *RootCommand) ToCobraCommand() *cobra.Command {
 			DisableDefaultCmd: true,
 		},
 		SilenceUsage: true,
-		RunE:         cli.RequireSubcommand,
+		RunE:         r.RunCallback(opts),
 	}
 
 	r.cobraCommand.SetHelpCommand(&cobra.Command{
@@ -105,27 +94,10 @@ func (r *RootCommand) ToCobraCommand() *cobra.Command {
 	return r.cobraCommand
 }
 
-func (r *RootCommand) RegisterSubcommands(c ...command.Command) {
-	// TODO(shmel1k@): add BaseCommand in order no to copypaste this method.
+func (r *RootCommand) RegisterSubcommands(opts *command.BaseOptions, c ...command.Command) {
 	for _, v := range c {
-		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
+		v.RegisterOptions(opts)
+		cli.SetDefaultsOn(v.ToCobraCommand(opts))
+		r.ToCobraCommand(opts).AddCommand(v.ToCobraCommand(opts))
 	}
-}
-
-var RootCmd *cobra.Command
-
-func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
-	rootCmd := NewRootCommand(
-		command.NewDescription(
-			"ydbops",
-			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
-			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
-		),
-		logLevelSetter,
-		logger,
-		nil,
-	)
-
-	RootCmd = rootCmd.ToCobraCommand()
-	RootCmd.AddCommand(NewRestartCmd())
 }

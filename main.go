@@ -5,8 +5,6 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/ydb-platform/ydbops/cmd"
 )
 
 func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
@@ -28,7 +26,6 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 
 func main() {
 	logLevelSetter, logger := createLogger("info")
-	cmd.InitRootCmd(logLevelSetter, logger.Sugar())
-
-	_ = cmd.RootCmd.Execute()
+	_ = logLevelSetter
+	_ = logger
 }

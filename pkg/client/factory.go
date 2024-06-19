@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -45,7 +46,7 @@ type Factory struct {
 }
 
 func InitConnectionFactory(
-	rootOpts options.RootOptions,
+	rootOpts command.BaseOptions,
 	logger *zap.SugaredLogger,
 	retryNumber int,
 ) error {

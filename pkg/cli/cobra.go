@@ -7,15 +7,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/internal/cli"
+	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
-type PreRunCallback func(...options.Options) func(*cobra.Command, []string) error
+type PreRunCallback func(*command.BaseOptions, ...options.Options) func(*cobra.Command, []string) error
 
-func PopulateProfileDefaultsAndValidate(optsArgs ...options.Options) func(*cobra.Command, []string) error {
+func PopulateProfileDefaultsAndValidate(rootOpts *command.BaseOptions, optsArgs ...options.Options) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		rootOpts := options.RootOptionsInstance
 		err := profile.FillDefaultsFromActiveProfile(rootOpts.ProfileFile, rootOpts.ActiveProfile)
 		if err != nil {
 			return err

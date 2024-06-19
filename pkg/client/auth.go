@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -82,7 +83,7 @@ func (c *Auth) ExecuteAuthMethod(
 }
 
 func initAuthToken(
-	rootOpts options.RootOptions,
+	rootOpts command.BaseOptions,
 	logger *zap.SugaredLogger,
 	factory *Factory,
 ) error {
