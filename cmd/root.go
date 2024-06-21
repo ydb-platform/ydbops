@@ -12,36 +12,35 @@ import (
 )
 
 type RootCommand struct {
+	*command.Base
 	description    *command.Description
 	cobraCommand   *cobra.Command
 	logger         *zap.SugaredLogger
 	logLevelSetter zap.AtomicLevel
-	opts           *command.BaseOptions
 }
 
 func NewRootCommand(
 	description *command.Description,
+	baseCommand *command.Base,
 	logLevelSetter zap.AtomicLevel,
 	logger *zap.SugaredLogger,
-	opts *command.BaseOptions,
 ) command.Command {
 	return &RootCommand{
+		Base:           baseCommand,
 		description:    description,
 		logger:         logger,
 		logLevelSetter: logLevelSetter,
-		opts:           opts,
 	}
 }
 
-func (r *RootCommand) RunCallback(opts *command.BaseOptions) func(cmd *cobra.Command, args []string) error {
-	// TODO(shmel1k@): nil nil?
+func (r *RootCommand) RunCallback() func(cmd *cobra.Command, args []string) error {
 	return cli.RequireSubcommand
 }
 
-func (r *RootCommand) RegisterOptions(opts *command.BaseOptions) {
+func (r *RootCommand) RegisterOptions() {
 }
 
-func (r *RootCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
+func (r *RootCommand) ToCobraCommand() *cobra.Command {
 	if r.cobraCommand != nil {
 		return r.cobraCommand
 	}
@@ -52,7 +51,7 @@ func (r *RootCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
 		Long:  r.description.GetLongDescription(),
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
-			if opts.Verbose {
+			if r.GetBaseOptions().Verbose {
 				logLevel = "debug"
 			}
 
@@ -72,7 +71,7 @@ func (r *RootCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
 			DisableDefaultCmd: true,
 		},
 		SilenceUsage: true,
-		RunE:         r.RunCallback(opts),
+		RunE:         r.RunCallback(),
 	}
 
 	r.cobraCommand.SetHelpCommand(&cobra.Command{
@@ -84,20 +83,15 @@ func (r *RootCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
 
 	r.cobraCommand.SetOutput(color.Output)
 
-	//	defer func() {
-	//		// NOTE(shmel1k@): does not work. Sync will happen after end of the function
-	//		_ = r.logger.Sync()
-	//	}()
-
 	r.cobraCommand.SetUsageTemplate(iCli.UsageTemplate)
 
 	return r.cobraCommand
 }
 
-func (r *RootCommand) RegisterSubcommands(opts *command.BaseOptions, c ...command.Command) {
+func (r *RootCommand) RegisterSubcommands(c ...command.Command) {
 	for _, v := range c {
-		v.RegisterOptions(opts)
-		cli.SetDefaultsOn(v.ToCobraCommand(opts))
-		r.ToCobraCommand(opts).AddCommand(v.ToCobraCommand(opts))
+		v.RegisterOptions()
+		cli.SetDefaultsOn(v.ToCobraCommand())
+		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
 	}
 }

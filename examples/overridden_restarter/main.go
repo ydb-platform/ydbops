@@ -29,26 +29,28 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 	return atom, logger
 }
 
-func initCommandTree(opts *command.BaseOptions, logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) (root command.Command) {
+func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) (root command.Command) {
+	baseCommand := command.NewBase(rootOptions)
 	root = cmd.NewRootCommand(
 		command.NewDescription(
 			"ydbops",
 			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
 			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
 		),
+		baseCommand,
 		logLevelSetter,
 		logger,
-		opts,
 	)
-	root.RegisterOptions(opts)
-	opts.DefineFlags(root.ToCobraCommand(opts).PersistentFlags())
+	root.RegisterOptions()
+	rootOptions.DefineFlags(root.ToCobraCommand().PersistentFlags())
 
 	restartCommand := cmd.NewRestartCommand(
 		cmd.RestartCommandDescription,
+		baseCommand,
 		cli.PopulateProfileDefaultsAndValidate,
 	)
-	root.RegisterSubcommands(opts, restartCommand)
-	cli.SetDefaultsOn(root.ToCobraCommand(opts))
+	root.RegisterSubcommands(restartCommand)
+	cli.SetDefaultsOn(root.ToCobraCommand())
 
 	restarter := restarters.NewRunRestarter(logger)
 	runCommand := cmd.NewRunCommand(
@@ -68,20 +70,21 @@ func initCommandTree(opts *command.BaseOptions, logLevelSetter zap.AtomicLevel, 
 		Certain environment variable will be passed to your executable on each run:
 			$HOSTNAME: the fqdn of the node currently released by CMS.`,
 		),
+		baseCommand,
 		restarter,
 	)
-	root.RegisterSubcommands(opts, runCommand)
+	root.RegisterSubcommands(runCommand)
 
-	root.ToCobraCommand(opts).SetUsageTemplate(iCli.UsageTemplate)
+	root.ToCobraCommand().SetUsageTemplate(iCli.UsageTemplate)
 	return root
 }
 
 func main() {
-	opts := &command.BaseOptions{}
+	rootOptions := &command.BaseOptions{}
 	logLevelSetter, logger := createLogger("info")
-	root := initCommandTree(opts, logLevelSetter, logger.Sugar())
+	root := initCommandTree(rootOptions, logLevelSetter, logger.Sugar())
 	defer func() {
 		_ = logger.Sync()
 	}()
-	_ = root.ToCobraCommand(opts).Execute()
+	_ = root.ToCobraCommand().Execute()
 }

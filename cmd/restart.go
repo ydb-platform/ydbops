@@ -27,6 +27,7 @@ type restartCommandOptions struct {
 }
 
 type RestartCommand struct {
+	*command.Base
 	description    *command.Description
 	preRunCallback cli.PreRunCallback
 	commandOptions *options.RestartOptions
@@ -35,29 +36,31 @@ type RestartCommand struct {
 
 func NewRestartCommand(
 	description *command.Description,
+	rootCommand *command.Base,
 	preRunCallback cli.PreRunCallback,
 ) command.Command {
 	return &RestartCommand{
 		description:    description,
 		preRunCallback: preRunCallback,
 		commandOptions: &options.RestartOptions{},
+		Base:           rootCommand,
 	}
 }
 
-func (r *RestartCommand) RegisterSubcommands(opts *command.BaseOptions, c ...command.Command) {
+func (r *RestartCommand) RegisterSubcommands(c ...command.Command) {
 	for _, v := range c {
 		// TODO(shmel1k@): remove copypaste
-		cli.SetDefaultsOn(v.ToCobraCommand(opts))
-		r.ToCobraCommand(opts).AddCommand(v.ToCobraCommand(opts))
+		cli.SetDefaultsOn(v.ToCobraCommand())
+		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
 	}
 }
 
-func (r *RestartCommand) RegisterOptions(opts *command.BaseOptions) {
+func (r *RestartCommand) RegisterOptions() {
 	// TODO(shmel1k@): less letters.
-	r.commandOptions.DefineFlags(r.ToCobraCommand(opts).PersistentFlags())
+	r.commandOptions.DefineFlags(r.ToCobraCommand().PersistentFlags())
 }
 
-func (r *RestartCommand) RunCallback(opts *command.BaseOptions) func(_ *cobra.Command, _ []string) error {
+func (r *RestartCommand) RunCallback() func(_ *cobra.Command, _ []string) error {
 	return func(_ *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			return fmt.Errorf("Free args not expected: %v", args)
@@ -67,7 +70,7 @@ func (r *RestartCommand) RunCallback(opts *command.BaseOptions) func(_ *cobra.Co
 		var tenantRestarter restarters.Restarter
 
 		err := client.InitConnectionFactory(
-			*opts,
+			*r.Base.GetBaseOptions(),
 			options.Logger,
 			options.DefaultRetryCount,
 		)
@@ -113,14 +116,14 @@ func (r *RestartCommand) RunCallback(opts *command.BaseOptions) func(_ *cobra.Co
 	}
 }
 
-func (r *RestartCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
+func (r *RestartCommand) ToCobraCommand() *cobra.Command {
 	if r.cobraCommand == nil {
 		r.cobraCommand = &cobra.Command{
 			Use:     r.description.GetUse(),
 			Short:   r.description.GetShortDescription(),
 			Long:    r.description.GetLongDescription(),
-			PreRunE: r.preRunCallback(opts),
-			RunE:    r.RunCallback(opts),
+			PreRunE: r.preRunCallback(r.Base.GetBaseOptions()),
+			RunE:    r.RunCallback(),
 		}
 	}
 	return r.cobraCommand

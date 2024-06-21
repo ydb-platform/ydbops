@@ -13,6 +13,7 @@ import (
 )
 
 type RunCommand struct {
+	*command.Base
 	description    *command.Description
 	commandOptions *options.RunOptions
 	cobraCommand   *cobra.Command
@@ -21,6 +22,7 @@ type RunCommand struct {
 
 func NewRunCommand(
 	description *command.Description,
+	rootCommand *command.Base,
 	restarter *restarters.RunRestarter,
 ) command.Command {
 	return &RunCommand{
@@ -29,27 +31,28 @@ func NewRunCommand(
 			RestartOptions: &options.RestartOptions{},
 		}, // TODO(shmel1k@): remove from options package.
 		restarter: restarters.NewRunRestarter(options.Logger), // TODO(shmel1k@): remove link to global variable
+		Base:      rootCommand,
 	}
 }
 
-func (r *RunCommand) RegisterSubcommands(opts *command.BaseOptions, c ...command.Command) {
+func (r *RunCommand) RegisterSubcommands(c ...command.Command) {
 	for _, v := range c {
-		r.ToCobraCommand(opts).AddCommand(v.ToCobraCommand(opts))
+		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
 	}
 }
 
-func (r *RunCommand) RegisterOptions(opts *command.BaseOptions) {
-	r.commandOptions.DefineFlags(r.ToCobraCommand(opts).PersistentFlags())
+func (r *RunCommand) RegisterOptions() {
+	r.commandOptions.DefineFlags(r.ToCobraCommand().PersistentFlags())
 }
 
-func (r *RunCommand) RunCallback(opts *command.BaseOptions) func(*cobra.Command, []string) error {
+func (r *RunCommand) RunCallback() func(*cobra.Command, []string) error {
 	return func(_ *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			return fmt.Errorf("Free args not expected: %v", args)
 		}
 
 		err := client.InitConnectionFactory(
-			*opts,
+			*r.GetBaseOptions(),
 			options.Logger,
 			options.DefaultRetryCount,
 		)
@@ -73,7 +76,7 @@ func (r *RunCommand) RunCallback(opts *command.BaseOptions) func(*cobra.Command,
 	}
 }
 
-func (r *RunCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
+func (r *RunCommand) ToCobraCommand() *cobra.Command {
 	if r.cobraCommand != nil {
 		return r.cobraCommand
 	}
@@ -81,8 +84,8 @@ func (r *RunCommand) ToCobraCommand(opts *command.BaseOptions) *cobra.Command {
 		Use:     r.description.GetUse(),
 		Short:   r.description.GetShortDescription(),
 		Long:    r.description.GetLongDescription(),
-		PreRunE: cli.PopulateProfileDefaultsAndValidate(opts, r.restarter.Opts),
-		RunE:    r.RunCallback(opts),
+		PreRunE: cli.PopulateProfileDefaultsAndValidate(r.GetBaseOptions(), r.restarter.Opts),
+		RunE:    r.RunCallback(),
 	}
 	return r.cobraCommand
 }

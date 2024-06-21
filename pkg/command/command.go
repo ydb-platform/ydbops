@@ -7,10 +7,10 @@ import (
 )
 
 type Command interface {
-	ToCobraCommand(*BaseOptions) *cobra.Command
-	RegisterSubcommands(*BaseOptions, ...Command)
-	RunCallback(*BaseOptions) func(*cobra.Command, []string) error
-	RegisterOptions(*BaseOptions)
+	ToCobraCommand() *cobra.Command
+	RegisterSubcommands(...Command)
+	RunCallback() func(*cobra.Command, []string) error
+	RegisterOptions()
 }
 
 type Description struct {
@@ -53,6 +53,20 @@ func (o *BaseOptions) DefineFlags(fs *pflag.FlagSet) {
 		"Override currently set profile name from --config-file")
 
 	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
+}
+
+type Base struct {
+	options *BaseOptions
+}
+
+func NewBase(opts *BaseOptions) *Base {
+	return &Base{
+		options: opts,
+	}
+}
+
+func (b *Base) GetBaseOptions() *BaseOptions {
+	return b.options
 }
 
 func NewDescription(use, shortDescription, longDescription string) *Description {
