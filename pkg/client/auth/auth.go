@@ -1,4 +1,4 @@
-package client
+package auth
 
 import (
 	"context"
@@ -11,52 +11,45 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
-type Auth struct {
-	logger *zap.SugaredLogger
-	f      *Factory
+type Client interface {
+	Auth(string, string) (string, error) // TODO(shmel1k@): add context to params
 }
 
-func NewAuthClient(logger *zap.SugaredLogger, f *Factory) *Auth {
-	return &Auth{
-		logger: logger,
-		f:      f,
+type defaultAuthClient struct {
+	logger  *zap.SugaredLogger
+	f       connectionsfactory.Factory
+	options command.BaseOptions
+}
+
+func NewClient(
+	logger *zap.SugaredLogger,
+	options command.BaseOptions,
+	f connectionsfactory.Factory,
+) Client {
+	return &defaultAuthClient{
+		logger:  logger,
+		f:       f,
+		options: options,
 	}
 }
 
-func (c *Auth) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
-	result := Ydb_Auth.LoginResult{}
-
-	c.logger.Debug("Invoke Auth method")
-	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (OperationResponse, error) {
-		return cl.Login(ctx, &Ydb_Auth.LoginRequest{
-			OperationParams: c.f.OperationParams(),
-			User:            user,
-			Password:        password,
-		})
-	}, grpcOpts)
-	if err != nil {
-		return "", err
-	}
-	c.logger.Debugf("Login response: %s... (token contents masked)", string([]rune(result.Token)[:20]))
-	return result.Token, nil
-}
-
-func (c *Auth) ExecuteAuthMethod(
+func (c *defaultAuthClient) executeAuthMethod(
 	out proto.Message,
-	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (OperationResponse, error),
-	grpcOpts options.GRPC,
+	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	cc, err := c.f.Connection()
+	cc, err := c.f.Create()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := c.f.ContextWithoutAuth()
-	defer cancel()
+	ctx := context.TODO() // XXX(shmel1k@): improve context behavior.
 
 	cl := Ydb_Auth_V1.NewAuthServiceClient(cc)
 	r, err := method(ctx, cl)
@@ -65,7 +58,7 @@ func (c *Auth) ExecuteAuthMethod(
 		return nil, err
 	}
 	op := r.GetOperation()
-	LogOperation(c.logger, op)
+	utils.LogOperation(c.logger, op)
 
 	if out == nil {
 		return op, nil
@@ -80,6 +73,25 @@ func (c *Auth) ExecuteAuthMethod(
 	}
 
 	return op, nil
+
+}
+
+func (c *defaultAuthClient) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
+	result := Ydb_Auth.LoginResult{}
+
+	c.logger.Debug("Invoke Auth method")
+	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
+		return cl.Login(ctx, &Ydb_Auth.LoginRequest{
+			OperationParams: c.f.OperationParams(),
+			User:            user,
+			Password:        password,
+		})
+	}, grpcOpts)
+	if err != nil {
+		return "", err
+	}
+	c.logger.Debugf("Login response: %s... (token contents masked)", string([]rune(result.Token)[:20]))
+	return result.Token, nil
 }
 
 func initAuthToken(
