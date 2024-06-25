@@ -69,7 +69,7 @@ func (r *StorageK8sRestarter) Filter(
 
 	r.prepareK8sState(r.Opts.kubeconfigPath, storageLabelSelector, r.Opts.namespace)
 
-	allStorageNodes := FilterStorageNodes(cluster.AllNodes)
+	allStorageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeId)
 
 	selectedNodes := populateWithK8sRules(allStorageNodes, spec, r.FQDNToPodName)
 
