@@ -108,6 +108,7 @@ func (r *Rolling) DoRestart() error {
 			StartedTime:     r.opts.StartedTime,
 			Version:         r.opts.VersionSpec,
 			ExcludeHosts:    r.opts.ExcludeHosts,
+			MaxStaticNodeId: uint32(r.opts.MaxStaticNodeId),
 		},
 		restarters.ClusterNodesInfo{
 			TenantToNodeIds: r.state.tenantNameToNodeIds,

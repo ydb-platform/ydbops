@@ -22,6 +22,7 @@ const (
 	DefaultRetryCount              = 3
 	DefaultRestartDurationSeconds  = 60
 	DefaultCMSQueryIntervalSeconds = 10
+	DefaultMaxStaticNodeId         = 50000
 )
 
 var AvailabilityModes = []string{"strong", "weak", "force"}
@@ -62,6 +63,8 @@ type RestartOptions struct {
 
 	KubeconfigPath string
 	K8sNamespace   string
+
+	MaxStaticNodeId int
 }
 
 var (
@@ -79,6 +82,10 @@ func (o *RestartOptions) Validate() error {
 
 	if len(o.KubeconfigPath) > 0 && len(o.K8sNamespace) == 0 {
 		return fmt.Errorf("specified --kubeconfig, but not --k8s-namespace")
+	}
+
+	if o.MaxStaticNodeId < 0 {
+		return fmt.Errorf("specified invalid max-static-node-id: %d. Must be positive", o.MaxStaticNodeId)
 	}
 
 	if o.RestartDuration < 0 {
@@ -203,6 +210,10 @@ after that would be considered a regular cluster failure`)
 		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
 for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since 
 the ydbops utility is stateless. Use at your own risk.`)
+
+	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", DefaultMaxStaticNodeId,
+		`This argument is used to help ydbops distinguish storage and dynamic nodes. 
+Nodes with this nodeId or less will be considered storage.`)
 
 	profile.PopulateFromProfileLater(
 		fs.StringVar, &o.KubeconfigPath, "kubeconfig",

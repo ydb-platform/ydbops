@@ -40,6 +40,7 @@ var _ = Describe("Test storage Filter", func() {
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
 		filterSpec := restarters.FilterNodeParams{
+			MaxStaticNodeId: options.DefaultMaxStaticNodeId,
 			StartedTime: &options.StartedTime{
 				Direction: '<',
 				Timestamp: fiveMinutesAgoTimestamp,
@@ -89,8 +90,9 @@ var _ = Describe("Test storage Filter", func() {
 
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
-		// empty params equivalent to no arguments
-		filterSpec := restarters.FilterNodeParams{}
+		filterSpec := restarters.FilterNodeParams{
+			MaxStaticNodeId: options.DefaultMaxStaticNodeId,
+		}
 
 		clusterInfo := restarters.ClusterNodesInfo{
 			AllNodes: nodes,

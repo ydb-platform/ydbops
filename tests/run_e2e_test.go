@@ -112,7 +112,6 @@ func RunTestCase(tc TestCase) {
 					),
 				)
 				maintenanceTaskId = uuidOnlyRegexp.FindString(output)
-				fmt.Printf("DETERMINED taskId %s\n", maintenanceTaskId)
 			}
 
 			r := regexp.MustCompile(expectedOutputRegexp)

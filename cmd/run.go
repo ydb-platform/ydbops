@@ -13,8 +13,8 @@ import (
 )
 
 func NewRunCmd() *cobra.Command {
-	restartOpts := options.RestartOptionsInstance
 	rootOpts := options.RootOptionsInstance
+	restartOpts := options.RestartOptionsInstance
 	restarter := restarters.NewRunRestarter(options.Logger)
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{

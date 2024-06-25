@@ -14,10 +14,10 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-func FilterStorageNodes(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
+func FilterStorageNodes(nodes []*Ydb_Maintenance.Node, maxStaticNodeId uint32) []*Ydb_Maintenance.Node {
 	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
-			return node.GetStorage() != nil
+			return node.GetStorage() != nil && node.NodeId < maxStaticNodeId
 		},
 	)
 }
