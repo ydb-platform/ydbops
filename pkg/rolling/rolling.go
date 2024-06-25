@@ -89,13 +89,9 @@ type ProgressMessage struct {
 
 	isExit bool
 
-	render func(r *zap.SugaredLogger)
-
-	// isTask   bool
-	// task     client.MaintenanceTask
-
-	// isResult bool
-	// result   client.MaintenanceTask
+	isResult      bool
+	restartedNode uint32
+	tenant        string
 }
 
 func (r *Rolling) DoRestart() error {
@@ -152,15 +148,14 @@ func (r *Rolling) DoRestart() error {
 		return nil
 	}
 
-	tasksParams := [][]client.MaintenanceTaskParams{}
+	tasksPerTenant := make(map[string][]client.MaintenanceTaskParams)
+	nodesPerTenant := make(map[string]int)
 
 	if r.nodeType == NodeTypeStorage {
-		tasksParams = append(tasksParams, []client.MaintenanceTaskParams{})
-		tasksParams[0] = append(tasksParams[0], r.makeTaskParams(nodesToRestart))
+		tasksPerTenant["storage"] = []client.MaintenanceTaskParams{r.makeTaskParams(nodesToRestart)}
 	} else {
-		for _, tenantNodeIds := range r.state.tenantNameToNodeIds {
+		for tenantName, tenantNodeIds := range r.state.tenantNameToNodeIds {
 			curTenantTasks := []client.MaintenanceTaskParams{}
-			tasksParams = append(tasksParams)
 
 			cnt := 0
 			curTaskNodes := []*Ydb_Maintenance.Node{}
@@ -177,14 +172,15 @@ func (r *Rolling) DoRestart() error {
 				curTenantTasks = append(curTenantTasks, r.makeTaskParams(curTaskNodes))
 			}
 
-			tasksParams = append(tasksParams, curTenantTasks)
+			tasksPerTenant[tenantName] = curTenantTasks
+			nodesPerTenant[tenantName] = len(tenantNodeIds)
 		}
 	}
 
 	resultChannel := make(chan ProgressMessage, 1024)
 
 	wg := sync.WaitGroup{}
-	for _, sequentialTasks := range tasksParams {
+	for _, sequentialTasks := range tasksPerTenant {
 		wg.Add(1)
 		go func() {
 			r.cmsWaitingLoop(sequentialTasks, resultChannel)
@@ -200,13 +196,30 @@ func (r *Rolling) DoRestart() error {
 	}()
 
 	for {
-		msg := <-resultChannel
-		if msg.isExit {
-			return nil
-		} else if msg.err != nil {
-			return err
-		} else {
-			// TODO print
+		newlyRestartedPerTenant := make(map[string][]uint32)
+		select {
+		case msg, ok := <-resultChannel:
+			if !ok {
+				return nil
+			}
+			if msg.err != nil {
+				return err
+			}
+			if msg.isExit {
+				return nil
+			}
+			if _, ok := newlyRestartedPerTenant[msg.tenant]; !ok {
+				newlyRestartedPerTenant[msg.tenant] = []uint32{}
+			}
+			newlyRestartedPerTenant[msg.tenant] = append(newlyRestartedPerTenant[msg.tenant], msg.restartedNode)
+		default:
+
+			prettyprint.AggregateByAllTenants(logger, tasksPerTenant, newlyRestartedPerTenant, nodesPerTenant)
+			for tenant, newNodes := range newlyRestartedPerTenant {
+			}
+
+			// pretty-print, hoho
+
 			defaultDelay := time.Duration(r.opts.CMSQueryInterval) * time.Second
 			time.Sleep(defaultDelay)
 		}
@@ -222,13 +235,8 @@ func (r *Rolling) DoRestart() error {
 // Maybe I should challenge the fact that CMS just does not have the concept of an absolute limit, only a relative limit?
 // Who is at fault?
 // But it will still be possibly some good value even though the code looks like shit LOL
-// It just saddens me that
 // Maybe I can just create a task per node and continuously have this "pool" inside of one loop? Discuss implications of this
 // with ilya shakhov.
-//
-// Local improvement:
-// why having this ProgressChannel, if you can just allocate enough taskstates and combine the output together?
-// I bet it would be simpler
 
 func (r *Rolling) makeTaskParams(nodes []*Ydb_Maintenance.Node) client.MaintenanceTaskParams {
 	return client.MaintenanceTaskParams{
@@ -280,7 +288,8 @@ func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, res
 			// r.logTask(task)
 
 			resultChannel <- ProgressMessage{
-				task: task,
+				isTask: true,
+				task:   task,
 			}
 
 			if task.GetRetryAfter() != nil {
