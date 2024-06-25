@@ -6,6 +6,10 @@ import (
 	"github.com/ydb-platform/ydbops/cmd"
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/cli"
+	"github.com/ydb-platform/ydbops/pkg/client/cms"
+	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
+	"github.com/ydb-platform/ydbops/pkg/client/discovery"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"go.uber.org/zap"
@@ -29,6 +33,21 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 	return atom, logger
 }
 
+var (
+	factory         cmdutil.Factory
+	cmsClient       cms.Client
+	discoveryClient discovery.Client
+)
+
+func initFactory() {
+	factory = cmdutil.New(cmsClient, discoveryClient)
+}
+
+func initClients(cf connectionsfactory.Factory, logger *zap.SugaredLogger) {
+	cmsClient = cms.NewCMSClient(cf, logger)
+	discoveryClient = discovery.NewDiscoveryClient(cf, logger)
+}
+
 func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) (root command.Command) {
 	baseCommand := command.NewBase(rootOptions)
 	root = cmd.NewRootCommand(
@@ -48,6 +67,7 @@ func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.Atomic
 		cmd.RestartCommandDescription,
 		baseCommand,
 		cli.PopulateProfileDefaultsAndValidate,
+		factory,
 	)
 	root.RegisterSubcommands(restartCommand)
 	cli.SetDefaultsOn(root.ToCobraCommand())
@@ -72,6 +92,7 @@ func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.Atomic
 		),
 		baseCommand,
 		restarter,
+		factory,
 	)
 	root.RegisterSubcommands(runCommand)
 
@@ -81,7 +102,12 @@ func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.Atomic
 
 func main() {
 	rootOptions := &command.BaseOptions{}
+	cf := connectionsfactory.New(rootOptions)
 	logLevelSetter, logger := createLogger("info")
+
+	initClients(cf, logger.Sugar())
+	initFactory()
+
 	root := initCommandTree(rootOptions, logLevelSetter, logger.Sugar())
 	defer func() {
 		_ = logger.Sync()

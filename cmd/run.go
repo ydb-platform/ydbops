@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydbops/pkg/cli"
-	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
@@ -18,12 +18,14 @@ type RunCommand struct {
 	commandOptions *options.RunOptions
 	cobraCommand   *cobra.Command
 	restarter      *restarters.RunRestarter // TODO(shmel1k@): move to restarter interface.
+	f              cmdutil.Factory
 }
 
 func NewRunCommand(
 	description *command.Description,
 	rootCommand *command.Base,
 	restarter *restarters.RunRestarter,
+	f cmdutil.Factory,
 ) command.Command {
 	return &RunCommand{
 		description: description,
@@ -51,25 +53,20 @@ func (r *RunCommand) RunCallback() func(*cobra.Command, []string) error {
 			return fmt.Errorf("Free args not expected: %v", args)
 		}
 
-		err := client.InitConnectionFactory(
-			*r.GetBaseOptions(),
-			options.Logger,
-			options.DefaultRetryCount,
-		)
-		if err != nil {
-			return err
-		}
-
 		bothUnspecified := !r.commandOptions.Storage && !r.commandOptions.Tenant
 
+		var executer rolling.Executer
+		var err error
 		if r.commandOptions.Storage || bothUnspecified {
 			r.restarter.SetStorageOnly()
-			err = rolling.ExecuteRolling(*r.commandOptions.RestartOptions, options.Logger, r.restarter)
+			executer = rolling.NewExecuter(*r.commandOptions.RestartOptions, options.Logger, r.f.GetCMSClient(), r.f.GetDiscoveryClient(), r.restarter)
+			err = executer.Execute()
 		}
 
 		if err == nil && (r.commandOptions.Tenant || bothUnspecified) {
 			r.restarter.SetDynnodeOnly()
-			err = rolling.ExecuteRolling(*r.commandOptions.RestartOptions, options.Logger, r.restarter)
+			executer = rolling.NewExecuter(*r.commandOptions.RestartOptions, options.Logger, r.f.GetCMSClient(), r.f.GetDiscoveryClient(), r.restarter)
+			err = executer.Execute()
 		}
 
 		return err

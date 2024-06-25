@@ -12,12 +12,15 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/client/auth/credentials"
+	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
 type Discovery struct {
-	logger *zap.SugaredLogger
-	f      *Factory
+	logger              *zap.SugaredLogger
+	connectionsFactory  connectionsfactory.Factory
+	credentialsProvider credentials.Provider
 }
 
 type Client interface {
@@ -26,10 +29,10 @@ type Client interface {
 	Close() error
 }
 
-func NewDiscoveryClient(f *Factory, logger *zap.SugaredLogger) *Discovery {
+func NewDiscoveryClient(f connectionsfactory.Factory, logger *zap.SugaredLogger) *Discovery {
 	return &Discovery{
-		logger: logger,
-		f:      f,
+		logger:             logger,
+		connectionsFactory: f,
 	}
 }
 
@@ -65,15 +68,15 @@ func (c *Discovery) ExecuteDiscoveryMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	cc, err := c.f.Connection()
+	cc, err := c.connectionsFactory.Create()
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		_ = cc.Close()
+	}()
 
-	ctx, cancel, err := c.f.ContextWithAuth()
-	if err != nil {
-		return nil, err
-	}
+	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
 	defer cancel()
 
 	cl := Ydb_Discovery_V1.NewDiscoveryServiceClient(cc)

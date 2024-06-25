@@ -13,8 +13,6 @@ import (
 
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
-	"github.com/ydb-platform/ydbops/pkg/command"
-	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
@@ -23,20 +21,17 @@ type Client interface {
 }
 
 type defaultAuthClient struct {
-	logger  *zap.SugaredLogger
-	f       connectionsfactory.Factory
-	options command.BaseOptions
+	logger *zap.SugaredLogger
+	f      connectionsfactory.Factory
 }
 
 func NewClient(
 	logger *zap.SugaredLogger,
-	options command.BaseOptions,
 	f connectionsfactory.Factory,
 ) Client {
 	return &defaultAuthClient{
-		logger:  logger,
-		f:       f,
-		options: options,
+		logger: logger,
+		f:      f,
 	}
 }
 
@@ -76,52 +71,20 @@ func (c *defaultAuthClient) executeAuthMethod(
 
 }
 
-func (c *defaultAuthClient) Auth(grpcOpts options.GRPC, user, password string) (string, error) {
+func (c *defaultAuthClient) Auth(user, password string) (string, error) {
 	result := Ydb_Auth.LoginResult{}
 
 	c.logger.Debug("Invoke Auth method")
-	_, err := c.ExecuteAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
+	_, err := c.executeAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
 		return cl.Login(ctx, &Ydb_Auth.LoginRequest{
 			OperationParams: c.f.OperationParams(),
 			User:            user,
 			Password:        password,
 		})
-	}, grpcOpts)
+	})
 	if err != nil {
 		return "", err
 	}
 	c.logger.Debugf("Login response: %s... (token contents masked)", string([]rune(result.Token)[:20]))
 	return result.Token, nil
-}
-
-func initAuthToken(
-	rootOpts command.BaseOptions,
-	logger *zap.SugaredLogger,
-	factory *Factory,
-) error {
-	switch rootOpts.Auth.Type {
-	case options.Static:
-		authClient := NewAuthClient(logger, factory)
-		staticCreds := rootOpts.Auth.Creds.(*options.AuthStatic)
-		user := staticCreds.User
-		password := staticCreds.Password
-		logger.Debugf("Endpoint: %v", rootOpts.GRPC.Endpoint)
-		token, err := authClient.Auth(rootOpts.GRPC, user, password)
-		if err != nil {
-			return fmt.Errorf("failed to initialize static auth token: %w", err)
-		}
-		factory.token = token
-	case options.IamToken:
-		factory.token = rootOpts.Auth.Creds.(*options.AuthIAMToken).Token
-	case options.IamCreds:
-		return fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
-	case options.None:
-		return fmt.Errorf("determined credentials to be anonymous. Anonymous credentials are currently unsupported")
-	default:
-		return fmt.Errorf(
-			"internal error: authorization type not recognized after options validation, this should never happen",
-		)
-	}
-
-	return nil
 }

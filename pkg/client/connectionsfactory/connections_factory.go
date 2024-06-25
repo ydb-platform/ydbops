@@ -25,14 +25,16 @@ type Factory interface {
 	OperationParams() *Ydb_Operations.OperationParams
 }
 
-func New(options command.BaseOptions) Factory {
+func New(
+	options *command.BaseOptions,
+) Factory {
 	return &connectionsFactory{
 		options: options,
 	}
 }
 
 type connectionsFactory struct {
-	options command.BaseOptions
+	options *command.BaseOptions
 }
 
 // OperationParams implements Factory.
@@ -64,7 +66,7 @@ func (f *connectionsFactory) endpoint() string {
 	// for balancers, it does not really matter, one endpoint is enough.
 	// but if you specify node endpoint directly, if this particular node
 	// is dead, things get inconvenient.
-	return fmt.Sprintf("%s:%d", f.grpc.Endpoint, f.grpc.GRPCPort)
+	return fmt.Sprintf("%s:%d", f.options.GRPC.Endpoint, f.options.GRPC.GRPCPort)
 }
 
 func (f *connectionsFactory) makeCredentials() (credentials.TransportCredentials, error) {

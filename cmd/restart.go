@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/pkg/cli"
-	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
@@ -32,12 +33,14 @@ type RestartCommand struct {
 	preRunCallback cli.PreRunCallback
 	commandOptions *options.RestartOptions
 	cobraCommand   *cobra.Command
+	f              cmdutil.Factory
 }
 
 func NewRestartCommand(
 	description *command.Description,
 	rootCommand *command.Base,
 	preRunCallback cli.PreRunCallback,
+	f cmdutil.Factory,
 ) command.Command {
 	return &RestartCommand{
 		description:    description,
@@ -69,15 +72,6 @@ func (r *RestartCommand) RunCallback() func(_ *cobra.Command, _ []string) error 
 		var storageRestarter restarters.Restarter
 		var tenantRestarter restarters.Restarter
 
-		err := client.InitConnectionFactory(
-			*r.Base.GetBaseOptions(),
-			options.Logger,
-			options.DefaultRetryCount,
-		)
-		if err != nil {
-			return err
-		}
-
 		if r.commandOptions.KubeconfigPath != "" {
 			storageRestarter = restarters.NewStorageK8sRestarter(
 				options.Logger,
@@ -104,13 +98,17 @@ func (r *RestartCommand) RunCallback() func(_ *cobra.Command, _ []string) error 
 
 		bothUnspecified := !r.commandOptions.Storage && !r.commandOptions.Tenant
 
+		var executer rolling.Executer
+		var err error
 		if r.commandOptions.Storage || bothUnspecified {
-			err = rolling.ExecuteRolling(*r.commandOptions, options.Logger, storageRestarter)
+			// TODO(shmel1k@): add logger to NewExecuter parameters
+			executer = rolling.NewExecuter(*r.commandOptions, zap.S(), r.f.GetCMSClient(), r.f.GetDiscoveryClient(), storageRestarter)
 		}
 
 		if err == nil && (r.commandOptions.Tenant || bothUnspecified) {
-			err = rolling.ExecuteRolling(*r.commandOptions, options.Logger, tenantRestarter)
+			executer = rolling.NewExecuter(*r.commandOptions, zap.S(), r.f.GetCMSClient(), r.f.GetDiscoveryClient(), tenantRestarter)
 		}
+		err = executer.Execute()
 
 		return err
 	}
