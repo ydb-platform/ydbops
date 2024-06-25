@@ -26,7 +26,7 @@ var _ = Describe("Test Profile", func() {
 			steps: []StepData{
 				{
 					ydbopsInvocation: Command{
-						"--config-file",
+						"--profile-file",
 						filepath.Join(".", "test-data", "config_with_active_profile.yaml"),
 						"--availability-mode", "strong",
 						"--cms-query-interval", "1",
@@ -101,7 +101,7 @@ var _ = Describe("Test Profile", func() {
 			steps: []StepData{
 				{
 					ydbopsInvocation: Command{
-						"--config-file",
+						"--profile-file",
 						filepath.Join(".", "test-data", "config_without_active_profile.yaml"),
 						"--profile",
 						"my-profile",

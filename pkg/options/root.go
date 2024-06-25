@@ -2,8 +2,8 @@ package options
 
 import (
 	"errors"
-	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/pflag"
 )
@@ -35,7 +35,7 @@ func (o *RootOptions) DefineFlags(fs *pflag.FlagSet) {
 
 	defaultProfileLocation := ""
 	if home, present := os.LookupEnv("HOME"); present {
-		defaultProfileLocation = fmt.Sprintf("%s/ydb/ydbops/config/config.yaml", home)
+		defaultProfileLocation = filepath.Join(home, "ydb", "ydbops", "config", "config.yaml")
 	}
 
 	_, err := os.Stat(defaultProfileLocation)
@@ -46,14 +46,14 @@ func (o *RootOptions) DefineFlags(fs *pflag.FlagSet) {
 	}
 
 	fs.StringVar(
-		&o.ProfileFile, "config-file",
+		&o.ProfileFile, "profile-file",
 		defaultProfileLocation,
 		"Path to config file with profile data in yaml format. Default: $HOME/ydb/ydbops/config/config.yaml")
 
 	fs.StringVar(
 		&o.ActiveProfile, "profile",
 		"",
-		"Override currently set profile name from --config-file")
+		"Override currently set profile name from --profile-file")
 
 	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
 }
