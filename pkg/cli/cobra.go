@@ -26,7 +26,7 @@ func PopulateProfileDefaultsAndValidate(rootOpts *command.BaseOptions, optsArgs 
 				return fmt.Errorf("%w\nTry '--help' option for more info", err)
 			}
 		}
-		return nil
+		return rootOpts.Validate()
 	}
 }
 

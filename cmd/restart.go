@@ -39,12 +39,11 @@ type RestartCommand struct {
 func NewRestartCommand(
 	description *command.Description,
 	rootCommand *command.Base,
-	preRunCallback cli.PreRunCallback,
 	f cmdutil.Factory,
 ) command.Command {
 	return &RestartCommand{
 		description:    description,
-		preRunCallback: preRunCallback,
+		preRunCallback: cli.PopulateProfileDefaultsAndValidate,
 		commandOptions: &options.RestartOptions{},
 		Base:           rootCommand,
 	}

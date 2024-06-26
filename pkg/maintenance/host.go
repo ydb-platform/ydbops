@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 
-	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
@@ -14,8 +14,8 @@ const (
 	MaintenanceTaskPrefix = "maintenance-"
 )
 
-func getNodesOnHost(cms *client.Cms, hostFQDN string) ([]*Ydb_Maintenance.Node, error) {
-	nodes, err := cms.Nodes()
+func getNodesOnHost(cmsClient cms.Client, hostFQDN string) ([]*Ydb_Maintenance.Node, error) {
+	nodes, err := cmsClient.Nodes()
 	if err != nil {
 		return nil, err
 	}
@@ -33,24 +33,22 @@ func getNodesOnHost(cms *client.Cms, hostFQDN string) ([]*Ydb_Maintenance.Node, 
 	return res, nil
 }
 
-func RequestHost(opts *options.MaintenanceHostOpts) (string, error) {
-	cms := client.GetCmsClient()
-
+func RequestHost(cmsClient cms.Client, opts *options.MaintenanceHostOpts) (string, error) {
 	taskUID := MaintenanceTaskPrefix + uuid.New().String()
 
-	nodes, err := getNodesOnHost(cms, opts.HostFQDN)
+	nodes, err := getNodesOnHost(cmsClient, opts.HostFQDN)
 	if err != nil {
 		return "", err
 	}
 
-	taskParams := client.MaintenanceTaskParams{
+	taskParams := cms.MaintenanceTaskParams{
 		TaskUID:          taskUID,
 		AvailabilityMode: opts.GetAvailabilityMode(),
 		Duration:         opts.GetMaintenanceDuration(),
 		Nodes:            nodes,
 	}
 
-	task, err := cms.CreateMaintenanceTask(taskParams)
+	task, err := cmsClient.CreateMaintenanceTask(taskParams)
 	if err != nil {
 		return "", fmt.Errorf("failed to create maintenance task: %w", err)
 	}

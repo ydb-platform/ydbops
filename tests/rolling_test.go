@@ -79,6 +79,7 @@ var _ = Describe("Test Rolling", func() {
 
 		_, err := cmd.CombinedOutput()
 		// output, err := cmd.CombinedOutput()
+		// log.Println(string(output))
 		Expect(err).To(BeNil())
 
 		if err != nil {

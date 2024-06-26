@@ -10,6 +10,7 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
+	"go.uber.org/zap"
 )
 
 type RunCommand struct {
@@ -17,14 +18,12 @@ type RunCommand struct {
 	description    *command.Description
 	commandOptions *options.RunOptions
 	cobraCommand   *cobra.Command
-	restarter      *restarters.RunRestarter // TODO(shmel1k@): move to restarter interface.
 	f              cmdutil.Factory
 }
 
 func NewRunCommand(
 	description *command.Description,
 	rootCommand *command.Base,
-	restarter *restarters.RunRestarter,
 	f cmdutil.Factory,
 ) command.Command {
 	return &RunCommand{
@@ -32,8 +31,8 @@ func NewRunCommand(
 		commandOptions: &options.RunOptions{
 			RestartOptions: &options.RestartOptions{},
 		}, // TODO(shmel1k@): remove from options package.
-		restarter: restarters.NewRunRestarter(options.Logger), // TODO(shmel1k@): remove link to global variable
-		Base:      rootCommand,
+		Base: rootCommand,
+		f:    f,
 	}
 }
 
@@ -55,17 +54,21 @@ func (r *RunCommand) RunCallback() func(*cobra.Command, []string) error {
 
 		bothUnspecified := !r.commandOptions.Storage && !r.commandOptions.Tenant
 
+		restarter := restarters.NewRunRestarter(zap.S(), &restarters.RunRestarterParams{
+			PayloadFilePath: r.commandOptions.PayloadFilePath,
+		})
+
 		var executer rolling.Executer
 		var err error
 		if r.commandOptions.Storage || bothUnspecified {
-			r.restarter.SetStorageOnly()
-			executer = rolling.NewExecuter(*r.commandOptions.RestartOptions, options.Logger, r.f.GetCMSClient(), r.f.GetDiscoveryClient(), r.restarter)
+			restarter.SetStorageOnly()
+			executer = rolling.NewExecuter(*r.commandOptions.RestartOptions, options.Logger, r.f.GetCMSClient(), r.f.GetDiscoveryClient(), restarter)
 			err = executer.Execute()
 		}
 
 		if err == nil && (r.commandOptions.Tenant || bothUnspecified) {
-			r.restarter.SetDynnodeOnly()
-			executer = rolling.NewExecuter(*r.commandOptions.RestartOptions, options.Logger, r.f.GetCMSClient(), r.f.GetDiscoveryClient(), r.restarter)
+			restarter.SetDynnodeOnly()
+			executer = rolling.NewExecuter(*r.commandOptions.RestartOptions, options.Logger, r.f.GetCMSClient(), r.f.GetDiscoveryClient(), restarter)
 			err = executer.Execute()
 		}
 
@@ -81,7 +84,7 @@ func (r *RunCommand) ToCobraCommand() *cobra.Command {
 		Use:     r.description.GetUse(),
 		Short:   r.description.GetShortDescription(),
 		Long:    r.description.GetLongDescription(),
-		PreRunE: cli.PopulateProfileDefaultsAndValidate(r.GetBaseOptions(), r.restarter.Opts),
+		PreRunE: cli.PopulateProfileDefaultsAndValidate(r.GetBaseOptions(), r.commandOptions),
 		RunE:    r.RunCallback(),
 	}
 	return r.cobraCommand

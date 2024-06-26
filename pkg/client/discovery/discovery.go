@@ -29,10 +29,15 @@ type Client interface {
 	Close() error
 }
 
-func NewDiscoveryClient(f connectionsfactory.Factory, logger *zap.SugaredLogger) *Discovery {
+func NewDiscoveryClient(
+	f connectionsfactory.Factory,
+	logger *zap.SugaredLogger,
+	cp credentials.Provider,
+) *Discovery {
 	return &Discovery{
-		logger:             logger,
-		connectionsFactory: f,
+		logger:              logger,
+		connectionsFactory:  f,
+		credentialsProvider: cp,
 	}
 }
 

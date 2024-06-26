@@ -9,13 +9,16 @@ import (
 
 type MaintenanceCommand struct {
 	*command.Base
-	description    *command.Description
-	preRunCallback cli.PreRunCallback
 	commandOptions *options.RestartOptions
 	cobraCommand   *cobra.Command
 }
 
 func (r *MaintenanceCommand) RegisterSubcommands(c ...command.Command) {
+	for _, v := range c {
+		v.RegisterOptions()
+		cli.SetDefaultsOn(v.ToCobraCommand())
+		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
+	}
 }
 
 func (r *MaintenanceCommand) RegisterOptions() {
@@ -36,9 +39,10 @@ func (r *MaintenanceCommand) ToCobraCommand() *cobra.Command {
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
 			r.Base.GetBaseOptions(), r.commandOptions,
 		),
-		RunE: cli.RequireSubcommand,
+		RunE: r.RunCallback(),
 	})
-	return cmd
+	r.cobraCommand = cmd
+	return r.cobraCommand
 }
 
 func (r *MaintenanceCommand) RunCallback() func(*cobra.Command, []string) error {
@@ -46,13 +50,9 @@ func (r *MaintenanceCommand) RunCallback() func(*cobra.Command, []string) error 
 }
 
 func NewMaintenanceCommand(
-	description *command.Description,
 	base *command.Base,
-	preRunCallback cli.PreRunCallback, // TODO(shmel1k@): change to validation callback name or smth
 ) command.Command {
 	return &MaintenanceCommand{
-		description:    description,
-		preRunCallback: preRunCallback,
 		commandOptions: &options.RestartOptions{},
 		Base:           base,
 	}

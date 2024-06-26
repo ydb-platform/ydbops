@@ -43,10 +43,15 @@ type defaultCMSClient struct {
 	credentialsProvider credentials.Provider
 }
 
-func NewCMSClient(connectionsFactory connectionsfactory.Factory, logger *zap.SugaredLogger) Client {
+func NewCMSClient(
+	connectionsFactory connectionsfactory.Factory,
+	logger *zap.SugaredLogger,
+	cp credentials.Provider,
+) Client {
 	return &defaultCMSClient{
-		logger:             logger,
-		connectionsFactory: connectionsFactory,
+		logger:              logger,
+		connectionsFactory:  connectionsFactory,
+		credentialsProvider: cp,
 	}
 }
 
