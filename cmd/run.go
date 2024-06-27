@@ -53,12 +53,12 @@ func NewRunCmd() *cobra.Command {
 
 			if restartOpts.Storage || bothUnspecified {
 				restarter.SetStorageOnly()
-				err = rolling.ExecuteRolling(*restartOpts, options.Logger, restarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, restarter, rolling.NodeTypeStorage)
 			}
 
 			if err == nil && (restartOpts.Tenant || bothUnspecified) {
 				restarter.SetDynnodeOnly()
-				err = rolling.ExecuteRolling(*restartOpts, options.Logger, restarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, restarter, rolling.NodeTypeTenant)
 			}
 
 			return err

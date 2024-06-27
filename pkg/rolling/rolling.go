@@ -20,7 +20,7 @@ type NodeType int
 
 const (
 	NodeTypeStorage NodeType = 1
-	NodeTypeDynnode NodeType = 2
+	NodeTypeTenant  NodeType = 2
 )
 
 type Rolling struct {
@@ -86,12 +86,7 @@ func ExecuteRolling(
 
 type ProgressMessage struct {
 	err error
-
-	isExit bool
-
-	isResult      bool
 	restartedNode uint32
-	tenant        string
 }
 
 func (r *Rolling) DoRestart() error {
@@ -190,13 +185,11 @@ func (r *Rolling) DoRestart() error {
 
 	go func() {
 		wg.Wait()
-		resultChannel <- ProgressMessage{
-			isExit: true,
-		}
+		close(resultChannel)
 	}()
 
 	for {
-		newlyRestartedPerTenant := make(map[string][]uint32)
+		newlyRestartedPerBase := make(map[string][]uint32)
 		select {
 		case msg, ok := <-resultChannel:
 			if !ok {
@@ -205,38 +198,27 @@ func (r *Rolling) DoRestart() error {
 			if msg.err != nil {
 				return err
 			}
-			if msg.isExit {
-				return nil
+
+			node := r.state.nodes[msg.restartedNode]
+			var tenant string
+			if node.GetStorage() != nil {
+				tenant = "domain"
+			} else {
+				tenant = node.GetDynamic().GetTenant()
 			}
-			if _, ok := newlyRestartedPerTenant[msg.tenant]; !ok {
-				newlyRestartedPerTenant[msg.tenant] = []uint32{}
+
+			if _, ok := newlyRestartedPerBase[tenant]; !ok {
+				newlyRestartedPerBase[tenant] = []uint32{}
 			}
-			newlyRestartedPerTenant[msg.tenant] = append(newlyRestartedPerTenant[msg.tenant], msg.restartedNode)
+			newlyRestartedPerBase[tenant] = append(newlyRestartedPerBase[tenant], msg.restartedNode)
 		default:
-
-			prettyprint.AggregateByAllTenants(logger, tasksPerTenant, newlyRestartedPerTenant, nodesPerTenant)
-			for tenant, newNodes := range newlyRestartedPerTenant {
-			}
-
-			// pretty-print, hoho
+			r.logger.Info(prettyprint.AggregateByAllTenants(newlyRestartedPerBase, nodesPerTenant))
 
 			defaultDelay := time.Duration(r.opts.CMSQueryInterval) * time.Second
 			time.Sleep(defaultDelay)
 		}
 	}
 }
-
-// TODO
-// I think where I'm going should work.
-// I don't like the fact that I'm twisting the maintenance API in a way it was not supposed to be twisted.
-// E.g. you restart 10 nodes, 9 restart quickly, last restarts slowly, 9 'slots' are free and do nothing, although
-// you could have already taken 10 other nodes.
-//
-// Maybe I should challenge the fact that CMS just does not have the concept of an absolute limit, only a relative limit?
-// Who is at fault?
-// But it will still be possibly some good value even though the code looks like shit LOL
-// Maybe I can just create a task per node and continuously have this "pool" inside of one loop? Discuss implications of this
-// with ilya shakhov.
 
 func (r *Rolling) makeTaskParams(nodes []*Ydb_Maintenance.Node) client.MaintenanceTaskParams {
 	return client.MaintenanceTaskParams{
@@ -252,13 +234,15 @@ func (r *Rolling) DoRestartPrevious() error {
 }
 
 type TaskState struct {
-	m                               *sync.Mutex
+	m                  *sync.Mutex
+	restartedNodes     int
+	retriesMadeForNode map[uint32]int
+
 	unreportedButCompletedActionIds []*Ydb_Maintenance.ActionUid
-	restartedNodes                  int
-	retriesMadeForNode              map[uint32]int
+	unreportedButRestartedNodeIds   []uint32
 }
 
-func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, resultChannel chan ProgressMessage) {
+func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, resultChannel chan<- ProgressMessage) {
 	for _, taskParams := range tasksParams {
 		task, err := r.cms.CreateMaintenanceTask(taskParams)
 		if err != nil {
@@ -276,9 +260,10 @@ func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, res
 
 		taskState := &TaskState{
 			restartedNodes:                  0,
-			unreportedButCompletedActionIds: []*Ydb_Maintenance.ActionUid{},
 			retriesMadeForNode:              make(map[uint32]int),
 			m:                               new(sync.Mutex),
+			unreportedButCompletedActionIds: []*Ydb_Maintenance.ActionUid{},
+			unreportedButRestartedNodeIds:   []uint32{},
 		}
 
 		// r.logger.Infof("Maintenance task %v, processing loop started", taskID)
@@ -286,11 +271,6 @@ func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, res
 			delay = defaultDelay
 
 			// r.logTask(task)
-
-			resultChannel <- ProgressMessage{
-				isTask: true,
-				task:   task,
-			}
 
 			if task.GetRetryAfter() != nil {
 				retryTime := task.GetRetryAfter().AsTime()
@@ -301,7 +281,11 @@ func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, res
 				}
 			}
 
-			if completed := r.processActionGroupStates(task.GetActionGroupStates(), taskState); completed {
+			if completed := r.processActionGroupStates(
+				task.GetActionGroupStates(),
+				taskState,
+				resultChannel,
+			); completed {
 				break
 			}
 
@@ -310,6 +294,7 @@ func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, res
 
 			// r.logger.Infof("Refresh maintenance task with id: %s", taskID)
 			task, err = r.cms.RefreshMaintenanceTask(taskID)
+			// TODO wtf?
 			// if err != nil {
 			// r.logger.Warnf("Failed to refresh maintenance task: %+v", err)
 			// }
@@ -319,7 +304,11 @@ func (r *Rolling) cmsWaitingLoop(tasksParams []client.MaintenanceTaskParams, res
 	}
 }
 
-func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates, taskState *TaskState, progress chan ProgressMessage) bool {
+func (r *Rolling) processActionGroupStates(
+	actions []*Ydb_Maintenance.ActionGroupStates,
+	taskState *TaskState,
+	resultChan chan<- ProgressMessage,
+) bool {
 	// r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
 	performed := collections.FilterBy(actions,
 		func(gs *Ydb_Maintenance.ActionGroupStates) bool {
@@ -334,7 +323,6 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 	// r.logger.Infof("%d ActionGroupStates moved to PERFORMED, will restart now...", len(performed))
 
-	completedActions := []*Ydb_Maintenance.ActionUid{}
 	wg := new(sync.WaitGroup)
 
 	for _, gs := range performed {
@@ -344,14 +332,14 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
 
-		if collections.Contains(taskState.unreportedButCompletedActionIds, as.ActionUid.ActionId) {
-			completedActions = append(completedActions, as.ActionUid)
+		// TODO I have a bad feeling about proto comparison
+		if collections.Contains(taskState.unreportedButCompletedActionIds, as.ActionUid) {
+			continue
 			// r.logger.Debugf(
 			// 	"Node id %v already restarted, but CompleteAction failed on last iteration, "+
 			// 		"so CMS does not know it is complete yet.",
 			// 	node.NodeId,
 			// )
-			continue
 		}
 
 		r.logger.Debugf("Drain node with id: %d", node.NodeId)
@@ -367,11 +355,6 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			if err := r.restarter.RestartNode(node); err != nil {
 				retriesUntilNow := taskState.getAndIncrement(node.NodeId)
 
-				// rollingStateMutex.Lock()
-				// retriesUntilNow := r.state.retriesMadeForNode[node.NodeId]
-				// r.state.retriesMadeForNode[node.NodeId]++
-				// rollingStateMutex.Unlock()
-
 				// r.logger.Warnf(
 				// 	"Failed to restart node with id: %d, attempt number %v, because of: %s",
 				// 	node.NodeId,
@@ -380,11 +363,11 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 				// )
 
 				if retriesUntilNow+1 == r.opts.RestartRetryNumber {
-					taskState.rememberComplete(as.ActionUid, completedActions)
+					taskState.markActionComplete(as.ActionUid, node.NodeId)
 					// r.logger.Warnf("Failed to retry node %v specified number of times (%v)", node.NodeId, r.opts.RestartRetryNumber)
 				}
 			} else {
-				taskState.rememberComplete(as.ActionUid, completedActions)
+				taskState.markActionComplete(as.ActionUid, node.NodeId)
 				// r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
 			}
 		}()
@@ -392,22 +375,34 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 	wg.Wait()
 
-	result, err := r.cms.CompleteAction(completedActions)
+	result, err := r.cms.CompleteAction(taskState.unreportedButCompletedActionIds)
 	if err != nil {
 		r.logger.Warnf("Failed to complete action: %+v", err)
-		taskState.unreportedButCompletedActionIds = completedActions
 		return false
 	}
 
-	progress <- ProgressMessage{
-		render: func(logger *zap.SugaredLogger) {
-			logCompleteResult(logger, result)
-		},
-	}
-
-	taskState.unreportedButCompletedActionIds = []*Ydb_Maintenance.ActionUid{}
+	taskState.reportCompletedActions(resultChan)
 
 	return len(actions) == len(result.ActionStatuses)
+}
+
+func (t *TaskState) markActionComplete(actionUid *Ydb_Maintenance.ActionUid, nodeId uint32) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	t.unreportedButCompletedActionIds = append(t.unreportedButCompletedActionIds, actionUid)
+	t.unreportedButRestartedNodeIds = append(t.unreportedButRestartedNodeIds, nodeId)
+}
+
+func (t *TaskState) reportCompletedActions(resultChan chan<- ProgressMessage) {
+	for _, nodeId := range t.unreportedButRestartedNodeIds {
+		resultChan <- ProgressMessage{
+			restartedNode: nodeId,
+		}
+	}
+
+	t.unreportedButCompletedActionIds = []*Ydb_Maintenance.ActionUid{}
+	t.unreportedButRestartedNodeIds = []uint32{}
 }
 
 func (t *TaskState) getAndIncrement(nodeId uint32) int {
@@ -417,13 +412,6 @@ func (t *TaskState) getAndIncrement(nodeId uint32) int {
 	retries := t.retriesMadeForNode[nodeId]
 	t.retriesMadeForNode[nodeId]++
 	return retries
-}
-
-func (t *TaskState) rememberComplete(actionUid *Ydb_Maintenance.ActionUid, completedActions []*Ydb_Maintenance.ActionUid) {
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	completedActions = append(completedActions, actionUid)
 }
 
 func (r *Rolling) populateTenantToNodesMapping(nodes []*Ydb_Maintenance.Node) map[string][]uint32 {
@@ -509,3 +497,7 @@ func logCompleteResult(logger *zap.SugaredLogger, result *Ydb_Maintenance.Manage
 
 	logger.Debugf("Manage action result:\n%s", prettyprint.ResultToString(result))
 }
+
+- check prod grafana
+- continue multi tenant coding testing
+- maintenance api recording

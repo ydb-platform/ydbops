@@ -70,11 +70,11 @@ func NewRestartCmd() *cobra.Command {
 			bothUnspecified := !restartOpts.Storage && !restartOpts.Tenant
 
 			if restartOpts.Storage || bothUnspecified {
-				err = rolling.ExecuteRolling(*restartOpts, options.Logger, storageRestarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, storageRestarter, rolling.NodeTypeStorage)
 			}
 
 			if err == nil && (restartOpts.Tenant || bothUnspecified) {
-				err = rolling.ExecuteRolling(*restartOpts, options.Logger, tenantRestarter)
+				err = rolling.ExecuteRolling(*restartOpts, options.Logger, tenantRestarter, rolling.NodeTypeTenant)
 			}
 
 			return err
