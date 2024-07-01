@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
@@ -31,4 +32,35 @@ func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {
 	} else {
 		logger.Debugf("Invocation result:\n%s", sb.String())
 	}
+}
+
+func ParseSSHArgs(rawArgs string) []string {
+	args := []string{}
+	isInsideQuotes := false
+
+	rawRunes := []rune(rawArgs)
+	curArg := []rune{}
+	for i := 0; i < len(rawRunes); i++ {
+		if rawRunes[i] == '\\' && i+1 < len(rawRunes) && rawRunes[i+1] == '"' {
+			isInsideQuotes = !isInsideQuotes
+			i++
+			curArg = append(curArg, '"')
+			continue
+		}
+
+		if unicode.IsSpace(rawRunes[i]) && !isInsideQuotes {
+			if len(curArg) > 0 {
+				args = append(args, string(curArg))
+			}
+			curArg = []rune{}
+		} else {
+			curArg = append(curArg, rawRunes[i])
+		}
+	}
+
+	if len(curArg) > 0 {
+		args = append(args, string(curArg))
+	}
+
+	return args
 }

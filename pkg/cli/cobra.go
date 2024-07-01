@@ -12,8 +12,6 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/profile"
 )
 
-type PreRunCallback func(*command.BaseOptions, ...options.Options) func(*cobra.Command, []string) error
-
 func PopulateProfileDefaultsAndValidate(rootOpts *command.BaseOptions, optsArgs ...options.Options) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		err := profile.FillDefaultsFromActiveProfile(rootOpts.ProfileFile, rootOpts.ActiveProfile)

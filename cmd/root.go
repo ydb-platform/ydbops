@@ -3,95 +3,82 @@ package cmd
 import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/command"
+	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 type RootCommand struct {
-	*command.Base
 	description    *command.Description
 	cobraCommand   *cobra.Command
 	logger         *zap.SugaredLogger
 	logLevelSetter zap.AtomicLevel
 }
 
+type RootOptions struct {
+	*command.BaseOptions
+}
+
+func (r *RootOptions) Validate() error {
+	return r.BaseOptions.Validate()
+}
+
+func (r *RootOptions) DefineFlags(fs *pflag.FlagSet) {
+	r.BaseOptions.DefineFlags(fs)
+}
+
 func NewRootCommand(
 	description *command.Description,
-	baseCommand *command.Base,
 	logLevelSetter zap.AtomicLevel,
 	logger *zap.SugaredLogger,
-) command.Command {
-	return &RootCommand{
-		Base:           baseCommand,
-		description:    description,
-		logger:         logger,
-		logLevelSetter: logLevelSetter,
-	}
-}
-
-func (r *RootCommand) RunCallback() func(cmd *cobra.Command, args []string) error {
-	return cli.RequireSubcommand
-}
-
-func (r *RootCommand) RegisterOptions() {
-}
-
-func (r *RootCommand) ToCobraCommand() *cobra.Command {
-	if r.cobraCommand != nil {
-		return r.cobraCommand
-	}
-
-	r.cobraCommand = &cobra.Command{
-		Use:   r.description.GetUse(),
-		Short: r.description.GetShortDescription(),
-		Long:  r.description.GetLongDescription(),
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
-			logLevel := "info"
-			if r.GetBaseOptions().Verbose {
-				logLevel = "debug"
-			}
-
-			lvc, err := zapcore.ParseLevel(logLevel)
-			if err != nil {
-				r.logger.Warn("Failed to set level")
-				return err
-			}
-			r.logLevelSetter.SetLevel(lvc)
-
-			zap.S().Debugf("Current logging level enabled: %s", logLevel)
-
-			return nil
-		},
+) *cobra.Command {
+	roptions := &RootOptions{}
+	cmd := &cobra.Command{
+		Use:   description.GetUse(),
+		Short: description.GetShortDescription(),
+		Long:  description.GetLongDescription(),
 		// hide --completion for more compact --help
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
 		},
 		SilenceUsage: true,
-		RunE:         r.RunCallback(),
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			roptions.DefineFlags(cmd.PersistentFlags())
+			err := options.Validate()
+			if err != nil {
+				return err
+			}
+
+			logLevel := "info"
+			if roptions.Verbose {
+				logLevel = "debug"
+			}
+
+			lvc, err := zapcore.ParseLevel(logLevel)
+			if err != nil {
+				logger.Warn("Failed to set level")
+				return err
+			}
+			logLevelSetter.SetLevel(lvc)
+
+			zap.S().Debugf("Current logging level enabled: %s", logLevel)
+			return nil
+		},
+		RunE: cli.RequireSubcommand,
 	}
 
-	r.cobraCommand.SetHelpCommand(&cobra.Command{
+	cmd.SetHelpCommand(&cobra.Command{
 		Hidden: true,
 	})
+	cmd.Flags().SortFlags = false
+	cmd.PersistentFlags().SortFlags = false
+	cmd.SetOutput(color.Output)
+	cmd.SetUsageTemplate(iCli.UsageTemplate)
 
-	r.cobraCommand.Flags().SortFlags = false
-	r.cobraCommand.PersistentFlags().SortFlags = false
-
-	r.cobraCommand.SetOutput(color.Output)
-
-	r.cobraCommand.SetUsageTemplate(iCli.UsageTemplate)
-
-	return r.cobraCommand
-}
-
-func (r *RootCommand) RegisterSubcommands(c ...command.Command) {
-	for _, v := range c {
-		v.RegisterOptions()
-		cli.SetDefaultsOn(v.ToCobraCommand())
-		r.ToCobraCommand().AddCommand(v.ToCobraCommand())
-	}
+	return cmd
 }

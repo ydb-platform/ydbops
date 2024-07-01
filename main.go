@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/ydb-platform/ydbops/cmd"
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
@@ -54,21 +55,16 @@ func initClients(
 	discoveryClient = discovery.NewDiscoveryClient(cf, logger, cp)
 }
 
-func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) (root command.Command) {
-	baseCommand := command.NewBase(rootOptions)
+func initCommandTree(rootOptions *command.BaseOptions, logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) (root *cobra.Command) {
 	root = cmd.NewRootCommand(
 		command.NewDescription(
 			"ydbops",
 			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
 			"ydbops: a CLI tool for performing YDB cluster maintenance operations",
 		),
-		baseCommand,
 		logLevelSetter,
 		logger,
 	)
-	root.RegisterOptions()
-	rootOptions.DefineFlags(root.ToCobraCommand().PersistentFlags())
-
 	restartCommand := cmd.NewRestartCommand(
 		cmd.RestartCommandDescription,
 		baseCommand,

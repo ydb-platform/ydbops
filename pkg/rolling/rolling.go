@@ -13,7 +13,6 @@ import (
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/client/discovery"
-	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
@@ -23,7 +22,7 @@ type Rolling struct {
 
 	logger    *zap.SugaredLogger
 	state     *state
-	opts      options.RestartOptions
+	opts      *RollingRestartOptions
 	restarter restarters.Restarter
 
 	// TODO jorres@: maybe turn this into a local `map`
@@ -53,13 +52,13 @@ type Executer interface {
 type executer struct {
 	cmsClient       cms.Client
 	discoveryClient discovery.Client
-	restartOpts     options.RestartOptions
+	opts            *RollingRestartOptions
 	logger          *zap.SugaredLogger
 	restarter       restarters.Restarter
 }
 
 func NewExecuter(
-	restartOpts options.RestartOptions,
+	opts *RollingRestartOptions,
 	logger *zap.SugaredLogger,
 	cmsClient cms.Client,
 	discoveryClient discovery.Client,
@@ -70,7 +69,7 @@ func NewExecuter(
 		discoveryClient: discoveryClient,
 		logger:          logger,
 		restarter:       rst,
-		restartOpts:     restartOpts, // TODO(shmel1k@): create own options
+		opts:            opts, // TODO(shmel1k@): create own options
 	}
 }
 
@@ -79,12 +78,12 @@ func (e *executer) Execute() error {
 		cms:       e.cmsClient,
 		discovery: e.discoveryClient,
 		logger:    e.logger,
-		opts:      e.restartOpts,
+		opts:      e.opts,
 		restarter: e.restarter,
 	}
 
 	var err error
-	if e.restartOpts.Continue {
+	if e.opts.Continue {
 		e.logger.Info("Continue previous rolling restart")
 		err = r.DoRestartPrevious()
 	} else {

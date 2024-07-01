@@ -1,17 +1,9 @@
 package command
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
-
-type Command interface {
-	ToCobraCommand() *cobra.Command
-	RegisterSubcommands(...Command)
-	RunCallback() func(*cobra.Command, []string) error
-	RegisterOptions()
-}
 
 type Description struct {
 	use              string
@@ -53,20 +45,6 @@ func (o *BaseOptions) DefineFlags(fs *pflag.FlagSet) {
 		"Override currently set profile name from --config-file")
 
 	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
-}
-
-type Base struct {
-	options *BaseOptions
-}
-
-func NewBase(opts *BaseOptions) *Base {
-	return &Base{
-		options: opts,
-	}
-}
-
-func (b *Base) GetBaseOptions() *BaseOptions {
-	return b.options
 }
 
 func NewDescription(use, shortDescription, longDescription string) *Description {

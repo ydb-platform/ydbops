@@ -1,24 +1,22 @@
-package options
+package rolling
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"google.golang.org/protobuf/types/known/durationpb"
-
 	"github.com/ydb-platform/ydbops/internal/collections"
+	"github.com/ydb-platform/ydbops/pkg/command"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/profile"
+	"github.com/ydb-platform/ydbops/pkg/utils"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
@@ -27,21 +25,9 @@ const (
 	DefaultCMSQueryIntervalSeconds = 10
 )
 
-var AvailabilityModes = []string{"strong", "weak", "force"}
+type RollingRestartOptions struct {
+	*command.BaseOptions
 
-type StartedTime struct {
-	Timestamp time.Time
-	Direction rune
-}
-
-type VersionSpec struct {
-	Sign  string
-	Major int
-	Minor int
-	Patch int
-}
-
-type RestartOptions struct {
 	AvailabilityMode   string
 	Hosts              []string
 	ExcludeHosts       []string
@@ -50,8 +36,8 @@ type RestartOptions struct {
 	Version            string
 	CMSQueryInterval   int
 
-	StartedTime *StartedTime
-	VersionSpec *VersionSpec
+	StartedTime *options.StartedTime
+	VersionSpec *options.VersionSpec
 
 	Continue bool
 
@@ -67,57 +53,19 @@ type RestartOptions struct {
 	K8sNamespace   string
 }
 
-type RunOptions struct {
-	*RestartOptions
-	PayloadFilePath string
-}
-
-func (r *RunOptions) DefineFlags(fs *pflag.FlagSet) {
-	r.RestartOptions.DefineFlags(fs)
-	fs.StringVar(
-		&r.PayloadFilePath,
-		"payload",
-		"",
-		"File path to arbitrary executable to run in the context of the local machine",
-	)
-}
-
-func (r *RunOptions) Validate() error {
-	err := r.RestartOptions.Validate()
-	if err != nil {
-		return err
-	}
-
-	if r.PayloadFilePath == "" {
-		return fmt.Errorf("empty --payload specified")
-	}
-	fileInfo, err := os.Stat(r.PayloadFilePath)
-	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("payload file '%s' does not exist", r.PayloadFilePath)
-	}
-
-	// Apologies, this is really an idiomatic way to check the permission in Go.
-	// Just run some bitmagic. 0100 is octal, in binary it would be equivalent to:
-	// 000001000000
-	//   drwxrwxrwx
-	executableByOwner := 0o100
-	if fileInfo.Mode()&fs.FileMode(executableByOwner) != fs.FileMode(executableByOwner) {
-		return fmt.Errorf("payload file '%s' is not executable by the owner", r.PayloadFilePath)
-	}
-
-	return nil
-}
-
 var (
 	startedUnparsedFlag string
 	versionUnparsedFlag string
 	rawSSHUnparsedArgs  string
 )
 
-var RestartOptionsInstance = &RestartOptions{}
+func (o *RollingRestartOptions) Validate() error {
+	err := o.BaseOptions.Validate()
+	if err != nil {
+		return err
+	}
 
-func (o *RestartOptions) Validate() error {
-	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
+	if !collections.Contains(options.AvailabilityModes, o.AvailabilityMode) {
 		return fmt.Errorf("specified a non-existing availability mode: %s", o.AvailabilityMode)
 	}
 
@@ -154,7 +102,7 @@ func (o *RestartOptions) Validate() error {
 			return fmt.Errorf("failed to parse --started: %w", err)
 		}
 
-		o.StartedTime = &StartedTime{
+		o.StartedTime = &options.StartedTime{
 			Timestamp: timestamp,
 			Direction: directionRune,
 		}
@@ -169,7 +117,7 @@ func (o *RestartOptions) Validate() error {
 			major, _ := strconv.Atoi(matches[2])
 			minor, _ := strconv.Atoi(matches[3])
 			patch, _ := strconv.Atoi(matches[4])
-			o.VersionSpec = &VersionSpec{
+			o.VersionSpec = &options.VersionSpec{
 				Sign:  matches[1],
 				Major: major,
 				Minor: minor,
@@ -183,7 +131,7 @@ func (o *RestartOptions) Validate() error {
 		}
 	}
 
-	o.SSHArgs = parseSSHArgs(rawSSHUnparsedArgs)
+	o.SSHArgs = utils.ParseSSHArgs(rawSSHUnparsedArgs)
 
 	_, errFromIds := o.GetNodeIds()
 	_, errFromFQDNs := o.GetNodeFQDNs()
@@ -198,7 +146,7 @@ func (o *RestartOptions) Validate() error {
 	return nil
 }
 
-func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
+func (o *RollingRestartOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.Storage, "storage", false, `Only include storage nodes. Otherwise, include all nodes by default`)
 
 	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes. Otherwise, include all nodes by default`)
@@ -259,18 +207,18 @@ the ydbops utility is stateless. Use at your own risk.`)
 		"[can specify in profile] Limit your operations to pods in this kubernetes namespace.")
 }
 
-func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
+func (o *RollingRestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
 	title := strings.ToUpper(fmt.Sprintf("availability_mode_%s", o.AvailabilityMode))
 	value := Ydb_Maintenance.AvailabilityMode_value[title]
 
 	return Ydb_Maintenance.AvailabilityMode(value)
 }
 
-func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {
+func (o *RollingRestartOptions) GetRestartDuration() *durationpb.Duration {
 	return durationpb.New(time.Second * time.Duration(o.RestartDuration) * time.Duration(o.RestartRetryNumber))
 }
 
-func (o *RestartOptions) GetNodeFQDNs() ([]string, error) {
+func (o *RollingRestartOptions) GetNodeFQDNs() ([]string, error) {
 	hosts := make([]string, 0, len(o.Hosts))
 
 	for _, hostFqdn := range o.Hosts {
@@ -285,7 +233,7 @@ func (o *RestartOptions) GetNodeFQDNs() ([]string, error) {
 	return hosts, nil
 }
 
-func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
+func (o *RollingRestartOptions) GetNodeIds() ([]uint32, error) {
 	ids := make([]uint32, 0, len(o.Hosts))
 
 	for _, nodeID := range o.Hosts {
@@ -300,35 +248,4 @@ func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 	}
 
 	return ids, nil
-}
-
-func parseSSHArgs(rawArgs string) []string {
-	args := []string{}
-	isInsideQuotes := false
-
-	rawRunes := []rune(rawArgs)
-	curArg := []rune{}
-	for i := 0; i < len(rawRunes); i++ {
-		if rawRunes[i] == '\\' && i+1 < len(rawRunes) && rawRunes[i+1] == '"' {
-			isInsideQuotes = !isInsideQuotes
-			i++
-			curArg = append(curArg, '"')
-			continue
-		}
-
-		if unicode.IsSpace(rawRunes[i]) && !isInsideQuotes {
-			if len(curArg) > 0 {
-				args = append(args, string(curArg))
-			}
-			curArg = []rune{}
-		} else {
-			curArg = append(curArg, rawRunes[i])
-		}
-	}
-
-	if len(curArg) > 0 {
-		args = append(args, string(curArg))
-	}
-
-	return args
 }
