@@ -18,6 +18,7 @@ import (
 
 const (
 	DefaultPodPhasePollingInterval = time.Second * 10
+	AnnotationNodeHost             = "ydb.tech/node-host"
 )
 
 type k8sRestarter struct {
@@ -99,9 +100,25 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 	)
 
 	for _, pod := range pods.Items {
-		fullPodFQDN := fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
+		// default with k8s network
+		fullPodFQDN := fmt.Sprintf("%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Namespace)
+
+		// In case of subdomain for Pod spec using extended fqdn
+		if pod.Spec.Subdomain != "" {
+			fullPodFQDN = fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
+		}
+
+		// In case of externalHost for Interconnect using annotation value
+		if nodeHost, exist := pod.Annotations[AnnotationNodeHost]; exist {
+			fullPodFQDN = fmt.Sprintf("%s.%s", pod.Spec.Hostname, nodeHost)
+		}
+
+		// In case of hostNetwork using nodeName
+		if pod.Spec.HostNetwork {
+			fullPodFQDN = pod.Spec.NodeName
+		}
+
 		r.FQDNToPodName[fullPodFQDN] = pod.Name
-		r.FQDNToPodName[pod.Spec.NodeName] = pod.Name
 	}
 
 	if err != nil {
