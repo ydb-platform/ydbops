@@ -14,6 +14,8 @@ type Options struct {
 func (o *Options) DefineFlags(fs *pflag.FlagSet) {
 	fs.StringSliceVar(&o.HostFQDNs, "hosts", []string{},
 		"FQDNs of hosts with completed maintenance")
+	fs.StringVar(&o.TaskID, "task-id", "",
+		"ID of your maintenance task (result of `ydbops maintenance host`)")
 }
 
 func (o *Options) Validate() error {

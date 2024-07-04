@@ -174,8 +174,8 @@ but you can not mix host FQDNs and node ids in this option. The list is comma-de
 	fs.StringVar(&o.AvailabilityMode, "availability-mode", "strong",
 		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(options.AvailabilityModes, ", ")))
 
-	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDurationSeconds,
-		`CMS will release the node for maintenance for restart-duration * restart-retry-number seconds. Any maintenance
+	fs.IntVar(&o.RestartDuration, "duration", DefaultRestartDurationSeconds,
+		`CMS will release the node for maintenance for duration * restart-retry-number seconds. Any maintenance
 after that would be considered a regular cluster failure`)
 
 	fs.IntVar(&o.RestartRetryNumber, "restart-retry-number", DefaultRetryCount,
@@ -196,7 +196,7 @@ for this invocation must be the same as for the previous invocation, and this ca
 the ydbops utility is stateless. Use at your own risk.`)
 
 	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", DefaultMaxStaticNodeId,
-		`This argument is used to help ydbops distinguish storage and dynamic nodes. 
+		`This argument is used to help ydbops distinguish storage and dynamic nodes.
 Nodes with this nodeId or less will be considered storage.`)
 
 	profile.PopulateFromProfileLater(

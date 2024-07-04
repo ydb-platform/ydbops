@@ -11,9 +11,7 @@ import (
 )
 
 func New(f cmdutil.Factory) *cobra.Command {
-	_ = &Options{
-		BaseOptions: f.GetBaseOptions(),
-	}
+	_ = &Options{}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "list",

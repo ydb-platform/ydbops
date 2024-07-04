@@ -25,14 +25,14 @@ const (
 	defaultRetryCount = 5
 )
 
-type CMSClient interface {
+type CMS interface {
 	Tenants() ([]string, error)
 	Nodes() ([]*Ydb_Maintenance.Node, error)
 }
 
 type Client interface {
-	CMSClient
-	MaintenanceClient
+	CMS
+	Maintenance
 
 	Close() error
 }

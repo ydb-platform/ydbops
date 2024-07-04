@@ -10,7 +10,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ydb-platform/ydbops/pkg/maintenance"
+	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/tests/mock"
 )
 
@@ -29,12 +29,12 @@ var _ = Describe("Test Maintenance", func() {
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
-						"--availability-mode", "strong",
 						"--user", mock.TestUser,
-						"--cms-query-interval", "1",
 						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 						"maintenance",
 						"create",
+						"--availability-mode", "strong",
+						"--cms-query-interval", "1",
 						"--hosts=ydb-1.ydb.tech,ydb-2.ydb.tech",
 					},
 					expectedRequests: []proto.Message{
@@ -53,19 +53,19 @@ var _ = Describe("Test Maintenance", func() {
 					},
 					expectedOutputRegexps: []string{
 						// Your task id is:\n\n<uuid>\n\nPlease write it down for refreshing and completing the task later.\n
-						fmt.Sprintf("Your task id is:\n\n%s%s\n\n", maintenance.TaskUuidPrefix, uuidRegexpString),
+						fmt.Sprintf("Your task id is:\n\n%s%s\n\n", cms.TaskUuidPrefix, uuidRegexpString),
 					},
 				},
 				{
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
-						"--availability-mode", "strong",
 						"--user", mock.TestUser,
-						"--cms-query-interval", "1",
 						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 						"maintenance",
 						"list",
+						// "--availability-mode", "strong",
+						// "--cms-query-interval", "1",
 					},
 					expectedRequests: []proto.Message{
 						&Ydb_Auth.LoginRequest{
@@ -81,7 +81,7 @@ var _ = Describe("Test Maintenance", func() {
 						},
 					},
 					expectedOutputRegexps: []string{
-						fmt.Sprintf("Uid: %s%s\n", maintenance.TaskUuidPrefix, uuidRegexpString),
+						fmt.Sprintf("Uid: %s%s\n", cms.TaskUuidPrefix, uuidRegexpString),
 						"  Lock on host ydb-1.ydb.tech",
 						"PERFORMED",
 						"  Lock on host ydb-2.ydb.tech",
@@ -92,15 +92,15 @@ var _ = Describe("Test Maintenance", func() {
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
-						"--availability-mode", "strong",
 						"--user", mock.TestUser,
-						"--cms-query-interval", "1",
 						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 						"maintenance",
 						"complete",
 						"--task-id",
 						testWillInsertTaskUuid,
 						"--hosts=ydb-1.ydb.tech",
+						// "--availability-mode", "strong",
+						// "--cms-query-interval", "1",
 					},
 					expectedRequests: []proto.Message{
 						&Ydb_Auth.LoginRequest{
@@ -128,14 +128,14 @@ var _ = Describe("Test Maintenance", func() {
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
-						"--availability-mode", "strong",
 						"--user", mock.TestUser,
-						"--cms-query-interval", "1",
 						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 						"maintenance",
 						"refresh",
 						"--task-id",
 						testWillInsertTaskUuid,
+						// "--availability-mode", "strong",
+						// "--cms-query-interval", "1",
 					},
 					expectedRequests: []proto.Message{
 						&Ydb_Auth.LoginRequest{
@@ -147,7 +147,7 @@ var _ = Describe("Test Maintenance", func() {
 						},
 					},
 					expectedOutputRegexps: []string{
-						fmt.Sprintf("Uid: %s%s\n", maintenance.TaskUuidPrefix, uuidRegexpString),
+						fmt.Sprintf("Uid: %s%s\n", cms.TaskUuidPrefix, uuidRegexpString),
 						"  Lock on host ydb-2.ydb.tech",
 						"PERFORMED",
 					},
@@ -156,15 +156,15 @@ var _ = Describe("Test Maintenance", func() {
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
-						"--availability-mode", "strong",
 						"--user", mock.TestUser,
-						"--cms-query-interval", "1",
 						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 						"maintenance",
 						"complete",
 						"--task-id",
 						testWillInsertTaskUuid,
 						"--hosts=ydb-2.ydb.tech",
+						// "--availability-mode", "strong",
+						// "--cms-query-interval", "1",
 					},
 					expectedRequests: []proto.Message{
 						&Ydb_Auth.LoginRequest{
@@ -192,12 +192,12 @@ var _ = Describe("Test Maintenance", func() {
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
-						"--availability-mode", "strong",
 						"--user", mock.TestUser,
-						"--cms-query-interval", "1",
 						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
 						"maintenance",
 						"list",
+						// "--availability-mode", "strong",
+						// "--cms-query-interval", "1",
 					},
 					expectedRequests: []proto.Message{
 						&Ydb_Auth.LoginRequest{

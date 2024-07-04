@@ -19,7 +19,7 @@ type CreateTaskParams struct {
 	AvailabilityMode           string
 }
 
-type MaintenanceClient interface {
+type Maintenance interface {
 	CompleteAction([]*Ydb_Maintenance.ActionUid) (*Ydb_Maintenance.ManageActionResult, error)
 	CompleteActions(string, []string) (*Ydb_Maintenance.ManageActionResult, error)
 	CreateMaintenanceTask(MaintenanceTaskParams) (MaintenanceTask, error)

@@ -2,17 +2,22 @@ package create
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
+	"github.com/ydb-platform/ydbops/pkg/rolling"
 )
 
 func New(f cmdutil.Factory) *cobra.Command {
-	opts := &Options{}
+	opts := &Options{
+		RestartOptions: &rolling.RestartOptions{},
+	}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "create",
@@ -24,10 +29,11 @@ func New(f cmdutil.Factory) *cobra.Command {
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			taskUID := cms.TaskUuidPrefix + uuid.New().String()
+			duration := time.Duration(opts.RestartOptions.RestartDuration) * time.Minute
 			taskId, err := f.GetCMSClient().CreateMaintenanceTask(cms.MaintenanceTaskParams{
-				Hosts:            opts.HostFQDNs,
-				Duration:         opts.GetMaintenanceDuration(),
-				AvailabilityMode: opts.GetAvailabilityMode(),
+				Hosts:            opts.RestartOptions.Hosts,
+				Duration:         durationpb.New(duration),
+				AvailabilityMode: opts.RestartOptions.GetAvailabilityMode(),
 				ScopeType:        cms.HostScope,
 				TaskUID:          taskUID,
 			})

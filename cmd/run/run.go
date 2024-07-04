@@ -69,6 +69,7 @@ func New(
 			return err
 		},
 	}
+
 	opts.DefineFlags(cmd.Flags())
 	return cmd
 }
