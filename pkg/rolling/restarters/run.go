@@ -14,7 +14,7 @@ const (
 )
 
 type RunRestarter struct {
-	Opts        *RunOpts
+	Opts        *RunRestarterParams
 	logger      *zap.SugaredLogger
 	storageOnly bool
 	dynnodeOnly bool
@@ -22,7 +22,7 @@ type RunRestarter struct {
 
 func (r *RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	//nolint:gosec
-	cmd := exec.Command(r.Opts.PayloadFilepath)
+	cmd := exec.Command(r.Opts.PayloadFilePath)
 
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", HostnameEnvVar, node.Host))
 
@@ -42,9 +42,13 @@ func (r *RunRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	return nil
 }
 
-func NewRunRestarter(logger *zap.SugaredLogger) *RunRestarter {
+type RunRestarterParams struct {
+	PayloadFilePath string
+}
+
+func NewRunRestarter(logger *zap.SugaredLogger, params *RunRestarterParams) *RunRestarter {
 	return &RunRestarter{
-		Opts:   &RunOpts{},
+		Opts:   params,
 		logger: logger,
 	}
 }

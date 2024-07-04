@@ -11,15 +11,21 @@ type StorageK8sRestarter struct {
 	Opts *StorageK8sOpts
 }
 
-func NewStorageK8sRestarter(logger *zap.SugaredLogger, kubeconfigPath, namespace string) *StorageK8sRestarter {
+type StorageK8sRestarterOptions struct {
+	*K8sRestarterOptions
+}
+
+func NewStorageK8sRestarter(logger *zap.SugaredLogger, params *StorageK8sRestarterOptions) *StorageK8sRestarter {
 	return &StorageK8sRestarter{
 		Opts: &StorageK8sOpts{
 			k8sOpts: k8sOpts{
-				kubeconfigPath: kubeconfigPath,
-				namespace:      namespace,
+				kubeconfigPath: params.KubeconfigPath,
+				namespace:      params.Namespace,
 			},
 		},
-		k8sRestarter: newK8sRestarter(logger),
+		k8sRestarter: newK8sRestarter(logger, &k8sRestarterOptions{
+			restartDuration: params.RestartDuration,
+		}),
 	}
 }
 

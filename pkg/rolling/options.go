@@ -1,4 +1,4 @@
-package options
+package rolling
 
 import (
 	"fmt"
@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"google.golang.org/protobuf/types/known/durationpb"
-
 	"github.com/ydb-platform/ydbops/internal/collections"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/profile"
+	"github.com/ydb-platform/ydbops/pkg/utils"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
@@ -24,20 +24,6 @@ const (
 	DefaultCMSQueryIntervalSeconds = 10
 	DefaultMaxStaticNodeId         = 50000
 )
-
-var AvailabilityModes = []string{"strong", "weak", "force"}
-
-type StartedTime struct {
-	Timestamp time.Time
-	Direction rune
-}
-
-type VersionSpec struct {
-	Sign  string
-	Major int
-	Minor int
-	Patch int
-}
 
 type RestartOptions struct {
 	AvailabilityMode   string
@@ -48,8 +34,8 @@ type RestartOptions struct {
 	Version            string
 	CMSQueryInterval   int
 
-	StartedTime *StartedTime
-	VersionSpec *VersionSpec
+	StartedTime *options.StartedTime
+	VersionSpec *options.VersionSpec
 
 	Continue bool
 
@@ -73,10 +59,8 @@ var (
 	rawSSHUnparsedArgs  string
 )
 
-var RestartOptionsInstance = &RestartOptions{}
-
 func (o *RestartOptions) Validate() error {
-	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
+	if !collections.Contains(options.AvailabilityModes, o.AvailabilityMode) {
 		return fmt.Errorf("specified a non-existing availability mode: %s", o.AvailabilityMode)
 	}
 
@@ -117,7 +101,7 @@ func (o *RestartOptions) Validate() error {
 			return fmt.Errorf("failed to parse --started: %w", err)
 		}
 
-		o.StartedTime = &StartedTime{
+		o.StartedTime = &options.StartedTime{
 			Timestamp: timestamp,
 			Direction: directionRune,
 		}
@@ -132,7 +116,7 @@ func (o *RestartOptions) Validate() error {
 			major, _ := strconv.Atoi(matches[2])
 			minor, _ := strconv.Atoi(matches[3])
 			patch, _ := strconv.Atoi(matches[4])
-			o.VersionSpec = &VersionSpec{
+			o.VersionSpec = &options.VersionSpec{
 				Sign:  matches[1],
 				Major: major,
 				Minor: minor,
@@ -146,7 +130,7 @@ func (o *RestartOptions) Validate() error {
 		}
 	}
 
-	o.SSHArgs = parseSSHArgs(rawSSHUnparsedArgs)
+	o.SSHArgs = utils.ParseSSHArgs(rawSSHUnparsedArgs)
 
 	_, errFromIds := o.GetNodeIds()
 	_, errFromFQDNs := o.GetNodeFQDNs()
@@ -166,13 +150,13 @@ func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
 
 	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes. Otherwise, include all nodes by default`)
 
-	fs.StringSliceVar(&o.TenantList, "tenant-list", []string{}, `Comma-delimited list of tenant names to restart. 
+	fs.StringSliceVar(&o.TenantList, "tenant-list", []string{}, `Comma-delimited list of tenant names to restart.
   E.g.:'--tenant-list=name1,name2,name3'`)
 
 	fs.StringVar(&o.CustomSystemdUnitName, "systemd-unit", "", "Specify custom systemd unit name to restart")
 
 	fs.StringVar(&rawSSHUnparsedArgs, "ssh-args", "",
-		`This argument will be used when ssh-ing to the nodes. It may be used to override 
+		`This argument will be used when ssh-ing to the nodes. It may be used to override
 the ssh command itself, ssh username or any additional arguments.
 Double quotes are can be escaped with backward slash '\'.
 Examples:
@@ -180,7 +164,7 @@ Examples:
 2) --ssh-args "ssh -o ProxyCommand=\"...\""`)
 
 	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
-		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids, 
+		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids,
 but you can not mix host FQDNs and node ids in this option. The list is comma-delimited.
   E.g.: '--hosts=1,2,3' or '--hosts=fqdn1,fqdn2,fqdn3'`)
 
@@ -188,10 +172,10 @@ but you can not mix host FQDNs and node ids in this option. The list is comma-de
 		`Comma-delimited list. Do not restart these hosts, even if they are explicitly specified in --hosts.`)
 
 	fs.StringVar(&o.AvailabilityMode, "availability-mode", "strong",
-		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(AvailabilityModes, ", ")))
+		fmt.Sprintf("Availability mode. Available choices: %s", strings.Join(options.AvailabilityModes, ", ")))
 
-	fs.IntVar(&o.RestartDuration, "restart-duration", DefaultRestartDurationSeconds,
-		`CMS will release the node for maintenance for restart-duration * restart-retry-number seconds. Any maintenance
+	fs.IntVar(&o.RestartDuration, "duration", DefaultRestartDurationSeconds,
+		`CMS will release the node for maintenance for duration * restart-retry-number seconds. Any maintenance
 after that would be considered a regular cluster failure`)
 
 	fs.IntVar(&o.RestartRetryNumber, "restart-retry-number", DefaultRetryCount,
@@ -207,12 +191,12 @@ after that would be considered a regular cluster failure`)
 		`Apply filter by node version. Format: [<|>|!=|==MAJOR.MINOR.PATCH], e.g. '--version !=24.1.2'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
-		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes 
-for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since 
+		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes
+for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since
 the ydbops utility is stateless. Use at your own risk.`)
 
 	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", DefaultMaxStaticNodeId,
-		`This argument is used to help ydbops distinguish storage and dynamic nodes. 
+		`This argument is used to help ydbops distinguish storage and dynamic nodes.
 Nodes with this nodeId or less will be considered storage.`)
 
 	profile.PopulateFromProfileLater(
@@ -267,35 +251,4 @@ func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 	}
 
 	return ids, nil
-}
-
-func parseSSHArgs(rawArgs string) []string {
-	args := []string{}
-	isInsideQuotes := false
-
-	rawRunes := []rune(rawArgs)
-	curArg := []rune{}
-	for i := 0; i < len(rawRunes); i++ {
-		if rawRunes[i] == '\\' && i+1 < len(rawRunes) && rawRunes[i+1] == '"' {
-			isInsideQuotes = !isInsideQuotes
-			i++
-			curArg = append(curArg, '"')
-			continue
-		}
-
-		if unicode.IsSpace(rawRunes[i]) && !isInsideQuotes {
-			if len(curArg) > 0 {
-				args = append(args, string(curArg))
-			}
-			curArg = []rune{}
-		} else {
-			curArg = append(curArg, rawRunes[i])
-		}
-	}
-
-	if len(curArg) > 0 {
-		args = append(args, string(curArg))
-	}
-
-	return args
 }

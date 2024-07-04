@@ -3,46 +3,63 @@ package cmd
 import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
+	"github.com/ydb-platform/ydbops/cmd/restart"
+	"github.com/ydb-platform/ydbops/cmd/run"
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/cli"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
+	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-func addAndReturnCmd(cmd *cobra.Command, rest ...*cobra.Command) *cobra.Command {
-	for _, subCmd := range rest {
-		cmd.AddCommand(subCmd)
+var RootCommandDescription = command.NewDescription(
+	"ydbops",
+	"ydbops: a CLI tool for performing YDB cluster maintenance operations",
+	"ydbops: a CLI tool for performing YDB cluster maintenance operations",
+)
+
+type RootOptions struct {
+	*command.BaseOptions
+}
+
+func (r *RootOptions) Validate() error {
+	return r.BaseOptions.Validate()
+}
+
+func (r *RootOptions) DefineFlags(fs *pflag.FlagSet) {
+	r.BaseOptions.DefineFlags(fs)
+}
+
+func NewRootCommand(
+	logLevelSetter zap.AtomicLevel,
+	logger *zap.SugaredLogger,
+	boptions *command.BaseOptions,
+) *cobra.Command {
+	roptions := &RootOptions{
+		BaseOptions: boptions,
 	}
-	return cmd
-}
+	cmd := &cobra.Command{
+		Use:   RootCommandDescription.GetUse(),
+		Short: RootCommandDescription.GetShortDescription(),
+		Long:  RootCommandDescription.GetLongDescription(),
+		// hide --completion for more compact --help
+		CompletionOptions: cobra.CompletionOptions{
+			DisableDefaultCmd: true,
+		},
+		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			err := options.Validate()
+			if err != nil {
+				return err
+			}
 
-func registerAllSubcommands(root *cobra.Command) {
-	_ = addAndReturnCmd(root,
-		NewRestartCmd(),
-		NewRunCmd(),
-		addAndReturnCmd(NewMaintenanceCmd(),
-			maintenance.NewCreateCmd(),
-			maintenance.NewListCmd(),
-			maintenance.NewDropCmd(),
-			maintenance.NewRefreshCmd(),
-			maintenance.NewCompleteCmd(),
-		),
-	)
-}
-
-var RootCmd *cobra.Command
-
-func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
-	RootCmd = &cobra.Command{
-		Use:   "ydbops",
-		Short: "ydbops: a CLI tool for performing YDB cluster maintenance operations",
-		Long:  "ydbops: a CLI tool for performing YDB cluster maintenance operations",
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			logLevel := "info"
-			if options.RootOptionsInstance.Verbose {
+			if roptions.Verbose {
 				logLevel = "debug"
 			}
 
@@ -54,33 +71,27 @@ func InitRootCmd(logLevelSetter zap.AtomicLevel, logger *zap.SugaredLogger) {
 			logLevelSetter.SetLevel(lvc)
 
 			zap.S().Debugf("Current logging level enabled: %s", logLevel)
-
 			return nil
 		},
-		// hide --completion for more compact --help
-		CompletionOptions: cobra.CompletionOptions{
-			DisableDefaultCmd: true,
-		},
-		SilenceUsage: true,
-		RunE:         cli.RequireSubcommand,
+		RunE: cli.RequireSubcommand,
 	}
+	roptions.DefineFlags(cmd.PersistentFlags())
 
-	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	cmd.SetHelpCommand(&cobra.Command{
+		Hidden: true,
+	})
+	cmd.Flags().SortFlags = false
+	cmd.PersistentFlags().SortFlags = false
+	cmd.SetOutput(color.Output)
+	cmd.SetUsageTemplate(iCli.UsageTemplate)
 
-	RootCmd.Flags().SortFlags = false
-	RootCmd.PersistentFlags().SortFlags = false
+	return cmd
+}
 
-	RootCmd.SetOutput(color.Output)
-
-	defer func() {
-		_ = logger.Sync()
-	}()
-
-	options.Logger = logger
-
-	options.RootOptionsInstance.DefineFlags(RootCmd.PersistentFlags())
-
-	registerAllSubcommands(RootCmd)
-
-	RootCmd.SetUsageTemplate(iCli.UsageTemplate)
+func InitRootCommandTree(root *cobra.Command, f cmdutil.Factory) {
+	root.AddCommand(
+		restart.New(f),
+		maintenance.New(f),
+		run.New(f),
+	)
 }

@@ -1,4 +1,4 @@
-package maintenance
+package list
 
 import (
 	"fmt"
@@ -6,35 +6,29 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/pkg/cli"
-	"github.com/ydb-platform/ydbops/pkg/client"
-	"github.com/ydb-platform/ydbops/pkg/maintenance"
-	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 )
 
-func NewListCmd() *cobra.Command {
-	rootOpts := options.RootOptionsInstance
+func New(f cmdutil.Factory) *cobra.Command {
+	_ = &Options{}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "list",
 		Short: "List all existing maintenance tasks",
-		Long: `ydbops maintenance list: 
+		Long: `ydbops maintenance list:
   List all existing maintenance tasks on the cluster.
   Can be useful if you lost your task id to refresh/complete your own task.`,
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(
-			rootOpts,
+			f.GetBaseOptions(),
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := client.InitConnectionFactory(
-				*rootOpts,
-				options.Logger,
-				options.DefaultRetryCount,
-			)
+			userSID, err := f.GetDiscoveryClient().WhoAmI()
 			if err != nil {
 				return err
 			}
 
-			tasks, err := maintenance.ListTasks()
+			tasks, err := f.GetCMSClient().MaintenanceTasks(userSID)
 			if err != nil {
 				return err
 			}
@@ -52,10 +46,5 @@ func NewListCmd() *cobra.Command {
 		},
 	})
 
-	options.RootOptionsInstance.DefineFlags(cmd.PersistentFlags())
-
 	return cmd
-}
-
-func init() {
 }

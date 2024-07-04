@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 
-	"github.com/ydb-platform/ydbops/pkg/maintenance"
+	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	blackmagic "github.com/ydb-platform/ydbops/tests/black-magic"
 	"github.com/ydb-platform/ydbops/tests/mock"
@@ -107,7 +107,7 @@ func RunTestCase(tc TestCase) {
 			if strings.Contains(expectedOutputRegexp, "Your task id is:") {
 				uuidOnlyRegexp := regexp.MustCompile(
 					fmt.Sprintf("(%s%s)",
-						maintenance.TaskUuidPrefix,
+						cms.TaskUuidPrefix,
 						uuidRegexpString,
 					),
 				)

@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-
-	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/client/cms"
 )
 
-func TaskToString(task client.MaintenanceTask) string {
+func TaskToString(task cms.MaintenanceTask) string {
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Uid: %s\n", task.GetTaskUid()))
 

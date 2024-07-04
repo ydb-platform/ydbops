@@ -2,6 +2,7 @@ package rolling
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,19 +11,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/internal/collections"
-	"github.com/ydb-platform/ydbops/pkg/client"
-	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/client/cms"
+	"github.com/ydb-platform/ydbops/pkg/client/discovery"
 	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 type Rolling struct {
-	cms       *client.Cms
-	discovery *client.Discovery
+	cms       cms.Client
+	discovery discovery.Client
 
 	logger    *zap.SugaredLogger
 	state     *state
-	opts      options.RestartOptions
+	opts      *RestartOptions
 	restarter restarters.Restarter
 
 	// TODO jorres@: maybe turn this into a local `map`
@@ -45,37 +46,58 @@ const (
 	RestartTaskPrefix = "rolling-restart-"
 )
 
-func ExecuteRolling(
-	restartOpts options.RestartOptions,
-	logger *zap.SugaredLogger,
-	restarter restarters.Restarter,
-) error {
-	cmsClient := client.GetCmsClient()
-	discoveryClient := client.GetDiscoveryClient()
+type Executer interface {
+	Execute() error
+}
 
+type executer struct {
+	cmsClient       cms.Client
+	discoveryClient discovery.Client
+	opts            *RestartOptions
+	logger          *zap.SugaredLogger
+	restarter       restarters.Restarter
+}
+
+func NewExecuter(
+	opts *RestartOptions,
+	logger *zap.SugaredLogger,
+	cmsClient cms.Client,
+	discoveryClient discovery.Client,
+	rst restarters.Restarter,
+) Executer {
+	return &executer{
+		cmsClient:       cmsClient,
+		discoveryClient: discoveryClient,
+		logger:          logger,
+		restarter:       rst,
+		opts:            opts, // TODO(shmel1k@): create own options
+	}
+}
+
+func (e *executer) Execute() error {
 	r := &Rolling{
-		cms:       cmsClient,
-		discovery: discoveryClient,
-		logger:    logger,
-		opts:      restartOpts,
-		restarter: restarter,
+		cms:       e.cmsClient,
+		discovery: e.discoveryClient,
+		logger:    e.logger,
+		opts:      e.opts,
+		restarter: e.restarter,
 	}
 
 	var err error
-	if restartOpts.Continue {
-		logger.Info("Continue previous rolling restart")
+	if e.opts.Continue {
+		e.logger.Info("Continue previous rolling restart")
 		err = r.DoRestartPrevious()
 	} else {
-		logger.Info("Start rolling restart")
+		e.logger.Info("Start rolling restart")
 		err = r.DoRestart()
 	}
 
 	if err != nil {
-		logger.Errorf("Failed to complete restart: %+v", err)
+		e.logger.Errorf("Failed to complete restart: %+v", err)
 		return err
 	}
 
-	logger.Info("Restart completed successfully")
+	e.logger.Info("Restart completed successfully")
 	return nil
 }
 
@@ -133,11 +155,11 @@ func (r *Rolling) DoRestart() error {
 		return nil
 	}
 
-	taskParams := client.MaintenanceTaskParams{
+	taskParams := cms.MaintenanceTaskParams{
 		TaskUID:          r.state.restartTaskUID,
 		AvailabilityMode: r.opts.GetAvailabilityMode(),
 		Duration:         r.opts.GetRestartDuration(),
-		ScopeType:        client.NodeScope,
+		ScopeType:        cms.NodeScope,
 		Nodes:            nodesToRestart,
 	}
 	task, err := r.cms.CreateMaintenanceTask(taskParams)
@@ -152,7 +174,7 @@ func (r *Rolling) DoRestartPrevious() error {
 	return fmt.Errorf("--continue behavior not implemented yet")
 }
 
-func (r *Rolling) cmsWaitingLoop(task client.MaintenanceTask, totalNodes int) error {
+func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error {
 	var (
 		err          error
 		delay        time.Duration
@@ -357,7 +379,7 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 	}
 
 	for _, previousTaskUID := range previousTasks {
-		_, err := r.cms.DropMaintenanceTask(previousTaskUID)
+		_, err := r.cms.DropMaintenanceTask(previousTaskUID.GetTaskUid())
 		if err != nil {
 			return fmt.Errorf("failed to drop maintenance task: %w", err)
 		}
@@ -365,8 +387,26 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 	return nil
 }
 
-func (r *Rolling) logTask(task client.MaintenanceTask) {
+func (r *Rolling) logTask(task cms.MaintenanceTask) {
 	r.logger.Debugf("Maintenance task result:\n%s", prettyprint.TaskToString(task))
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("Uid: %s\n", task.GetTaskUid()))
+
+	if task.GetRetryAfter() != nil {
+		sb.WriteString(fmt.Sprintf("Retry after: %s\n", task.GetRetryAfter().AsTime().Format(time.DateTime)))
+	}
+
+	for _, gs := range task.GetActionGroupStates() {
+		as := gs.ActionStates[0]
+		sb.WriteString(fmt.Sprintf("  Lock on node %d ", as.Action.GetLockAction().Scope.GetNodeId()))
+		if as.Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED {
+			sb.WriteString(fmt.Sprintf("PERFORMED, until: %s", as.Deadline.AsTime().Format(time.DateTime)))
+		} else {
+			sb.WriteString(fmt.Sprintf("PENDING, %s", as.GetReason().String()))
+		}
+		sb.WriteString("\n")
+	}
+	r.logger.Debugf("Maintenance task result:\n%s", sb.String())
 }
 
 func (r *Rolling) logCompleteResult(result *Ydb_Maintenance.ManageActionResult) {

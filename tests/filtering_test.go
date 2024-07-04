@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"github.com/ydb-platform/ydbops/tests/mock"
 )
@@ -40,7 +41,7 @@ var _ = Describe("Test storage Filter", func() {
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
 		filterSpec := restarters.FilterNodeParams{
-			MaxStaticNodeId: options.DefaultMaxStaticNodeId,
+			MaxStaticNodeId: rolling.DefaultMaxStaticNodeId,
 			StartedTime: &options.StartedTime{
 				Direction: '<',
 				Timestamp: fiveMinutesAgoTimestamp,
@@ -91,7 +92,7 @@ var _ = Describe("Test storage Filter", func() {
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
 		filterSpec := restarters.FilterNodeParams{
-			MaxStaticNodeId: options.DefaultMaxStaticNodeId,
+			MaxStaticNodeId: rolling.DefaultMaxStaticNodeId,
 		}
 
 		clusterInfo := restarters.ClusterNodesInfo{

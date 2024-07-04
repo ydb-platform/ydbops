@@ -12,8 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 const (
@@ -24,13 +22,19 @@ type k8sRestarter struct {
 	k8sClient     *kubernetes.Clientset
 	FQDNToPodName map[string]string
 	logger        *zap.SugaredLogger
+	options       *k8sRestarterOptions
 }
 
-func newK8sRestarter(logger *zap.SugaredLogger) k8sRestarter {
+type k8sRestarterOptions struct {
+	restartDuration time.Duration
+}
+
+func newK8sRestarter(logger *zap.SugaredLogger, params *k8sRestarterOptions) k8sRestarter {
 	return k8sRestarter{
 		k8sClient:     nil, // initialized later
 		FQDNToPodName: make(map[string]string),
 		logger:        logger,
+		options:       params,
 	}
 }
 
@@ -141,6 +145,6 @@ func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) er
 		namespace,
 		podName,
 		oldUID,
-		time.Duration(options.RestartOptionsInstance.RestartDuration)*time.Second,
+		r.options.restartDuration,
 	)
 }
