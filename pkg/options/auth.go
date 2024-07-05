@@ -32,7 +32,6 @@ const (
 	IamToken       AuthType = "iam-token"
 	IamCreds       AuthType = "iam-creds"
 	IamMetadata    AuthType = "iam-metadata"
-	IamSAFile      AuthType = "iam-sa-file"
 	MultipleAtOnce AuthType = "multiple-at-once"
 )
 
