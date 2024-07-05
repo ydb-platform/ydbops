@@ -29,13 +29,13 @@ func (m *metadataProvider) ContextWithoutAuth(ctx context.Context) (context.Cont
 // GetToken implements Provider.
 func (m *metadataProvider) GetToken() (string, error) {
 	// TODO(shmel1k@): add contexts.
-	return m.creds.Token(context.Background())
+	return m.creds.Token(context.TODO())
 }
 
 // Init implements Provider.
 func (m *metadataProvider) Init() error {
 	m.once.Do(func() {
-		m.creds = yc.NewInstanceServiceAccount(yc.WithURL("http://169.254.169.254/metadata/v1/instance/service-accounts/default/token"))
+		m.creds = yc.NewInstanceServiceAccount(yc.WithURL("http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"))
 	})
 	return nil
 }

@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/ydb-platform/ydb-go-sdk/v3/credentials"
@@ -41,6 +42,10 @@ func (i *iamCredsProvider) GetToken() (string, error) {
 // Init implements Provider.
 func (i *iamCredsProvider) Init() error {
 	i.once.Do(func() {
+		sp := strings.Split(i.iamEndpoint, ":")
+		if len(sp) == 1 {
+			i.iamEndpoint += ":443"
+		}
 		i.creds, i.initErr = yc.NewClient(
 			yc.WithServiceFile(i.keyfileName),
 			yc.WithEndpoint(i.iamEndpoint),
