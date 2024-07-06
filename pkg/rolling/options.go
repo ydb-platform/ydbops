@@ -11,11 +11,12 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+	"google.golang.org/protobuf/types/known/durationpb"
+
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/profile"
 	"github.com/ydb-platform/ydbops/pkg/utils"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
