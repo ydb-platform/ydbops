@@ -74,7 +74,10 @@ func (b *baseProvider) Init() error {
 		case options.IamToken:
 			b.impl = NewIamToken(b.opts.Auth.Creds.(*options.AuthIAMToken).Token)
 		case options.IamCreds:
-			b.initErr = fmt.Errorf("TODO: IAM authorization from SA key not implemented yet")
+			creds := b.opts.Auth.Creds.(*options.AuthIAMCreds)
+			b.impl = NewIamCreds(creds.KeyFilename, creds.Endpoint)
+		case options.IamMetadata:
+			b.impl = NewMetadata(b.logger)
 		case options.None:
 			b.initErr = fmt.Errorf("determined credentials to be anonymous. Anonymous credentials are currently unsupported")
 		default:
@@ -82,6 +85,7 @@ func (b *baseProvider) Init() error {
 				"internal error: authorization type not recognized after options validation, this should never happen",
 			)
 		}
+		b.initErr = b.impl.Init()
 	})
 	return b.initErr
 }

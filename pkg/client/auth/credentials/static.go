@@ -41,8 +41,6 @@ func (s *staticCredentialsProvider) Init() error {
 // GetToken implements Provider.
 func (s *staticCredentialsProvider) GetToken() (string, error) {
 	// TODO(shmel1k@): probably, token can change time to time.
-	_ = s.Init()
-
 	s.tokenOnce.Do(func() {
 		s.token, s.tokenErr = s.authClient.Auth(s.params.user, s.params.password)
 	})
@@ -51,8 +49,6 @@ func (s *staticCredentialsProvider) GetToken() (string, error) {
 
 // ContextWithAuth implements Provider.
 func (s *staticCredentialsProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc) {
-	_ = s.Init()
-
 	tok, _ := s.GetToken() // TODO(shmel1k@): return err as params
 	ctx, cf := context.WithCancel(ctx)
 	return metadata.AppendToOutgoingContext(ctx,
@@ -61,8 +57,6 @@ func (s *staticCredentialsProvider) ContextWithAuth(ctx context.Context) (contex
 
 // ContextWithoutAuth implements Provider.
 func (s *staticCredentialsProvider) ContextWithoutAuth(ctx context.Context) (context.Context, context.CancelFunc) {
-	_ = s.Init()
-
 	return context.WithCancel(ctx)
 }
 

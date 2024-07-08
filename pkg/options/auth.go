@@ -31,14 +31,16 @@ const (
 	Static         AuthType = "static"
 	IamToken       AuthType = "iam-token"
 	IamCreds       AuthType = "iam-creds"
+	IamMetadata    AuthType = "iam-metadata"
 	MultipleAtOnce AuthType = "multiple-at-once"
 )
 
 var Auths = map[AuthType]Options{
-	None:     &AuthNone{},
-	Static:   &AuthStatic{},
-	IamToken: &AuthIAMToken{},
-	IamCreds: &AuthIAMCreds{},
+	None:        &AuthNone{},
+	Static:      &AuthStatic{},
+	IamToken:    &AuthIAMToken{},
+	IamCreds:    &AuthIAMCreds{},
+	IamMetadata: &AuthIAMMetadataCredentials{},
 	// TODO support OAuth
 }
 
@@ -55,6 +57,10 @@ type (
 	AuthIAMToken struct {
 		TokenFile string
 		Token     string
+	}
+
+	AuthIAMMetadataCredentials struct {
+		Enabled bool
 	}
 
 	AuthIAMCreds struct {
@@ -180,6 +186,21 @@ func (a *AuthIAMCreds) Validate() error {
 	return nil
 }
 
+func (a *AuthIAMMetadataCredentials) DefineFlags(fs *pflag.FlagSet) {
+	fs.BoolVar(&a.Enabled, "use-metadata-credentials", false,
+		`Use metadata service on a virtual machine to get credentials
+                          For more info go to: cloud.yandex.ru/docs/compute/operations/vm-connect/auth-inside-vm
+                          Definition priority:
+                            1. This option
+                            2. Profile specified with --profile option
+                            3. "USE_METADATA_CREDENTIALS" environment variable
+                            4. Active configuration profile (default: 0)`)
+}
+
+func (a *AuthIAMMetadataCredentials) Validate() error {
+	return nil
+}
+
 func determineExplicitAuthType() AuthType {
 	authType := map[AuthType]bool{}
 
@@ -188,6 +209,10 @@ func determineExplicitAuthType() AuthType {
 		if static.(*AuthStatic).PasswordFile != "" || passwordVarPresent {
 			authType[Static] = true
 		}
+	}
+
+	if iamMetadata, ok := Auths[IamMetadata]; ok && iamMetadata.(*AuthIAMMetadataCredentials).Enabled {
+		authType[IamMetadata] = true
 	}
 
 	if static, ok := Auths[IamToken]; ok && static.(*AuthIAMToken).TokenFile != "" {
