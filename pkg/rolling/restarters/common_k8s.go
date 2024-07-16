@@ -131,12 +131,14 @@ func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) er
 	}
 
 	oldUID := pod.ObjectMeta.UID
+	r.logger.Debugf("Pod %s id: %v", podName, oldUID)
 
 	err = r.k8sClient.CoreV1().Pods(namespace).Delete(
 		context.TODO(),
 		podName,
 		metav1.DeleteOptions{},
 	)
+
 	if err != nil {
 		return err
 	}

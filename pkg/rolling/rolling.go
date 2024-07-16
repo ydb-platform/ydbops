@@ -170,8 +170,6 @@ func (r *Rolling) DoRestart() error {
 		return fmt.Errorf("failed to create maintenance task: %w", err)
 	}
 
-	// return nil
-
 	return r.cmsWaitingLoop(task, len(nodesToRestart))
 }
 

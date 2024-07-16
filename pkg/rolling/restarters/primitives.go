@@ -126,7 +126,7 @@ func parseNodeVersion(version string) (int, int, int, error) {
 		return major, minor, patch, nil
 	}
 
-	pattern2 := `^(\d+)\.(\d+)\.(\d+)\..*$`
+	pattern2 := `^(\d+)\.(\d+)\.(\d+).*$`
 	major, minor, patch, parsed = tryParseWith(pattern2, version)
 	if parsed {
 		return major, minor, patch, nil

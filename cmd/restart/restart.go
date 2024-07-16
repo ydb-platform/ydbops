@@ -90,10 +90,15 @@ func New(
 				err = executer.Execute()
 			}
 
-			if err == nil && (opts.RestartOptions.Tenant || bothUnspecified) {
-				executer = rolling.NewExecuter(opts.RestartOptions, zap.S(), f.GetCMSClient(), f.GetDiscoveryClient(), tenantRestarter)
+			if err != nil {
+				return err
 			}
-			err = executer.Execute()
+
+			if opts.RestartOptions.Tenant || bothUnspecified {
+				executer = rolling.NewExecuter(opts.RestartOptions, zap.S(), f.GetCMSClient(), f.GetDiscoveryClient(), tenantRestarter)
+				err = executer.Execute()
+			}
+
 			return err
 		},
 	}
