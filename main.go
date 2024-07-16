@@ -34,14 +34,15 @@ func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {
 }
 
 var (
-	factory         cmdutil.Factory
-	baseOptions     *command.BaseOptions
-	cmsClient       cms.Client
-	discoveryClient discovery.Client
+	factory             cmdutil.Factory
+	baseOptions         *command.BaseOptions
+	cmsClient           cms.Client
+	discoveryClient     discovery.Client
+	credentialsProvider credentials.Provider
 )
 
 func initFactory() {
-	factory = cmdutil.New(baseOptions, cmsClient, discoveryClient)
+	factory = cmdutil.New(baseOptions, cmsClient, discoveryClient, credentialsProvider)
 }
 
 func initClients(
@@ -61,7 +62,7 @@ func main() {
 
 	options.Logger = logger.Sugar() // TODO(shmel1k@): tmp hack
 
-	credentialsProvider := credentials.New(baseOptions, cf, logger.Sugar(), nil)
+	credentialsProvider = credentials.New(baseOptions, cf, logger.Sugar(), nil)
 	initClients(cf, logger.Sugar(), credentialsProvider)
 	initFactory()
 

@@ -11,6 +11,9 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/ydb-platform/ydb-go-genproto v0.0.0-20240316140903-4a47abca1cca
+	github.com/ydb-platform/ydb-go-sdk/v3 v3.47.3
+	github.com/ydb-platform/ydb-go-yc v0.12.1
+	github.com/ydb-platform/ydb-go-yc-metadata v0.6.1
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.62.0
@@ -47,9 +50,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/yandex-cloud/go-genproto v0.0.0-20211115083454-9ca41db5ed9e // indirect
-	github.com/ydb-platform/ydb-go-sdk/v3 v3.47.3 // indirect
-	github.com/ydb-platform/ydb-go-yc v0.12.1 // indirect
-	github.com/ydb-platform/ydb-go-yc-metadata v0.6.1 // indirect
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
