@@ -17,7 +17,10 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+
       - name: smart-checkout
         uses: ./.github/actions/smart-checkout
       - name: golangci-lint
@@ -31,7 +34,9 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
       - name: smart-checkout
         uses: ./.github/actions/smart-checkout
 
@@ -57,7 +62,9 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
       - name: smart-checkout
         uses: ./.github/actions/smart-checkout
       - name: Install Go
