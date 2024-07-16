@@ -85,7 +85,9 @@ func (b *baseProvider) Init() error {
 				"internal error: authorization type not recognized after options validation, this should never happen",
 			)
 		}
-		b.initErr = b.impl.Init()
+		if b.initErr == nil {
+			b.initErr = b.impl.Init()
+		}
 	})
 	return b.initErr
 }
