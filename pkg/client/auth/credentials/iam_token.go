@@ -1,19 +1,26 @@
 package credentials
 
-import "context"
+import (
+	"context"
+
+	"google.golang.org/grpc/metadata"
+)
 
 type iamTokenCredentialsProvider struct {
 	token string
 }
 
 // ContextWithAuth implements Provider.
-func (i *iamTokenCredentialsProvider) ContextWithAuth(context.Context) (context.Context, context.CancelFunc) {
-	panic("unimplemented")
+func (i *iamTokenCredentialsProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc) {
+	tok, _ := i.GetToken() // TODO(shmel1k@): return err as params
+	ctx, cf := context.WithCancel(ctx)
+	return metadata.AppendToOutgoingContext(ctx,
+		"x-ydb-auth-ticket", tok), cf
 }
 
 // ContextWithoutAuth implements Provider.
-func (i *iamTokenCredentialsProvider) ContextWithoutAuth(context.Context) (context.Context, context.CancelFunc) {
-	panic("unimplemented")
+func (i *iamTokenCredentialsProvider) ContextWithoutAuth(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithCancel(ctx)
 }
 
 // GetToken implements Provider.
