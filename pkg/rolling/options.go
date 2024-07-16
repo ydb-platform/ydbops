@@ -16,6 +16,7 @@ import (
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/profile"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
@@ -23,7 +24,6 @@ const (
 	DefaultRetryCount              = 3
 	DefaultRestartDurationSeconds  = 60
 	DefaultCMSQueryIntervalSeconds = 10
-	DefaultMaxStaticNodeId         = 50000
 )
 
 type RestartOptions struct {
@@ -196,7 +196,7 @@ after that would be considered a regular cluster failure`)
 for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since
 the ydbops utility is stateless. Use at your own risk.`)
 
-	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", DefaultMaxStaticNodeId,
+	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", restarters.DefaultMaxStaticNodeId,
 		`This argument is used to help ydbops distinguish storage and dynamic nodes.
 Nodes with this nodeId or less will be considered storage.`)
 

@@ -1,4 +1,4 @@
-package tests
+package restarters
 
 import (
 	"time"
@@ -8,12 +8,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ydb-platform/ydbops/pkg/options"
-	"github.com/ydb-platform/ydbops/pkg/rolling"
-	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"github.com/ydb-platform/ydbops/tests/mock"
 )
 
-var _ = Describe("Test storage Filter", func() {
+var _ = Describe("Test storage ssh Filter", func() {
 	var (
 		now                     = time.Now()
 		tenMinutesAgoTimestamp  = now.Add(-10 * time.Minute)
@@ -21,7 +19,7 @@ var _ = Describe("Test storage Filter", func() {
 	)
 
 	It("ssh restarter filtering by --started>timestamp", func() {
-		restarter := restarters.NewStorageSSHRestarter(zap.S(), []string{}, "")
+		restarter := NewStorageSSHRestarter(zap.S(), []string{}, "")
 
 		nodeGroups := [][]uint32{
 			{1, 2, 3, 4, 5, 6, 7, 8},
@@ -40,15 +38,15 @@ var _ = Describe("Test storage Filter", func() {
 
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
-		filterSpec := restarters.FilterNodeParams{
-			MaxStaticNodeId: rolling.DefaultMaxStaticNodeId,
+		filterSpec := FilterNodeParams{
+			MaxStaticNodeId: DefaultMaxStaticNodeId,
 			StartedTime: &options.StartedTime{
 				Direction: '<',
 				Timestamp: fiveMinutesAgoTimestamp,
 			},
 		}
 
-		clusterInfo := restarters.ClusterNodesInfo{
+		clusterInfo := ClusterNodesInfo{
 			AllNodes:        nodes,
 			TenantToNodeIds: map[string][]uint32{},
 		}
@@ -67,8 +65,8 @@ var _ = Describe("Test storage Filter", func() {
 		Expect(filteredNodeIds).Should(HaveKey(uint32(3)))
 	})
 
-	It("ssh restarter without arguments takes all storage nodes", func() {
-		restarter := restarters.NewStorageSSHRestarter(zap.S(), []string{}, "")
+	It("storage restarter without arguments takes all storage nodes and no dynnodes", func() {
+		restarter := NewStorageSSHRestarter(zap.S(), []string{}, "")
 
 		nodeGroups := [][]uint32{
 			{1, 2, 3, 4, 5, 6, 7, 8},
@@ -91,11 +89,11 @@ var _ = Describe("Test storage Filter", func() {
 
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
-		filterSpec := restarters.FilterNodeParams{
-			MaxStaticNodeId: rolling.DefaultMaxStaticNodeId,
+		filterSpec := FilterNodeParams{
+			MaxStaticNodeId: DefaultMaxStaticNodeId,
 		}
 
-		clusterInfo := restarters.ClusterNodesInfo{
+		clusterInfo := ClusterNodesInfo{
 			AllNodes: nodes,
 			TenantToNodeIds: map[string][]uint32{
 				"fakeTenant": {9, 10, 11},

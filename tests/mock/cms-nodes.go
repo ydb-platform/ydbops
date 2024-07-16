@@ -101,19 +101,16 @@ func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestN
 			testNodeInfo, moreInfoPresent := nodeInfo[nodeID]
 			node := makeNode(nodeID)
 
+			// Put default values:
+			node.Type = &Ydb_Maintenance.Node_Storage{
+				Storage: &Ydb_Maintenance.Node_StorageNode{},
+			}
+			node.State = Ydb_Maintenance.ItemState_ITEM_STATE_UP
+			node.StartTime = timestamppb.New(time.Now())
+			node.Version = "some-fake-version-will-fail-when-parsing"
+
 			if !moreInfoPresent {
-				node.Type = &Ydb_Maintenance.Node_Storage{
-					Storage: &Ydb_Maintenance.Node_StorageNode{},
-				}
-
-				node.State = Ydb_Maintenance.ItemState_ITEM_STATE_UP
-
-				node.StartTime = timestamppb.New(time.Now())
-
-				node.Version = "some-fake-version-will-fail-when-parsing"
-
 				nodes = append(nodes, node)
-
 				continue
 			}
 

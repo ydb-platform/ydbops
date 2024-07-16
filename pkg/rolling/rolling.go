@@ -138,6 +138,8 @@ func (r *Rolling) DoRestart() error {
 		},
 	)
 
+	fmt.Printf("nodesToRestart %v\n", nodesToRestart)
+
 	excludedNodes := 0
 	for _, node := range nodesToRestart {
 		if _, present := r.state.inactiveNodes[node.NodeId]; present {
@@ -162,10 +164,13 @@ func (r *Rolling) DoRestart() error {
 		ScopeType:        cms.NodeScope,
 		Nodes:            nodesToRestart,
 	}
+
 	task, err := r.cms.CreateMaintenanceTask(taskParams)
 	if err != nil {
 		return fmt.Errorf("failed to create maintenance task: %w", err)
 	}
+
+	// return nil
 
 	return r.cmsWaitingLoop(task, len(nodesToRestart))
 }

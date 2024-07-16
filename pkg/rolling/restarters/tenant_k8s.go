@@ -41,20 +41,30 @@ func (r TenantK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
 	return r.restartNodeByRestartingPod(node.Host, r.Opts.namespace)
 }
 
-func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
-	databaseLabelSelector := "app.kubernetes.io/component=dynamic-node"
-
-	r.prepareK8sState(r.Opts.kubeconfigPath, databaseLabelSelector, r.Opts.namespace)
-
+func applyTenantK8sFilteringRules(
+	spec FilterNodeParams,
+	cluster ClusterNodesInfo,
+	fqdnToPodName map[string]string,
+) []*Ydb_Maintenance.Node {
 	tenantNodes := FilterTenantNodes(cluster.AllNodes)
 
-	selectedNodes := populateWithK8sRules(tenantNodes, spec, r.FQDNToPodName)
+	selectedNodes := populateWithK8sRules(tenantNodes, spec, fqdnToPodName)
 
 	selectedNodes = ExcludeByTenantNames(selectedNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
 
 	filteredNodes := ExcludeByCommonFields(selectedNodes, spec)
 
+	return filteredNodes
+}
+
+func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) []*Ydb_Maintenance.Node {
+	databaseLabelSelector := "app.kubernetes.io/component=dynamic-node"
+
+	r.prepareK8sState(r.Opts.kubeconfigPath, databaseLabelSelector, r.Opts.namespace)
+
+	filteredNodes := applyTenantK8sFilteringRules(spec, cluster, r.FQDNToPodName)
+
 	r.logger.Debugf("Tenant K8s restarter selected following nodes for restart: %v", filteredNodes)
 
-	return selectedNodes
+	return filteredNodes
 }
