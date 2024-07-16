@@ -14,6 +14,10 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
+const (
+	DefaultMaxStaticNodeId = 50000
+)
+
 func FilterStorageNodes(nodes []*Ydb_Maintenance.Node, maxStaticNodeId uint32) []*Ydb_Maintenance.Node {
 	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
@@ -138,9 +142,11 @@ func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) 
 
 	major, minor, patch, err := parseNodeVersion(node.Version)
 	if err != nil {
-		zap.S().Errorf(`ALARM: failed to parse %s when user specified a non-nil version. The filtering will
+		errorMsg := fmt.Sprintf(`ALARM: failed to parse '%s' when user specified a non-nil version. The filtering will
  be conservative and not include the node, but it might be not what you want. Either you have a weird node
- version in your cluster or we need to teach 'ydbops' to support one more version format.`)
+ version in your cluster or we need to teach 'ydbops' to support one more version format.`, node.Version)
+
+		zap.S().Errorf(errorMsg)
 		return false
 	}
 

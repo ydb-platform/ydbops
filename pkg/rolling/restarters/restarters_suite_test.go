@@ -1,4 +1,4 @@
-package tests
+package restarters
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 
 func TestRestart(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Restart e2e suite")
+	RunSpecs(t, "Restart Suite")
 }
