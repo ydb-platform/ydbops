@@ -114,9 +114,6 @@ func (o *RestartOptions) Validate() error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("AAAAAAA")
-		fmt.Println(o.VersionSpec.String())
-		fmt.Println("AAAAAAA")
 	}
 
 	o.SSHArgs = utils.ParseSSHArgs(rawSSHUnparsedArgs)
