@@ -138,7 +138,6 @@ func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) er
 		podName,
 		metav1.DeleteOptions{},
 	)
-
 	if err != nil {
 		return err
 	}

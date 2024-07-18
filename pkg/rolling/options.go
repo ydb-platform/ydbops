@@ -245,7 +245,6 @@ func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 	return ids, nil
 }
 
-
 func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {
 	majorMinorPatchPattern := `^(>|<|!=|~=)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
 	re1 := regexp.MustCompile(majorMinorPatchPattern)
@@ -277,6 +276,6 @@ func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {
 	}
 
 	return nil, fmt.Errorf(
-		"Failed to interpret the value of `--version` flag. Read `ydbops restart --help` for more info on what is expected.",
+		"failed to interpret the value of `--version` flag. Read `ydbops restart --help` for more info on what is expected",
 	)
 }
