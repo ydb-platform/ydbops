@@ -1,6 +1,7 @@
 package restarters
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -135,26 +136,21 @@ func parseNodeVersion(version string) (int, int, int, error) {
 	return 0, 0, 0, fmt.Errorf("failed to parse the version number in any of the known patterns")
 }
 
-func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) bool {
+func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) (bool, error) {
 	if version == nil {
-		return true
+		return true, nil
 	}
 
 	major, minor, patch, err := parseNodeVersion(node.Version)
 	if err != nil {
-		errorMsg := fmt.Sprintf(`ALARM: failed to parse '%s' when user specified a non-nil version. The filtering will
- be conservative and not include the node, but it might be not what you want. Either you have a weird node
- version in your cluster or we need to teach 'ydbops' to support one more version format.`, node.Version)
-
-		zap.S().Errorf(errorMsg)
-		return false
+		return false, fmt.Errorf("Failed to extract major.minor.patch from version %s", node.Version)
 	}
 
 	return compareMajorMinorPatch(
 		version.Sign,
 		[3]int{major, minor, patch},
 		[3]int{version.Major, version.Minor, version.Patch},
-	)
+	), nil
 }
 
 func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
@@ -187,6 +183,8 @@ func PopulateByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams
 
 func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	filtered := []*Ydb_Maintenance.Node{}
+
+	unknownVersions := make(map[string][]string)
 	for _, node := range nodes {
 		if collections.Contains(spec.ExcludeHosts, strconv.Itoa(int(node.NodeId))) {
 			continue
@@ -200,12 +198,26 @@ func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 			continue
 		}
 
-		if !SatisfiedVersion(node, spec.Version) {
+		satisfiesVersion, err := SatisfiedVersion(node, spec.Version)
+		if err != nil {
+			unknownVersions[node.Version] = append(unknownVersions[node.Version], node.Host)
+		}
+
+		if !satisfiesVersion {
 			continue
 		}
 
 		filtered = append(filtered, node)
 	}
+
+	prettyUnknownVersions, _ := json.MarshalIndent(unknownVersions, "", "  ")
+	zap.S().Warnf(`Failed to extract major.minor.patch when filtering by %s from some nodes.
+Here is a map from node version to node FQDNs with this version: 
+%s`,
+		spec.Version.String(),
+		prettyUnknownVersions,
+	)
+
 	return filtered
 }
 

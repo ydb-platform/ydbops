@@ -1,6 +1,9 @@
 package options
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
@@ -14,4 +17,8 @@ type VersionSpec struct {
 	Major int
 	Minor int
 	Patch int
+}
+
+func (v VersionSpec) String() string {
+	return fmt.Sprintf("%s%v.%v.%v", v.Sign, v.Major, v.Minor, v.Patch)
 }

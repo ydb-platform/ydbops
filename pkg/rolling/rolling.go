@@ -138,8 +138,6 @@ func (r *Rolling) DoRestart() error {
 		},
 	)
 
-	fmt.Printf("nodesToRestart %v\n", nodesToRestart)
-
 	excludedNodes := 0
 	for _, node := range nodesToRestart {
 		if _, present := r.state.inactiveNodes[node.NodeId]; present {
