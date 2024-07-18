@@ -26,6 +26,14 @@ const (
 	DefaultCMSQueryIntervalSeconds = 10
 )
 
+var (
+	majorMinorPatchPattern = `^(>|<|!=|~=)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
+	majorMinorPatchRegexp  = regexp.MustCompile(majorMinorPatchPattern)
+
+	rawPattern = `^==(.*)$`
+	rawRegexp  = regexp.MustCompile(rawPattern)
+)
+
 type RestartOptions struct {
 	AvailabilityMode   string
 	Hosts              []string
@@ -243,13 +251,7 @@ func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 }
 
 func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {
-	majorMinorPatchPattern := `^(>|<|!=|~=)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
-	re1 := regexp.MustCompile(majorMinorPatchPattern)
-
-	rawPattern := `^==(.*)$`
-	re2 := regexp.MustCompile(rawPattern)
-
-	matches := re1.FindStringSubmatch(versionUnparsedFlag)
+	matches := majorMinorPatchRegexp.FindStringSubmatch(versionUnparsedFlag)
 	if len(matches) == 5 {
 		// `--version` value looks like (sign)major.minor.patch
 		major, _ := strconv.Atoi(matches[2])
@@ -263,7 +265,7 @@ func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {
 		}, nil
 	}
 
-	matches = re2.FindStringSubmatch(versionUnparsedFlag)
+	matches = rawRegexp.FindStringSubmatch(versionUnparsedFlag)
 	if len(matches) == 2 {
 		// `--version` value is an arbitrary string value, and will
 		// be compared directly
