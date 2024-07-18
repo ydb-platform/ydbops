@@ -305,7 +305,7 @@ var _ = Describe("Test Rolling", func() {
 			},
 		},
 		),
-		Entry("filter nodes by --version flag", TestCase{
+		Entry("filter nodes by --version flag, >MAJOR.MINOR.PATCH", TestCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3},
 			},
@@ -371,6 +371,68 @@ var _ = Describe("Test Rolling", func() {
 									TaskUid:  "task-UUID-1",
 									GroupId:  "group-UUID-2",
 									ActionId: "action-UUID-2",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		),
+		Entry("filter nodes by --version flag, ==full_version_string_1234", TestCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				1: {
+					Version: "full_version_string_1234",
+				},
+				2: {
+					Version: "full_version_string_1235",
+				},
+				3: {
+					Version: "full_version_string_1236",
+				},
+			},
+			steps: []StepData{
+				{
+					ydbopsInvocation: []string{
+						"--endpoint", "grpcs://localhost:2135",
+						"--verbose",
+						"--availability-mode", "strong",
+						"--user", mock.TestUser,
+						"--cms-query-interval", "1",
+						"run",
+						"--storage",
+						"--version", "==full_version_string_1234",
+						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+					},
+					expectedRequests: []proto.Message{
+						&Ydb_Auth.LoginRequest{
+							User:     mock.TestUser,
+							Password: mock.TestPassword,
+						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
+						&Ydb_Cms.ListDatabasesRequest{},
+						&Ydb_Discovery.WhoAmIRequest{},
+						&Ydb_Maintenance.ListMaintenanceTasksRequest{
+							User: &mock.TestUser,
+						},
+						&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+							TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+								TaskUid:          "task-UUID-1",
+								Description:      "Rolling restart maintenance task",
+								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+							},
+							ActionGroups: mock.MakeActionGroupsFromNodeIds(1),
+						},
+						&Ydb_Maintenance.CompleteActionRequest{
+							ActionUids: []*Ydb_Maintenance.ActionUid{
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-1",
+									ActionId: "action-UUID-1",
 								},
 							},
 						},

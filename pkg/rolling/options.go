@@ -36,7 +36,7 @@ type RestartOptions struct {
 	CMSQueryInterval   int
 
 	StartedTime *options.StartedTime
-	VersionSpec *options.VersionSpec
+	VersionSpec options.VersionSpec
 
 	Continue bool
 
@@ -109,26 +109,14 @@ func (o *RestartOptions) Validate() error {
 	}
 
 	if versionUnparsedFlag != "" {
-		pattern := `^(>|<|!=|==)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
-		re := regexp.MustCompile(pattern)
-
-		matches := re.FindStringSubmatch(versionUnparsedFlag)
-		if len(matches) == 5 {
-			major, _ := strconv.Atoi(matches[2])
-			minor, _ := strconv.Atoi(matches[3])
-			patch, _ := strconv.Atoi(matches[4])
-			o.VersionSpec = &options.VersionSpec{
-				Sign:  matches[1],
-				Major: major,
-				Minor: minor,
-				Patch: patch,
-			}
-		} else {
-			return fmt.Errorf(
-				"failed to parse --version flag. %s value does not satisfy the format, check --help",
-				versionUnparsedFlag,
-			)
+		var err error
+		o.VersionSpec, err = parseVersionFlag(versionUnparsedFlag)
+		if err != nil {
+			return err
 		}
+		fmt.Println("AAAAAAA")
+		fmt.Println(o.VersionSpec.String())
+		fmt.Println("AAAAAAA")
 	}
 
 	o.SSHArgs = utils.ParseSSHArgs(rawSSHUnparsedArgs)
@@ -189,7 +177,10 @@ after that would be considered a regular cluster failure`)
 		fmt.Sprintf("Apply filter by node started time. Format: [<>%%Y-%%m-%%dT%%H:%%M:%%SZ], e.g. >2024-03-13T17:20:06Z"))
 
 	fs.StringVar(&versionUnparsedFlag, "version", "",
-		`Apply filter by node version. Format: [<|>|!=|==MAJOR.MINOR.PATCH], e.g. '--version !=24.1.2'`)
+		`Apply filter by node version. 
+Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|==VERSION_STRING], e.g.: 
+'--version ~=24.1.2' or 
+'--version ==24.1.2-ydb-stable-hotfix-5'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
 		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes
@@ -252,4 +243,40 @@ func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
 	}
 
 	return ids, nil
+}
+
+
+func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {
+	majorMinorPatchPattern := `^(>|<|!=|~=)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
+	re1 := regexp.MustCompile(majorMinorPatchPattern)
+
+	rawPattern := `^==(.*)$`
+	re2 := regexp.MustCompile(rawPattern)
+
+	matches := re1.FindStringSubmatch(versionUnparsedFlag)
+	if len(matches) == 5 {
+		// `--version` value looks like (sign)major.minor.patch
+		major, _ := strconv.Atoi(matches[2])
+		minor, _ := strconv.Atoi(matches[3])
+		patch, _ := strconv.Atoi(matches[4])
+		return &options.MajorMinorPatchVersion{
+			Sign:  matches[1],
+			Major: major,
+			Minor: minor,
+			Patch: patch,
+		}, nil
+	}
+
+	matches = re2.FindStringSubmatch(versionUnparsedFlag)
+	if len(matches) == 2 {
+		// `--version` value is an arbitrary string value, and will
+		// be compared directly
+		return &options.RawVersion{
+			Raw: matches[1],
+		}, nil
+	}
+
+	return nil, fmt.Errorf(
+		"Failed to interpret the value of `--version` flag. Read `ydbops restart --help` for more info on what is expected.",
+	)
 }

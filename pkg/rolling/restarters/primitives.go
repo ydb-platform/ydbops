@@ -3,9 +3,7 @@ package restarters
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
-	"regexp"
 	"strconv"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
@@ -83,76 +81,6 @@ func SatisfiesStartingTime(node *Ydb_Maintenance.Node, startedTime *options.Star
 	return startedTime.Timestamp.Before(nodeStartTime)
 }
 
-func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
-	res := 0
-	for i := 0; i < 3; i++ {
-		if nodeVersion[i] < userVersion[i] {
-			res = -1
-			break
-		} else if nodeVersion[i] > userVersion[i] {
-			res = 1
-			break
-		}
-	}
-
-	switch sign {
-	case "==":
-		return res == 0
-	case "<":
-		return res == -1
-	case ">":
-		return res == 1
-	case "!=":
-		return res != 0
-	}
-	return false
-}
-
-func tryParseWith(reString, version string) (int, int, int, bool) {
-	re := regexp.MustCompile(reString)
-	matches := re.FindStringSubmatch(version)
-	if len(matches) == 4 {
-		num1, _ := strconv.Atoi(matches[1])
-		num2, _ := strconv.Atoi(matches[2])
-		num3, _ := strconv.Atoi(matches[3])
-		return num1, num2, num3, true
-	}
-	return 0, 0, 0, false
-}
-
-func parseNodeVersion(version string) (int, int, int, error) {
-	pattern1 := `^ydb-stable-(\d+)-(\d+)-(\d+).*$`
-	major, minor, patch, parsed := tryParseWith(pattern1, version)
-	if parsed {
-		return major, minor, patch, nil
-	}
-
-	pattern2 := `^(\d+)\.(\d+)\.(\d+).*$`
-	major, minor, patch, parsed = tryParseWith(pattern2, version)
-	if parsed {
-		return major, minor, patch, nil
-	}
-
-	return 0, 0, 0, fmt.Errorf("failed to parse the version number in any of the known patterns")
-}
-
-func SatisfiedVersion(node *Ydb_Maintenance.Node, version *options.VersionSpec) (bool, error) {
-	if version == nil {
-		return true, nil
-	}
-
-	major, minor, patch, err := parseNodeVersion(node.Version)
-	if err != nil {
-		return false, fmt.Errorf("Failed to extract major.minor.patch from version %s", node.Version)
-	}
-
-	return compareMajorMinorPatch(
-		version.Sign,
-		[3]int{major, minor, patch},
-		[3]int{version.Major, version.Minor, version.Patch},
-	), nil
-}
-
 func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
 	return len(spec.SelectedHosts) == 0 && len(spec.SelectedNodeIds) == 0
 }
@@ -198,25 +126,29 @@ func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 			continue
 		}
 
-		satisfiesVersion, err := SatisfiedVersion(node, spec.Version)
-		if err != nil {
-			unknownVersions[node.Version] = append(unknownVersions[node.Version], node.Host)
-		}
+		if spec.Version != nil {
+			satisfiesVersion, err := spec.Version.Satisfies(node.Version)
+			if err != nil {
+				unknownVersions[node.Version] = append(unknownVersions[node.Version], node.Host)
+			}
 
-		if !satisfiesVersion {
-			continue
+			if !satisfiesVersion {
+				continue
+			}
 		}
 
 		filtered = append(filtered, node)
 	}
 
-	prettyUnknownVersions, _ := json.MarshalIndent(unknownVersions, "", "  ")
-	zap.S().Warnf(`Failed to extract major.minor.patch when filtering by %s from some nodes.
+	if spec.Version != nil && len(unknownVersions) > 0 {
+		prettyUnknownVersions, _ := json.MarshalIndent(unknownVersions, "", "  ")
+		zap.S().Warnf(`Failed to extract major.minor.patch when filtering by %s from some nodes.
 Here is a map from node version to node FQDNs with this version: 
 %s`,
-		spec.Version.String(),
-		prettyUnknownVersions,
-	)
+			spec.Version.String(),
+			prettyUnknownVersions,
+		)
+	}
 
 	return filtered
 }

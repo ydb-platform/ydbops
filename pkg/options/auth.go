@@ -187,14 +187,13 @@ func (a *AuthIAMCreds) Validate() error {
 }
 
 func (a *AuthIAMMetadataCredentials) DefineFlags(fs *pflag.FlagSet) {
+	// TODO @jorres allow this option in profile
 	fs.BoolVar(&a.Enabled, "use-metadata-credentials", false,
 		`Use metadata service on a virtual machine to get credentials
-                          For more info go to: cloud.yandex.ru/docs/compute/operations/vm-connect/auth-inside-vm
-                          Definition priority:
-                            1. This option
-                            2. Profile specified with --profile option
-                            3. "USE_METADATA_CREDENTIALS" environment variable
-                            4. Active configuration profile (default: 0)`)
+For more info go to: cloud.yandex.ru/docs/compute/operations/vm-connect/auth-inside-vm
+Definition priority:
+  1. This option
+  2. "USE_METADATA_CREDENTIALS" environment variable`)
 }
 
 func (a *AuthIAMMetadataCredentials) Validate() error {
