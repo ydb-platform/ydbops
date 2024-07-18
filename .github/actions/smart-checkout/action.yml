@@ -4,10 +4,10 @@ runs:
   using: 'composite'
   steps:
     - name: checkout-when-fork-source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       if: github.event.pull_request.head.sha != ''
       with:
         ref: ${{ github.event.pull_request.head.sha }}
     - name: checkout-when-this-repo-source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       if: github.event.pull_request.head.sha == ''
