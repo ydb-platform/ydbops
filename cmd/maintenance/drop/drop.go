@@ -21,7 +21,7 @@ func New(f cmdutil.Factory) *cobra.Command {
 			f.GetBaseOptions(), taskIdOpts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return f.GetCMSClient().DropTask(taskIdOpts.TaskID)
+			return taskIdOpts.Run(f)
 		},
 	})
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/pflag"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 )
 
 type Options struct {
@@ -20,4 +21,8 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("--task-id unspecified, argument required")
 	}
 	return nil
+}
+
+func (o *Options) Run(f cmdutil.Factory) error {
+	return f.GetCMSClient().DropTask(o.TaskID)
 }

@@ -7,8 +7,12 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+	"go.uber.org/zap"
 
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 )
 
 type Options struct {
@@ -50,4 +54,28 @@ func (r *Options) Validate() error {
 	}
 
 	return nil
+}
+
+func (r *Options) Run(f cmdutil.Factory) error {
+	bothUnspecified := !r.RestartOptions.Storage && !r.RestartOptions.Tenant
+
+	restarter := restarters.NewRunRestarter(zap.S(), &restarters.RunRestarterParams{
+		PayloadFilePath: r.PayloadFilePath,
+	})
+
+	var executer rolling.Executer
+	var err error
+	if r.RestartOptions.Storage || bothUnspecified {
+		restarter.SetStorageOnly()
+		executer = rolling.NewExecuter(r.RestartOptions, options.Logger, f.GetCMSClient(), f.GetDiscoveryClient(), restarter)
+		err = executer.Execute()
+	}
+
+	if err == nil && (r.RestartOptions.Tenant || bothUnspecified) {
+		restarter.SetDynnodeOnly()
+		executer = rolling.NewExecuter(r.RestartOptions, options.Logger, f.GetCMSClient(), f.GetDiscoveryClient(), restarter)
+		err = executer.Execute()
+	}
+
+	return err
 }

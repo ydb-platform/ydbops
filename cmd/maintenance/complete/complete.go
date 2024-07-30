@@ -1,13 +1,10 @@
 package complete
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
-	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 )
 
 func New(f cmdutil.Factory) *cobra.Command {
@@ -23,14 +20,7 @@ func New(f cmdutil.Factory) *cobra.Command {
 			f.GetBaseOptions(), opts,
 		),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result, err := f.GetCMSClient().CompleteActions(opts.TaskID, opts.HostFQDNs)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(prettyprint.ResultToString(result))
-
-			return nil
+			return opts.Run(f)
 		},
 	})
 

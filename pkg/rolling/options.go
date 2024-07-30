@@ -182,9 +182,9 @@ after that would be considered a regular cluster failure`)
 		fmt.Sprintf("Apply filter by node started time. Format: [<>%%Y-%%m-%%dT%%H:%%M:%%SZ], e.g. >2024-03-13T17:20:06Z"))
 
 	fs.StringVar(&versionUnparsedFlag, "version", "",
-		`Apply filter by node version. 
-Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|==VERSION_STRING], e.g.: 
-'--version ~=24.1.2' or 
+		`Apply filter by node version.
+Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|==VERSION_STRING], e.g.:
+'--version ~=24.1.2' or
 '--version ==24.1.2-ydb-stable-hotfix-5'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
