@@ -7,9 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
-	"go.uber.org/zap"
-
 	"github.com/ydb-platform/ydbops/pkg/profile"
+	"go.uber.org/zap"
 )
 
 const (

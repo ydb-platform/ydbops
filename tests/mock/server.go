@@ -17,13 +17,12 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Cms"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
+	"github.com/ydb-platform/ydbops/internal/collections"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 var (

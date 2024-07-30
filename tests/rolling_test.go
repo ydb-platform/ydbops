@@ -10,9 +10,8 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Cms"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
-	"google.golang.org/protobuf/proto"
-
 	"github.com/ydb-platform/ydbops/tests/mock"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = Describe("Test Rolling", func() {

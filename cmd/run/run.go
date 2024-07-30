@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
+	"go.uber.org/zap"
 )
 
 var RunCommandDescription = command.NewDescription(

@@ -8,9 +8,8 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
-	"go.uber.org/zap"
-
 	"github.com/ydb-platform/ydbops/internal/collections"
+	"go.uber.org/zap"
 )
 
 func LogOperation(logger *zap.SugaredLogger, op *Ydb_Operations.Operation) {

@@ -5,7 +5,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/tests/mock"
 )

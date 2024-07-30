@@ -3,9 +3,6 @@ package main
 import (
 	"os"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/ydb-platform/ydbops/cmd"
 	"github.com/ydb-platform/ydbops/pkg/client/auth/credentials"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
@@ -14,6 +11,8 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func createLogger(level string) (zap.AtomicLevel, *zap.Logger) {

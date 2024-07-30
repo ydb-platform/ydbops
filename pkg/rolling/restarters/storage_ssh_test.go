@@ -5,10 +5,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap"
-
 	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/tests/mock"
+	"go.uber.org/zap"
 )
 
 var _ = Describe("Test storage ssh Filter", func() {
