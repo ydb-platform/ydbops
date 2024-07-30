@@ -2,7 +2,6 @@ package create
 
 import (
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
