@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+	"github.com/ydb-platform/ydbops/pkg/cmdutil"
+	"github.com/ydb-platform/ydbops/pkg/options"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"go.uber.org/zap"

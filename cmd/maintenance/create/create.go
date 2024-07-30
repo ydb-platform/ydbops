@@ -5,7 +5,6 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func New(f cmdutil.Factory) *cobra.Command {
