@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
-	"go.uber.org/zap"
 )
 
 type Provider interface {
