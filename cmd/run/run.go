@@ -8,6 +8,8 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/rolling"
+	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
+	"go.uber.org/zap"
 )
 
 var RunCommandDescription = command.NewDescription(

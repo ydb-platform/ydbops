@@ -4,11 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"go.uber.org/zap"
-	"google.golang.org/grpc/metadata"
-
 	"github.com/ydb-platform/ydbops/pkg/client/auth"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 )
 
 type staticCredentialsProvider struct {

@@ -5,9 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"google.golang.org/protobuf/types/known/durationpb"
-
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (

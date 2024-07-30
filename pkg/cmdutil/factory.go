@@ -2,7 +2,6 @@ package cmdutil
 
 import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
-
 	"github.com/ydb-platform/ydbops/pkg/client/auth/credentials"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/client/discovery"

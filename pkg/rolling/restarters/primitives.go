@@ -7,10 +7,9 @@ import (
 	"strconv"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
-	"go.uber.org/zap"
-
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"go.uber.org/zap"
 )
 
 const (
