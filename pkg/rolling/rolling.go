@@ -8,12 +8,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+	"go.uber.org/zap"
+
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/client/discovery"
 	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
-	"go.uber.org/zap"
 )
 
 type Rolling struct {

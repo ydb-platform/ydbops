@@ -2,8 +2,9 @@ package options
 
 import (
 	"github.com/spf13/pflag"
-	"github.com/ydb-platform/ydbops/internal/collections"
 	"go.uber.org/multierr"
+
+	"github.com/ydb-platform/ydbops/internal/collections"
 )
 
 // AdditionalFlag allows adding extra flags not defined in command

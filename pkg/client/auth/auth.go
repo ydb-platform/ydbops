@@ -8,11 +8,12 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/ydb-platform/ydbops/pkg/client"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/utils"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 )
 
 type Client interface {
