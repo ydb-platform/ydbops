@@ -6,10 +6,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -56,44 +53,6 @@ func (r *k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Client
 	return clientset
 }
 
-func (r *k8sRestarter) waitPodRunning(
-	namespace, podName string,
-	oldUID types.UID,
-	podRestartTimeout time.Duration,
-) error {
-	checkInterval := DefaultPodPhasePollingInterval
-	start := time.Now()
-	for {
-		if time.Since(start) >= podRestartTimeout {
-			return fmt.Errorf("timed out waiting for a pod %s to start", podName)
-		}
-
-		pod, err := r.k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-
-		if pod.ObjectMeta.UID == oldUID {
-			r.logger.Debugf("Old pod %s is still not deleted, old UID found", podName)
-			time.Sleep(checkInterval)
-			continue
-		}
-
-		if errors.IsNotFound(err) {
-			remainingTime := podRestartTimeout - time.Since(start)
-			r.logger.Debugf(
-				"Pod %s is not found, will wait %v more seconds",
-				podName,
-				remainingTime.Seconds(),
-			)
-			time.Sleep(checkInterval)
-			continue
-		}
-
-		if pod.Status.Phase == v1.PodRunning {
-			r.logger.Debugf("Found pod %s to be restarted and running", podName)
-			return nil
-		}
-	}
-}
-
 func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace string) {
 	r.k8sClient = r.createK8sClient(kubeconfigPath)
 
@@ -138,14 +97,6 @@ func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) er
 		podName,
 		metav1.DeleteOptions{},
 	)
-	if err != nil {
-		return err
-	}
 
-	return r.waitPodRunning(
-		namespace,
-		podName,
-		oldUID,
-		r.options.restartDuration,
-	)
+	return err
 }
