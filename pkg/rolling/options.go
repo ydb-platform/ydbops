@@ -2,7 +2,6 @@ package rolling
 
 import (
 	"fmt"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -126,8 +125,8 @@ func (o *RestartOptions) Validate() error {
 
 	o.SSHArgs = utils.ParseSSHArgs(rawSSHUnparsedArgs)
 
-	_, errFromIds := o.GetNodeIds()
-	_, errFromFQDNs := o.GetNodeFQDNs()
+	_, errFromIds := utils.GetNodeIds(o.Hosts)
+	_, errFromFQDNs := utils.GetNodeFQDNs(o.Hosts)
 	if errFromIds != nil && errFromFQDNs != nil {
 		return fmt.Errorf(
 			"failed to parse --hosts argument as node ids (%w) or host fqdns (%w)",
@@ -157,7 +156,7 @@ Examples:
 1) --ssh-args "pssh -A -J <some jump host> --yc-profile <YC profile name>"
 2) --ssh-args "ssh -o ProxyCommand=\"...\""`)
 
-	fs.StringSliceVar(&o.Hosts, "hosts", o.Hosts,
+	fs.StringSliceVar(&o.Hosts, "hosts", []string{},
 		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids,
 but you can not mix host FQDNs and node ids in this option. The list is comma-delimited.
   E.g.: '--hosts=1,2,3' or '--hosts=fqdn1,fqdn2,fqdn3'`)
@@ -216,38 +215,6 @@ func (o *RestartOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode 
 
 func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {
 	return durationpb.New(time.Second * time.Duration(o.RestartDuration) * time.Duration(o.RestartRetryNumber))
-}
-
-func (o *RestartOptions) GetNodeFQDNs() ([]string, error) {
-	hosts := make([]string, 0, len(o.Hosts))
-
-	for _, hostFqdn := range o.Hosts {
-		_, err := url.Parse(hostFqdn)
-		if err != nil {
-			return nil, fmt.Errorf("invalid host fqdn specified: %s", hostFqdn)
-		}
-
-		hosts = append(hosts, hostFqdn)
-	}
-
-	return hosts, nil
-}
-
-func (o *RestartOptions) GetNodeIds() ([]uint32, error) {
-	ids := make([]uint32, 0, len(o.Hosts))
-
-	for _, nodeID := range o.Hosts {
-		id, err := strconv.Atoi(nodeID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse node id: %w", err)
-		}
-		if id < 0 {
-			return nil, fmt.Errorf("invalid node id specified: %d, must be positive", id)
-		}
-		ids = append(ids, uint32(id))
-	}
-
-	return ids, nil
 }
 
 func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {

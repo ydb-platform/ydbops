@@ -37,3 +37,31 @@ var _ = Describe("Test parsing SSHArgs", func() {
 		),
 	)
 })
+
+var _ = Describe("Test parsing Hosts", func() {
+	It("Parse hosts as FQDNs with various symbols", func() {
+		Expect(utils.GetNodeFQDNs(
+			[]string{"simpleHost", "host-with-dashes", "abc.ydb.nebius.dev"},
+		)).To(Equal(
+			[]string{"simpleHost", "host-with-dashes", "abc.ydb.nebius.dev"},
+		))
+	})
+
+	DescribeTable("Parse host as ids",
+		func(input []string, expected []uint32) {
+			Expect(utils.GetNodeIds(input)).To(Equal(expected))
+		},
+		Entry("simplest case, three hosts each by themselves",
+			[]string{"1", "2", "3"},
+			[]uint32{1, 2, 3},
+		),
+		Entry("simplest range test",
+			[]string{"1-5"},
+			[]uint32{1, 2, 3, 4, 5},
+		),
+		Entry("real world example",
+			[]string{"1", "2", "3", "4-5"},
+			[]uint32{1, 2, 3, 4, 5},
+		),
+	)
+})
