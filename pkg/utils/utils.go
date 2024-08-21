@@ -80,7 +80,7 @@ func GetNodeFQDNs(hostsRaw []string) ([]string, error) {
 		hostFQDNs = append(hostFQDNs, hostFQDN)
 	}
 
-	return hostsRaw, nil
+	return hostFQDNs, nil
 }
 
 func GetNodeIds(hosts []string) ([]uint32, error) {
