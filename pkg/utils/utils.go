@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -64,4 +66,53 @@ func ParseSSHArgs(rawArgs string) []string {
 	}
 
 	return args
+}
+
+func GetNodeFQDNs(hostsRaw []string) ([]string, error) {
+	hostFQDNs := make([]string, 0, len(hostsRaw))
+
+	for _, hostFQDN := range hostsRaw {
+		_, err := url.Parse(hostFQDN)
+		if err != nil {
+			return nil, fmt.Errorf("invalid host fqdn specified: %s", hostFQDN)
+		}
+
+		hostFQDNs = append(hostFQDNs, hostFQDN)
+	}
+
+	return hostsRaw, nil
+}
+
+func GetNodeIds(hosts []string) ([]uint32, error) {
+	ids := make([]uint32, 0, len(hosts))
+
+	for _, nodeID := range hosts {
+		if strings.Contains(nodeID, "-") {
+			rangeParts := strings.Split(nodeID, "-")
+			start, err := strconv.Atoi(rangeParts[0])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse node id %v in range %s, %w", start, nodeID, err)
+			}
+			end, err := strconv.Atoi(rangeParts[1])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse node id %v in range %s, %w", end, nodeID, err)
+			}
+			for id := start; id <= end; id++ {
+				ids = append(ids, uint32(id))
+			}
+
+			continue
+		}
+
+		id, err := strconv.Atoi(nodeID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse node id: %w", err)
+		}
+		if id < 0 {
+			return nil, fmt.Errorf("invalid node id specified: %d, must be positive", id)
+		}
+		ids = append(ids, uint32(id))
+	}
+
+	return ids, nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/client/discovery"
 	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
+	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
 type Rolling struct {
@@ -112,8 +113,8 @@ func (r *Rolling) DoRestart() error {
 		return err
 	}
 
-	nodeIds, errIds := r.opts.GetNodeIds()
-	nodeFQDNs, errFqdns := r.opts.GetNodeFQDNs()
+	nodeIds, errIds := utils.GetNodeIds(r.opts.Hosts)
+	nodeFQDNs, errFqdns := utils.GetNodeFQDNs(r.opts.Hosts)
 	if errIds != nil && errFqdns != nil {
 		return fmt.Errorf(
 			"TODO parsing both in id mode and in fqdn mode failed: (%w), (%w)",
