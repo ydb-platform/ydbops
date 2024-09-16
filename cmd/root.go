@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
 	"github.com/ydb-platform/ydbops/cmd/restart"
@@ -58,19 +57,9 @@ func NewRootCommand(
 				return err
 			}
 
-			logLevel := "info"
-			if roptions.Verbose {
-				logLevel = "debug"
-			}
+			logLevelSetter.SetLevel(roptions.VerbosityLevel.Level())
 
-			lvc, err := zapcore.ParseLevel(logLevel)
-			if err != nil {
-				logger.Warn("Failed to set level")
-				return err
-			}
-			logLevelSetter.SetLevel(lvc)
-
-			zap.S().Debugf("Current logging level enabled: %s", logLevel)
+			zap.S().Debugf("Current logging level enabled: %s", roptions.VerbosityLevel.Level())
 			return nil
 		},
 		RunE: cli.RequireSubcommand,

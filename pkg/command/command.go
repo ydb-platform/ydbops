@@ -17,11 +17,11 @@ type Description struct {
 }
 
 type BaseOptions struct {
-	Auth          options.AuthOptions
-	GRPC          options.GRPC
-	Verbose       bool
-	ProfileFile   string
-	ActiveProfile string
+	Auth           options.AuthOptions
+	GRPC           options.GRPC
+	VerbosityLevel VerbosityLevel
+	ProfileFile    string
+	ActiveProfile  string
 }
 
 func (o *BaseOptions) Validate() error {
@@ -61,7 +61,9 @@ func (o *BaseOptions) DefineFlags(fs *pflag.FlagSet) {
 		defaultProfileLocation,
 		"Path to config file with profile data in yaml format. Default: $HOME/ydb/ydbops/config/config.yaml")
 
-	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
+	o.VerbosityLevel = newVerbosityLevel()
+	fl := fs.VarPF(&o.VerbosityLevel, "verbose", "v", "Switches log level from INFO to DEBUG")
+	fl.NoOptDefVal = "false"
 }
 
 func NewDescription(use, shortDescription, longDescription string) *Description {
