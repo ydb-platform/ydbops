@@ -61,7 +61,7 @@ func (o *BaseOptions) DefineFlags(fs *pflag.FlagSet) {
 		defaultProfileLocation,
 		"Path to config file with profile data in yaml format. Default: $HOME/ydb/ydbops/config/config.yaml")
 
-	fs.BoolVar(&o.Verbose, "verbose", false, "Switches log level from INFO to DEBUG")
+	fs.BoolVarP(&o.Verbose, "verbose", "v", false, "Switches log level from INFO to DEBUG")
 }
 
 func NewDescription(use, shortDescription, longDescription string) *Description {
