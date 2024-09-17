@@ -2,7 +2,6 @@ package rolling
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -391,24 +390,6 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 
 func (r *Rolling) logTask(task cms.MaintenanceTask) {
 	r.logger.Debugf("Maintenance task result:\n%s", prettyprint.TaskToString(task))
-	sb := strings.Builder{}
-	sb.WriteString(fmt.Sprintf("Uid: %s\n", task.GetTaskUid()))
-
-	if task.GetRetryAfter() != nil {
-		sb.WriteString(fmt.Sprintf("Retry after: %s\n", task.GetRetryAfter().AsTime().Format(time.DateTime)))
-	}
-
-	for _, gs := range task.GetActionGroupStates() {
-		as := gs.ActionStates[0]
-		sb.WriteString(fmt.Sprintf("  Lock on node %d ", as.Action.GetLockAction().Scope.GetNodeId()))
-		if as.Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED {
-			sb.WriteString(fmt.Sprintf("PERFORMED, until: %s", as.Deadline.AsTime().Format(time.DateTime)))
-		} else {
-			sb.WriteString(fmt.Sprintf("PENDING, %s", as.GetReason().String()))
-		}
-		sb.WriteString("\n")
-	}
-	r.logger.Debugf("Maintenance task result:\n%s", sb.String())
 }
 
 func (r *Rolling) logCompleteResult(result *Ydb_Maintenance.ManageActionResult) {
