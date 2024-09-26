@@ -124,13 +124,14 @@ func (r *Rolling) DoRestart() error {
 
 	nodesToRestart := r.restarter.Filter(
 		restarters.FilterNodeParams{
-			SelectedTenants: r.opts.TenantList,
-			SelectedNodeIds: nodeIds,
-			SelectedHosts:   nodeFQDNs,
-			StartedTime:     r.opts.StartedTime,
-			Version:         r.opts.VersionSpec,
-			ExcludeHosts:    r.opts.ExcludeHosts,
-			MaxStaticNodeId: uint32(r.opts.MaxStaticNodeId),
+			SelectedTenants:     r.opts.TenantList,
+			SelectedNodeIds:     nodeIds,
+			SelectedHosts:       nodeFQDNs,
+			SelectedDatacenters: r.opts.Datacenters,
+			StartedTime:         r.opts.StartedTime,
+			Version:             r.opts.VersionSpec,
+			ExcludeHosts:        r.opts.ExcludeHosts,
+			MaxStaticNodeId:     uint32(r.opts.MaxStaticNodeId),
 		},
 		restarters.ClusterNodesInfo{
 			TenantToNodeIds: r.state.tenantNameToNodeIds,

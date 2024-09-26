@@ -35,6 +35,7 @@ var (
 
 type RestartOptions struct {
 	AvailabilityMode   string
+	Datacenters        []string
 	Hosts              []string
 	ExcludeHosts       []string
 	RestartDuration    int
@@ -155,6 +156,10 @@ Double quotes are can be escaped with backward slash '\'.
 Examples:
 1) --ssh-args "pssh -A -J <some jump host> --yc-profile <YC profile name>"
 2) --ssh-args "ssh -o ProxyCommand=\"...\""`)
+
+	fs.StringSliceVar(&o.Datacenters, "dc", []string{},
+		`Filter hosts by specific datacenter. The list is comma-delimited.
+  E.g.: '--dc=ru-central1-a,ru-central1-b`)
 
 	fs.StringSliceVar(&o.Hosts, "hosts", []string{},
 		`Restart only specified hosts. You can specify a list of host FQDNs or a list of node ids,

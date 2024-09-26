@@ -44,19 +44,9 @@ func populateWithK8sRules(
 
 	selectedNodes := []*Ydb_Maintenance.Node{}
 
-	selectedNodes = append(
-		selectedNodes,
-		FilterByNodeIds(nodes, spec.SelectedNodeIds)...,
-	)
-
 	// TODO make this linear
 	for _, node := range nodes {
 		for _, selectedHostFQDN := range spec.SelectedHosts {
-			if node.Host == selectedHostFQDN {
-				selectedNodes = append(selectedNodes, node)
-				continue
-			}
-
 			if selectedHostFQDN == fqdnToPodName[node.Host] {
 				selectedNodes = append(selectedNodes, node)
 				continue
@@ -69,12 +59,14 @@ func populateWithK8sRules(
 
 func applyStorageK8sFilteringRules(
 	spec FilterNodeParams,
-	allNodes []*Ydb_Maintenance.Node,
+	cluster ClusterNodesInfo,
 	fqdnToPodName map[string]string,
 ) []*Ydb_Maintenance.Node {
-	allStorageNodes := FilterStorageNodes(allNodes, spec.MaxStaticNodeId)
+	allStorageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeId)
 
-	selectedNodes := populateWithK8sRules(allStorageNodes, spec, fqdnToPodName)
+	selectedByCMSNodes := PopulateByCommonFields(allStorageNodes, spec)
+	selectedByK8sNodes := populateWithK8sRules(allStorageNodes, spec, fqdnToPodName)
+	selectedNodes := MergeAndUnique(selectedByCMSNodes, selectedByK8sNodes)
 
 	filteredNodes := ExcludeByCommonFields(selectedNodes, spec)
 
@@ -88,7 +80,7 @@ func (r *StorageK8sRestarter) Filter(
 	storageLabelSelector := "app.kubernetes.io/component=storage-node"
 	r.prepareK8sState(r.Opts.kubeconfigPath, storageLabelSelector, r.Opts.namespace)
 
-	filteredNodes := applyStorageK8sFilteringRules(spec, cluster.AllNodes, r.FQDNToPodName)
+	filteredNodes := applyStorageK8sFilteringRules(spec, cluster, r.FQDNToPodName)
 
 	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", filteredNodes)
 	return filteredNodes
