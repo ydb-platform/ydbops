@@ -61,7 +61,10 @@ func FillDefaultsFromActiveProfile(configFile, profileName string) error {
 	}
 
 	for optionName, defValue := range profile.(map[any]any) {
-		option := pointersToProgramOptions[optionName.(string)]
+		option, ok := pointersToProgramOptions[optionName.(string)]
+		if !ok {
+			return fmt.Errorf("profile `%s` contains unsupported field `%s`", profileName, optionName)
+		}
 		if *option.ptr == option.defaultValue {
 			*option.ptr = defValue.(string)
 		}
