@@ -45,7 +45,7 @@ func (o *BaseOptions) DefineFlags(fs *pflag.FlagSet) {
 		"Override currently set profile name from --config-file")
 
 	defaultProfileLocation := ""
-	if home, present := os.LookupEnv("HOME"); present {
+	if home, err := os.UserHomeDir(); err == nil {
 		defaultProfileLocation = filepath.Join(home, "ydb", "ydbops", "config", "config.yaml")
 	}
 
