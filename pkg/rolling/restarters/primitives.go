@@ -41,6 +41,14 @@ func FilterByNodeIds(nodes []*Ydb_Maintenance.Node, nodeIds []uint32) []*Ydb_Mai
 	)
 }
 
+func FilterByDatacenters(nodes []*Ydb_Maintenance.Node, datacenters []string) []*Ydb_Maintenance.Node {
+	return collections.FilterBy(nodes,
+		func(node *Ydb_Maintenance.Node) bool {
+			return collections.Contains(datacenters, node.GetLocation().GetDataCenter())
+		},
+	)
+}
+
 func FilterByHostFQDN(nodes []*Ydb_Maintenance.Node, hostFQDNs []string) []*Ydb_Maintenance.Node {
 	return collections.FilterBy(nodes,
 		func(node *Ydb_Maintenance.Node) bool {
@@ -82,11 +90,15 @@ func SatisfiesStartingTime(node *Ydb_Maintenance.Node, startedTime *options.Star
 }
 
 func isInclusiveFilteringUnspecified(spec FilterNodeParams) bool {
-	return len(spec.SelectedHosts) == 0 && len(spec.SelectedNodeIds) == 0
+	return len(spec.SelectedDatacenters) == 0 && len(spec.SelectedHosts) == 0 && len(spec.SelectedNodeIds) == 0
 }
 
-func includeByHostIDOrFQDN(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
+func includeByFilterNodeParams(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {
 	selected := []*Ydb_Maintenance.Node{}
+
+	selected = append(
+		selected, FilterByDatacenters(nodes, spec.SelectedDatacenters)...,
+	)
 
 	selected = append(
 		selected, FilterByHostFQDN(nodes, spec.SelectedHosts)...,
@@ -106,7 +118,7 @@ func PopulateByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams
 		return nodes
 	}
 
-	return includeByHostIDOrFQDN(nodes, spec)
+	return includeByFilterNodeParams(nodes, spec)
 }
 
 func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams) []*Ydb_Maintenance.Node {

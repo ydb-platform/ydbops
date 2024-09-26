@@ -48,11 +48,12 @@ func applyTenantK8sFilteringRules(
 ) []*Ydb_Maintenance.Node {
 	tenantNodes := FilterTenantNodes(cluster.AllNodes)
 
-	selectedNodes := populateWithK8sRules(tenantNodes, spec, fqdnToPodName)
+	selectedByCMSNodes := PopulateByCommonFields(tenantNodes, spec)
+	selectedByK8sNodes := populateWithK8sRules(tenantNodes, spec, fqdnToPodName)
+	selectedNodes := MergeAndUnique(selectedByCMSNodes, selectedByK8sNodes)
 
-	selectedNodes = ExcludeByTenantNames(selectedNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
-
-	filteredNodes := ExcludeByCommonFields(selectedNodes, spec)
+	filteredByTenantNodes := ExcludeByTenantNames(selectedNodes, spec.SelectedTenants, cluster.TenantToNodeIds)
+	filteredNodes := ExcludeByCommonFields(filteredByTenantNodes, spec)
 
 	return filteredNodes
 }
