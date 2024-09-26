@@ -1,7 +1,6 @@
 package restarters
 
 import (
-	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -76,28 +75,28 @@ var _ = Describe("Test storage k8s Filter", func() {
 		}
 		nodeInfoMap := map[uint32]mock.TestNodeInfo{
 			1: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &firstDCName},
+				Datacenter: firstDCName,
 			},
 			2: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &firstDCName},
+				Datacenter: firstDCName,
 			},
 			3: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &firstDCName},
+				Datacenter: firstDCName,
 			},
 			4: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &secondDCName},
+				Datacenter: secondDCName,
 			},
 			5: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &secondDCName},
+				Datacenter: secondDCName,
 			},
 			6: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &secondDCName},
+				Datacenter: secondDCName,
 			},
 			7: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &secondDCName},
+				Datacenter: secondDCName,
 			},
 			8: {
-				Location: Ydb_Discovery.NodeLocation{DataCenter: &secondDCName},
+				Datacenter: secondDCName,
 			},
 		}
 

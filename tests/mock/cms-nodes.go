@@ -91,7 +91,7 @@ type TestNodeInfo struct {
 	IsDynnode  bool
 	TenantName string
 	Version    string
-	Location   Ydb_Discovery.NodeLocation
+	Datacenter string
 	State      Ydb_Maintenance.ItemState
 }
 
@@ -136,8 +136,9 @@ func CreateNodesFromShortConfig(nodeGroups [][]uint32, nodeInfo map[uint32]TestN
 				node.State = testNodeInfo.State
 			}
 
-			if len(testNodeInfo.Location.GetDataCenter()) > 0 {
-				node.Location = &testNodeInfo.Location
+			if len(testNodeInfo.Datacenter) > 0 {
+				datacenter := &testNodeInfo.Datacenter
+				node.Location.DataCenter = datacenter
 			}
 
 			nodes = append(nodes, node)
