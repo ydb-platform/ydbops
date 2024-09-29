@@ -60,8 +60,8 @@ var _ = Describe("Test parsing Hosts", func() {
 			[]uint32{1, 2, 3, 4, 5},
 		),
 		Entry("real world example",
-			[]string{"1", "2", "3", "4-5"},
-			[]uint32{1, 2, 3, 4, 5},
+			[]string{"1", "2", "4-8", "3"},
+			[]uint32{1, 2, 4, 5, 6, 7, 8, 3},
 		),
 	)
 })
