@@ -1,13 +1,10 @@
-# Implicit requirements
-# runner must have `docker` and `curl` installed (true on github-runners)
-
-name: tests
+name: run-tests
 
 on:
   push:
     branches:
       - 'master'
-  workflow_call:
+  pull_request:
 
 jobs:
   golangci:
@@ -17,15 +14,12 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        # with:
-        #   sparse-checkout: .github
-      - name: smart-checkout
-        uses: ./.github/actions/smart-checkout
+      - name: checkout
+        uses: actions/checkout@v4
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.58.1
   autoformatter:
     name: autoformat check
     concurrency:
@@ -33,11 +27,8 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        # with:
-        #   sparse-checkout: .github
-      - name: smart-checkout
-        uses: ./.github/actions/smart-checkout
+      - name: checkout
+        uses: actions/checkout@v4
 
       - name: Install Go
         uses: actions/setup-go@v3
@@ -61,11 +52,8 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        # with:
-        #   sparse-checkout: .github
-      - name: smart-checkout
-        uses: ./.github/actions/smart-checkout
+      - name: checkout
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v3
         with:
