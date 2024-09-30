@@ -187,9 +187,9 @@ after that would be considered a regular cluster failure`)
 
 	fs.StringVar(&versionUnparsedFlag, "version", "",
 		`Apply filter by node version.
-Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|==VERSION_STRING], e.g.:
+Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|(==|!=)VERSION_STRING], e.g.:
 '--version ~=24.1.2' or
-'--version ==24.1.2-ydb-stable-hotfix-5'`)
+'--version !=24.1.2-ydb-stable-hotfix-5'`)
 
 	fs.BoolVar(&o.Continue, "continue", false,
 		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes

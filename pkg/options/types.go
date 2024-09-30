@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+const (
+	equalSign       = "=="
+	notEqualSign    = "!="
+	lessThanSign    = "<"
+	greaterThanSign = ">"
+)
+
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
 type StartedTime struct {
@@ -44,23 +51,23 @@ func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
 	}
 
 	switch sign {
-	case "==":
+	case equalSign:
 		return res == 0
-	case "<":
+	case lessThanSign:
 		return res == -1
-	case ">":
+	case greaterThanSign:
 		return res == 1
-	case "!=":
+	case notEqualSign:
 		return res != 0
 	}
 	return false
 }
 
-func compareRaw(sign string, nodeVersion, userVersion string) bool {
+func compareRaw(sign, nodeVersion, userVersion string) bool {
 	switch sign {
-	case "==":
+	case equalSign:
 		return nodeVersion == userVersion
-	case "!=":
+	case notEqualSign:
 		return nodeVersion != userVersion
 	}
 	return false
