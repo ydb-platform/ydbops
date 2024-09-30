@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+const (
+	equalSign       = "=="
+	notEqualSign    = "!="
+	lessThanSign    = "<"
+	greaterThanSign = ">"
+)
+
 var AvailabilityModes = []string{"strong", "weak", "force"}
 
 type StartedTime struct {
@@ -22,16 +29,13 @@ type MajorMinorPatchVersion struct {
 }
 
 type RawVersion struct {
-	Raw string
+	Sign string
+	Raw  string
 }
 
 type VersionSpec interface {
 	Satisfies(otherVersion string) (bool, error)
 	String() string
-}
-
-func (v MajorMinorPatchVersion) String() string {
-	return fmt.Sprintf("%s%v.%v.%v", v.Sign, v.Major, v.Minor, v.Patch)
 }
 
 func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
@@ -47,14 +51,24 @@ func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
 	}
 
 	switch sign {
-	case "==":
+	case equalSign:
 		return res == 0
-	case "<":
+	case lessThanSign:
 		return res == -1
-	case ">":
+	case greaterThanSign:
 		return res == 1
-	case "!=":
+	case notEqualSign:
 		return res != 0
+	}
+	return false
+}
+
+func compareRaw(sign, nodeVersion, userVersion string) bool {
+	switch sign {
+	case equalSign:
+		return nodeVersion == userVersion
+	case notEqualSign:
+		return nodeVersion != userVersion
 	}
 	return false
 }
@@ -100,10 +114,18 @@ func (v MajorMinorPatchVersion) Satisfies(otherVersion string) (bool, error) {
 	), nil
 }
 
+func (v MajorMinorPatchVersion) String() string {
+	return fmt.Sprintf("%s%v.%v.%v", v.Sign, v.Major, v.Minor, v.Patch)
+}
+
 func (v RawVersion) Satisfies(otherVersion string) (bool, error) {
-	return v.Raw == otherVersion, nil
+	return compareRaw(
+		v.Sign,
+		otherVersion,
+		v.Raw,
+	), nil
 }
 
 func (v RawVersion) String() string {
-	return v.Raw
+	return fmt.Sprintf("%s%v", v.Sign, v.Raw)
 }
