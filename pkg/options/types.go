@@ -22,16 +22,13 @@ type MajorMinorPatchVersion struct {
 }
 
 type RawVersion struct {
-	Raw string
+	Sign string
+	Raw  string
 }
 
 type VersionSpec interface {
 	Satisfies(otherVersion string) (bool, error)
 	String() string
-}
-
-func (v MajorMinorPatchVersion) String() string {
-	return fmt.Sprintf("%s%v.%v.%v", v.Sign, v.Major, v.Minor, v.Patch)
 }
 
 func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
@@ -55,6 +52,16 @@ func compareMajorMinorPatch(sign string, nodeVersion, userVersion [3]int) bool {
 		return res == 1
 	case "!=":
 		return res != 0
+	}
+	return false
+}
+
+func compareRaw(sign string, nodeVersion, userVersion string) bool {
+	switch sign {
+	case "==":
+		return nodeVersion == userVersion
+	case "!=":
+		return nodeVersion != userVersion
 	}
 	return false
 }
@@ -100,10 +107,18 @@ func (v MajorMinorPatchVersion) Satisfies(otherVersion string) (bool, error) {
 	), nil
 }
 
+func (v MajorMinorPatchVersion) String() string {
+	return fmt.Sprintf("%s%v.%v.%v", v.Sign, v.Major, v.Minor, v.Patch)
+}
+
 func (v RawVersion) Satisfies(otherVersion string) (bool, error) {
-	return v.Raw == otherVersion, nil
+	return compareRaw(
+		v.Sign,
+		otherVersion,
+		v.Raw,
+	), nil
 }
 
 func (v RawVersion) String() string {
-	return v.Raw
+	return fmt.Sprintf("%s%v", v.Sign, v.Raw)
 }

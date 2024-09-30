@@ -29,7 +29,7 @@ var (
 	majorMinorPatchPattern = `^(>|<|!=|~=)(\d+|\*)\.(\d+|\*)\.(\d+|\*)$`
 	majorMinorPatchRegexp  = regexp.MustCompile(majorMinorPatchPattern)
 
-	rawPattern = `^==(.*)$`
+	rawPattern = `^(==|!=)(.*)$`
 	rawRegexp  = regexp.MustCompile(rawPattern)
 )
 
@@ -238,11 +238,12 @@ func parseVersionFlag(versionUnparsedFlag string) (options.VersionSpec, error) {
 	}
 
 	matches = rawRegexp.FindStringSubmatch(versionUnparsedFlag)
-	if len(matches) == 2 {
+	if len(matches) == 3 {
 		// `--version` value is an arbitrary string value, and will
 		// be compared directly
 		return &options.RawVersion{
-			Raw: matches[1],
+			Sign: matches[1],
+			Raw:  matches[2],
 		}, nil
 	}
 
