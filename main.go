@@ -70,5 +70,9 @@ func main() {
 		_ = logger.Sync()
 	}()
 	cmd.InitRootCommandTree(root, factory)
-	_ = root.Execute()
+	err := root.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+
 }
