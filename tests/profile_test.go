@@ -66,6 +66,7 @@ var _ = Describe("Test Profile", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -78,6 +79,7 @@ var _ = Describe("Test Profile", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -143,6 +145,7 @@ var _ = Describe("Test Profile", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -155,6 +158,7 @@ var _ = Describe("Test Profile", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{

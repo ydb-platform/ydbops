@@ -215,6 +215,24 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 		if err != nil {
 			r.logger.Warnf("Failed to refresh maintenance task: %+v", err)
 		}
+
+		// NOTE: compatibility check will not fire if rolling restart just
+		// finished restarting last nodes. It will only fire when some
+		// nodes still remain and we are waiting for CMS anyway.
+
+		// But since 99 out of 100 times we want to rolling-restart more than
+		// 1 node, this check will fire at least once and it would be enough.
+
+		// In other words, if the whole cluster has restarted without
+		// compatibility issues, we don't want to force the user to wait extra
+		// tens of seconds after last iteration to simply check compatibility
+		// issues once more. We better exit quickly.
+		if !r.opts.SuppressCompatibilityCheck {
+			incompatible := r.tryDetectCompatibilityIssues()
+			if incompatible != nil {
+				return incompatible
+			}
+		}
 	}
 
 	r.logger.Infof("Maintenance task processing loop completed")
@@ -386,6 +404,59 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 			return fmt.Errorf("failed to drop maintenance task: %w", err)
 		}
 	}
+	return nil
+}
+
+type MajorMinor struct {
+	major int
+	minor int
+}
+
+func (r *Rolling) tryDetectCompatibilityIssues() error {
+	nodes, err := r.cms.Nodes()
+	if err != nil {
+		return fmt.Errorf("failed to fetch nodes while checking for compatibility issues: %w", err)
+	}
+
+	metVersions := make(map[MajorMinor]bool)
+	unknownVersionNodes := 0
+	for _, node := range nodes {
+		fmt.Println(node.Version)
+		major, minor, _, err := utils.ParseMajorMinorPatchFromVersion(node.Version)
+		if err == nil {
+			metVersions[MajorMinor{
+				major: major,
+				minor: minor,
+			}] = true
+		} else {
+			unknownVersionNodes++
+		}
+	}
+
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println("AAAAAAAAAAA")
+	fmt.Println(metVersions)
+
+	if len(metVersions) > 2 {
+		return fmt.Errorf(
+			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major. 
+			Please STOP restarting and check the connectivity between nodes on different versions. Range of versions found: %v`,
+			collections.Keys(metVersions),
+		)
+	}
+
+	if unknownVersionNodes > 0 {
+		r.logger.Warnf(
+			`No incompatible versions have been detected. However, %v nodes reported unparsable versions. 
+			You may have introduced incompatible versions to the cluster`, unknownVersionNodes,
+		)
+	}
+
 	return nil
 }
 

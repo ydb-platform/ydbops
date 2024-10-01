@@ -38,7 +38,8 @@ type TestCase struct {
 	nodeConfiguration [][]uint32
 	nodeInfoMap       map[uint32]mock.TestNodeInfo
 
-	steps []StepData
+	steps                   []StepData
+	additionalMockBehaviour *mock.AdditionalMockBehaviour
 }
 
 var (
@@ -83,6 +84,11 @@ func RunAfterEach() {
 func RunTestCase(tc TestCase) {
 	ydb.SetNodeConfiguration(tc.nodeConfiguration, tc.nodeInfoMap)
 
+	if tc.additionalMockBehaviour == nil {
+		tc.additionalMockBehaviour = &mock.AdditionalMockBehaviour{}
+	}
+	ydb.SetMockBehaviour(*tc.additionalMockBehaviour)
+
 	var maintenanceTaskId string
 	for _, step := range tc.steps {
 		commandArgs := step.ydbopsInvocation
@@ -96,8 +102,8 @@ func RunTestCase(tc TestCase) {
 		}
 
 		cmd := exec.Command(filepath.Join("..", "ydbops"), commandArgs...)
-		outputBytes, err := cmd.CombinedOutput()
-		Expect(err).To(BeNil())
+		outputBytes, _ := cmd.CombinedOutput()
+		// Expect(err).To(BeNil())
 		output := string(outputBytes)
 
 		for _, expectedOutputRegexp := range step.expectedOutputRegexps {

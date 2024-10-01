@@ -2,9 +2,9 @@ package options
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 	"time"
+
+	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
 const (
@@ -73,36 +73,8 @@ func compareRaw(sign, nodeVersion, userVersion string) bool {
 	return false
 }
 
-func tryParseWith(reString, version string) (int, int, int, bool) {
-	re := regexp.MustCompile(reString)
-	matches := re.FindStringSubmatch(version)
-	if len(matches) == 4 {
-		num1, _ := strconv.Atoi(matches[1])
-		num2, _ := strconv.Atoi(matches[2])
-		num3, _ := strconv.Atoi(matches[3])
-		return num1, num2, num3, true
-	}
-	return 0, 0, 0, false
-}
-
-func parseNodeVersion(version string) (int, int, int, error) {
-	pattern1 := `^ydb-stable-(\d+)-(\d+)-(\d+).*$`
-	major, minor, patch, parsed := tryParseWith(pattern1, version)
-	if parsed {
-		return major, minor, patch, nil
-	}
-
-	pattern2 := `^(\d+)\.(\d+)\.(\d+).*$`
-	major, minor, patch, parsed = tryParseWith(pattern2, version)
-	if parsed {
-		return major, minor, patch, nil
-	}
-
-	return 0, 0, 0, fmt.Errorf("failed to parse the version number in any of the known patterns")
-}
-
 func (v MajorMinorPatchVersion) Satisfies(otherVersion string) (bool, error) {
-	major, minor, patch, err := parseNodeVersion(otherVersion)
+	major, minor, patch, err := utils.ParseMajorMinorPatchFromVersion(otherVersion)
 	if err != nil {
 		return false, fmt.Errorf("Failed to extract major.minor.patch from version %s", otherVersion)
 	}

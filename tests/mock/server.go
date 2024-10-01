@@ -38,15 +38,20 @@ type fakeMaintenanceTask struct {
 	actionGroupStates []*ActionGroupStates
 }
 
+type AdditionalMockBehaviour struct {
+	RestartNodesOnNewVersion string
+}
+
 type YdbMock struct {
 	Ydb_Maintenance_V1.UnimplementedMaintenanceServiceServer
 	Ydb_Cms_V1.UnimplementedCmsServiceServer
 	Ydb_Auth_V1.UnimplementedAuthServiceServer
 	Ydb_Discovery_V1.UnimplementedDiscoveryServiceServer
 
-	grpcServer *grpc.Server
-	caFile     string
-	keyFile    string
+	grpcServer              *grpc.Server
+	caFile                  string
+	keyFile                 string
+	additionalMockBehaviour AdditionalMockBehaviour
 
 	// This field contains the list of Nodes that is suitable to return
 	// to ListClusterNodes request from rolling restart.
@@ -165,8 +170,26 @@ func (s *YdbMock) CompleteAction(ctx context.Context, req *CompleteActionRequest
 	s.RequestLog = append(s.RequestLog, req)
 
 	actionStatuses := []*ManageActionResult_Status{}
+
 	for _, completedActionUid := range req.ActionUids {
+		task := s.tasks[completedActionUid.TaskUid]
+
+		if s.additionalMockBehaviour.RestartNodesOnNewVersion != "" {
+			for _, actionGroup := range task.actionGroups {
+				lock := actionGroup.Actions[0].GetLockAction()
+				nodeHost := lock.Scope.GetHost()
+				nodeId := lock.Scope.GetNodeId()
+
+				for _, node := range s.nodes {
+					if node.NodeId == nodeId || node.Host == nodeHost {
+						node.Version = s.additionalMockBehaviour.RestartNodesOnNewVersion
+					}
+				}
+			}
+		}
+
 		s.cleanupActionByID(completedActionUid.ActionId)
+
 		actionStatuses = append(actionStatuses, &ManageActionResult_Status{
 			ActionUid: completedActionUid,
 			Status:    Ydb.StatusIds_SUCCESS,
@@ -277,4 +300,8 @@ func (s *YdbMock) StartOn(port int) {
 
 func (s *YdbMock) Teardown() {
 	s.grpcServer.GracefulStop()
+}
+
+func (s *YdbMock) SetMockBehaviour(additionalMockBehaviour AdditionalMockBehaviour) {
+	s.additionalMockBehaviour = additionalMockBehaviour
 }
