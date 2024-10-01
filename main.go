@@ -54,7 +54,7 @@ func initClients(
 	discoveryClient = discovery.NewDiscoveryClient(cf, logger, cp)
 }
 
-func main() {
+func mainNoExit() error {
 	logLevelSetter, logger := createLogger("info")
 	baseOptions = &command.BaseOptions{}
 	root := cmd.NewRootCommand(logLevelSetter, logger.Sugar(), baseOptions)
@@ -70,5 +70,12 @@ func main() {
 		_ = logger.Sync()
 	}()
 	cmd.InitRootCommandTree(root, factory)
-	_ = root.Execute()
+
+	return root.Execute()
+}
+
+func main() {
+	if err := mainNoExit(); err != nil {
+		os.Exit(1)
+	}
 }
