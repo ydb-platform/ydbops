@@ -12,6 +12,11 @@ For now, please use the below info for reference only, it might be slightly outd
 
 1. Go 1.21
 
+## How to build
+
+Execute build.sh
+Also Dockerfile can be used as a part of other multi-stage dockerfiles.
+
 ## How to run tests:
 
 Ginkgo testing library is used. Do:
