@@ -259,7 +259,6 @@ linters:
     - predeclared
     - rowserrcheck
     - revive
-    - staticcheck
 #    - stylecheck
 #    - tagliatelle
 #    - testpackage
@@ -327,8 +326,5 @@ issues:
         - unused
         - unparam
         - gocritic
-    - path: topic/topicreader/reader_example_test.go
-      linters:
-        - staticcheck
     - path: _test\.go
       text: "ydb.Connection is deprecated"

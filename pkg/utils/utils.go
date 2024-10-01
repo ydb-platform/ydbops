@@ -130,7 +130,7 @@ func tryParseWith(reString, version string) (int, int, int, bool) {
 	return 0, 0, 0, false
 }
 
-func ParseMajorMinorPatchFromVersion(version string) (int, int, int, error) {
+func ParseMajorMinorPatchFromVersion(version string) (major, minor, patch int, err error) {
 	pattern1 := `^ydb-stable-(\d+)-(\d+)-(\d+).*$`
 	major, minor, patch, parsed := tryParseWith(pattern1, version)
 	if parsed {
