@@ -421,7 +421,6 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 	metVersions := make(map[MajorMinor]bool)
 	unknownVersionNodes := 0
 	for _, node := range nodes {
-		fmt.Println(node.Version)
 		major, minor, _, err := utils.ParseMajorMinorPatchFromVersion(node.Version)
 		if err == nil {
 			metVersions[MajorMinor{
@@ -432,15 +431,6 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 			unknownVersionNodes++
 		}
 	}
-
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println("AAAAAAAAAAA")
-	fmt.Println(metVersions)
 
 	if len(metVersions) > 2 {
 		return fmt.Errorf(
