@@ -466,7 +466,10 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 	if incompatibleVersions != "" {
 		return fmt.Errorf(
 			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major. 
-			Please STOP restarting and check the connectivity between nodes on different versions. Triggered this check: %s. Range of versions found: %v`,
+			Please STOP restarting and check the connectivity between nodes on different versions.
+			Triggered this check: %s.
+			Range of versions found: %v.
+			If you are absolutely sure in what you are doing, see --suppress-compat-check`,
 			incompatibleVersions, r.state.knownVersions,
 		)
 	}
