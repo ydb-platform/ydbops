@@ -2,6 +2,7 @@ package rolling
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -31,7 +32,10 @@ type Rolling struct {
 	completedActions []*Ydb_Maintenance.ActionUid
 }
 
+type MajorToMinors map[int]map[int]bool
+
 type state struct {
+	knownVersions                  MajorToMinors
 	nodes                          map[uint32]*Ydb_Maintenance.Node
 	inactiveNodes                  map[uint32]*Ydb_Maintenance.Node
 	tenantNameToNodeIds            map[string][]uint32
@@ -379,6 +383,7 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
+		knownVersions:                  make(MajorToMinors),
 		tenantNameToNodeIds:            r.populateTenantToNodesMapping(activeNodes),
 		tenants:                        tenants,
 		userSID:                        userSID,
@@ -407,9 +412,20 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 	return nil
 }
 
-type MajorMinor struct {
-	major int
-	minor int
+func findLowHigh(minors map[int]bool) (low, high int) {
+	low = math.MaxInt
+	high = math.MinInt
+
+	for minor := range minors {
+		if minor < low {
+			low = minor
+		}
+		if minor > high {
+			high = minor
+		}
+	}
+
+	return low, high
 }
 
 func (r *Rolling) tryDetectCompatibilityIssues() error {
@@ -418,25 +434,40 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 		return fmt.Errorf("failed to fetch nodes while checking for compatibility issues: %w", err)
 	}
 
-	metVersions := make(map[MajorMinor]bool)
 	unknownVersionNodes := 0
 	for _, node := range nodes {
 		major, minor, _, err := utils.ParseMajorMinorPatchFromVersion(node.Version)
 		if err == nil {
-			metVersions[MajorMinor{
-				major: major,
-				minor: minor,
-			}] = true
+			if _, exists := r.state.knownVersions[major]; !exists {
+				r.state.knownVersions[major] = make(map[int]bool)
+			}
+			r.state.knownVersions[major][minor] = true
 		} else {
 			unknownVersionNodes++
 		}
 	}
 
-	if len(metVersions) > 2 {
+	incompatibleVersions := ""
+
+	for major, minors := range r.state.knownVersions {
+		low, high := findLowHigh(minors)
+		if high-low > 1 {
+			incompatibleVersions = fmt.Sprintf("%v-%v with %v-%v, minors too far", major, high, major, low)
+		}
+
+		if prevMinors, exists := r.state.knownVersions[major-1]; exists {
+			prevLow, prevHigh := findLowHigh(prevMinors)
+			if prevLow != prevHigh {
+				incompatibleVersions = fmt.Sprintf("%v major is incompatible with %v-%v", major, major-1, prevLow)
+			}
+		}
+	}
+
+	if incompatibleVersions != "" {
 		return fmt.Errorf(
 			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major. 
-			Please STOP restarting and check the connectivity between nodes on different versions. Range of versions found: %v`,
-			collections.Keys(metVersions),
+			Please STOP restarting and check the connectivity between nodes on different versions. Triggered this check: %s. Range of versions found: %v`,
+			incompatibleVersions, r.state.knownVersions,
 		)
 	}
 

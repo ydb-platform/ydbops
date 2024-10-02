@@ -874,6 +874,9 @@ var _ = Describe("Test Rolling", func() {
 						},
 						&Ydb_Maintenance.ListClusterNodesRequest{},
 					},
+					expectedOutputRegexps: []string{
+						".*Triggered this check: 24 major is incompatible with 23-3.*",
+					},
 				},
 			},
 		},
