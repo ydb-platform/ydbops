@@ -266,7 +266,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	)
 
 	if len(performed) == 0 {
-		r.logger.Info("No actions can be taken yet, waiting for CMS to move some actions to PERFORMED; Got issues: ", actionStatesBuf.String())
+		r.logger.Info("No actions can be taken yet, CMS didn't move any actions to PERFORMED because of: ", actionStatesBuf.String())
 		return false
 	}
 
