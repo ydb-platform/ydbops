@@ -3,6 +3,7 @@ package rolling
 import (
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -428,6 +429,26 @@ func findLowHigh(minors map[int]bool) (low, high int) {
 	return low, high
 }
 
+func checkWithinOneMajor(major int, minors map[int]bool, message *strings.Builder) {
+	low, high := findLowHigh(minors)
+	if high-low > 1 {
+		message.WriteString(fmt.Sprintf("%v-%v with %v-%v, minors too far\n", major, high, major, low))
+	}
+}
+
+func checkWithPreviousMajors(curMajor int, knownVersions MajorToMinors, message *strings.Builder) {
+	for prevMajor, prevMinors := range knownVersions {
+		if prevMajor >= curMajor {
+			continue
+		}
+
+		prevLow, prevHigh := findLowHigh(prevMinors)
+		if prevLow != prevHigh {
+			message.WriteString(fmt.Sprintf("%v major is incompatible with %v-%v\n", curMajor, prevMajor, prevLow))
+		}
+	}
+}
+
 func (r *Rolling) tryDetectCompatibilityIssues() error {
 	nodes, err := r.cms.Nodes()
 	if err != nil {
@@ -447,30 +468,21 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 		}
 	}
 
-	incompatibleVersions := ""
+	var message strings.Builder
 
 	for major, minors := range r.state.knownVersions {
-		low, high := findLowHigh(minors)
-		if high-low > 1 {
-			incompatibleVersions = fmt.Sprintf("%v-%v with %v-%v, minors too far", major, high, major, low)
-		}
-
-		if prevMinors, exists := r.state.knownVersions[major-1]; exists {
-			prevLow, prevHigh := findLowHigh(prevMinors)
-			if prevLow != prevHigh {
-				incompatibleVersions = fmt.Sprintf("%v major is incompatible with %v-%v", major, major-1, prevLow)
-			}
-		}
+		checkWithinOneMajor(major, minors, &message)
+		checkWithPreviousMajors(major, r.state.knownVersions, &message)
 	}
 
-	if incompatibleVersions != "" {
+	if message.Len() > 0 {
 		return fmt.Errorf(
 			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major. 
 			Please STOP restarting and check the connectivity between nodes on different versions.
 			Triggered this check: %s.
 			Range of versions found: %v.
 			If you are absolutely sure in what you are doing, see --suppress-compat-check`,
-			incompatibleVersions, r.state.knownVersions,
+			message.String(), r.state.knownVersions,
 		)
 	}
 
