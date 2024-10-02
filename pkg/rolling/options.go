@@ -34,14 +34,15 @@ var (
 )
 
 type RestartOptions struct {
-	AvailabilityMode   string
-	Datacenters        []string
-	Hosts              []string
-	ExcludeHosts       []string
-	RestartDuration    int
-	RestartRetryNumber int
-	Version            string
-	CMSQueryInterval   int
+	AvailabilityMode           string
+	Datacenters                []string
+	Hosts                      []string
+	ExcludeHosts               []string
+	RestartDuration            int
+	RestartRetryNumber         int
+	Version                    string
+	CMSQueryInterval           int
+	SuppressCompatibilityCheck bool
 
 	StartedTime *options.StartedTime
 	VersionSpec options.VersionSpec
@@ -199,6 +200,10 @@ the ydbops utility is stateless. Use at your own risk.`)
 	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", restarters.DefaultMaxStaticNodeId,
 		`This argument is used to help ydbops distinguish storage and dynamic nodes.
 Nodes with this nodeId or less will be considered storage.`)
+
+	fs.BoolVar(&o.SuppressCompatibilityCheck, "suppress-compat-check", false,
+		`By default, nodes within one cluster can differ by at most one major release. 
+ydbops will try to figure out if you broke this rule by comparing before\after of some restarted node.`)
 
 	profile.PopulateFromProfileLater(
 		fs.StringVar, &o.KubeconfigPath, "kubeconfig",

@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -115,4 +116,32 @@ func GetNodeIds(hosts []string) ([]uint32, error) {
 	}
 
 	return ids, nil
+}
+
+func tryParseWith(reString, version string) (int, int, int, bool) {
+	re := regexp.MustCompile(reString)
+	matches := re.FindStringSubmatch(version)
+	if len(matches) == 4 {
+		num1, _ := strconv.Atoi(matches[1])
+		num2, _ := strconv.Atoi(matches[2])
+		num3, _ := strconv.Atoi(matches[3])
+		return num1, num2, num3, true
+	}
+	return 0, 0, 0, false
+}
+
+func ParseMajorMinorPatchFromVersion(version string) (major, minor, patch int, err error) {
+	pattern1 := `^ydb-stable-(\d+)-(\d+)-(\d+).*$`
+	major, minor, patch, parsed := tryParseWith(pattern1, version)
+	if parsed {
+		return major, minor, patch, nil
+	}
+
+	pattern2 := `^(\d+)\.(\d+)\.(\d+).*$`
+	major, minor, patch, parsed = tryParseWith(pattern2, version)
+	if parsed {
+		return major, minor, patch, nil
+	}
+
+	return 0, 0, 0, fmt.Errorf("failed to parse the version number in any of the known patterns")
 }

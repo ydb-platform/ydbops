@@ -2,6 +2,8 @@ package rolling
 
 import (
 	"fmt"
+	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,7 +33,10 @@ type Rolling struct {
 	completedActions []*Ydb_Maintenance.ActionUid
 }
 
+type MajorToMinors map[int]map[int]bool
+
 type state struct {
+	knownVersions                  MajorToMinors
 	nodes                          map[uint32]*Ydb_Maintenance.Node
 	inactiveNodes                  map[uint32]*Ydb_Maintenance.Node
 	tenantNameToNodeIds            map[string][]uint32
@@ -215,6 +220,24 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 		if err != nil {
 			r.logger.Warnf("Failed to refresh maintenance task: %+v", err)
 		}
+
+		// NOTE: compatibility check will not fire if rolling restart just
+		// finished restarting last nodes. It will only fire when some
+		// nodes still remain and we are waiting for CMS anyway.
+
+		// But since 99 out of 100 times we want to rolling-restart more than
+		// 1 node, this check will fire at least once and it would be enough.
+
+		// In other words, if the whole cluster has restarted without
+		// compatibility issues, we don't want to force the user to wait extra
+		// tens of seconds after last iteration to simply check compatibility
+		// issues once more. We better exit quickly.
+		if !r.opts.SuppressCompatibilityCheck {
+			incompatible := r.tryDetectCompatibilityIssues()
+			if incompatible != nil {
+				return incompatible
+			}
+		}
 	}
 
 	r.logger.Infof("Maintenance task processing loop completed")
@@ -361,6 +384,7 @@ func (r *Rolling) prepareState() (*state, error) {
 	}
 
 	return &state{
+		knownVersions:                  make(MajorToMinors),
 		tenantNameToNodeIds:            r.populateTenantToNodesMapping(activeNodes),
 		tenants:                        tenants,
 		userSID:                        userSID,
@@ -386,6 +410,89 @@ func (r *Rolling) cleanupOldRollingRestarts() error {
 			return fmt.Errorf("failed to drop maintenance task: %w", err)
 		}
 	}
+	return nil
+}
+
+func findLowHigh(minors map[int]bool) (low, high int) {
+	low = math.MaxInt
+	high = math.MinInt
+
+	for minor := range minors {
+		if minor < low {
+			low = minor
+		}
+		if minor > high {
+			high = minor
+		}
+	}
+
+	return low, high
+}
+
+func checkWithinOneMajor(major int, minors map[int]bool, message *strings.Builder) {
+	low, high := findLowHigh(minors)
+	if high-low > 1 {
+		fmt.Fprintf(message, "%v-%v with %v-%v, minors too far\n", major, high, major, low)
+	}
+}
+
+func checkWithPreviousMajors(curMajor int, knownVersions MajorToMinors, message *strings.Builder) {
+	for prevMajor, prevMinors := range knownVersions {
+		if prevMajor >= curMajor {
+			continue
+		}
+
+		prevLow, prevHigh := findLowHigh(prevMinors)
+		if prevLow != prevHigh {
+			fmt.Fprintf(message, "%v major is incompatible with %v-%v\n", curMajor, prevMajor, prevLow)
+		}
+	}
+}
+
+func (r *Rolling) tryDetectCompatibilityIssues() error {
+	nodes, err := r.cms.Nodes()
+	if err != nil {
+		return fmt.Errorf("failed to fetch nodes while checking for compatibility issues: %w", err)
+	}
+
+	unknownVersionNodes := 0
+	for _, node := range nodes {
+		major, minor, _, err := utils.ParseMajorMinorPatchFromVersion(node.Version)
+		if err == nil {
+			if _, exists := r.state.knownVersions[major]; !exists {
+				r.state.knownVersions[major] = make(map[int]bool)
+			}
+			r.state.knownVersions[major][minor] = true
+		} else {
+			unknownVersionNodes++
+		}
+	}
+
+	var message strings.Builder
+
+	for major, minors := range r.state.knownVersions {
+		checkWithinOneMajor(major, minors, &message)
+		checkWithPreviousMajors(major, r.state.knownVersions, &message)
+	}
+
+	if message.Len() > 0 {
+		return fmt.Errorf(
+			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major. 
+			Please STOP restarting and check the connectivity between nodes on different versions.
+			Triggered this check: %s.
+			Range of versions found: %v.
+			If you are absolutely sure in what you are doing, see --suppress-compat-check`,
+			message.String(), r.state.knownVersions,
+		)
+	}
+
+	if unknownVersionNodes > 0 {
+		r.logger.Warnf(
+			`No incompatible versions have been detected. However, %v nodes reported unparsable versions. 
+			You may have introduced incompatible versions to the cluster`, unknownVersionNodes,
+		)
+	}
+
 	return nil
 }
 

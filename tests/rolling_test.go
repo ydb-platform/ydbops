@@ -83,6 +83,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-uuid-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -147,6 +148,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -159,6 +161,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -279,6 +282,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -291,6 +295,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -315,9 +320,6 @@ var _ = Describe("Test Rolling", func() {
 				},
 				2: {
 					Version: "ydb-stable-24-2-0",
-				},
-				3: {
-					Version: "ydb-stable-24-3-0",
 				},
 			},
 			steps: []StepData{
@@ -351,7 +353,7 @@ var _ = Describe("Test Rolling", func() {
 								Description:      "Rolling restart maintenance task",
 								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 							},
-							ActionGroups: mock.MakeActionGroupsFromNodeIds(2, 3),
+							ActionGroups: mock.MakeActionGroupsFromNodeIds(2),
 						},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
@@ -359,18 +361,6 @@ var _ = Describe("Test Rolling", func() {
 									TaskUid:  "task-UUID-1",
 									GroupId:  "group-UUID-1",
 									ActionId: "action-UUID-1",
-								},
-							},
-						},
-						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
-							TaskUid: "task-UUID-1",
-						},
-						&Ydb_Maintenance.CompleteActionRequest{
-							ActionUids: []*Ydb_Maintenance.ActionUid{
-								{
-									TaskUid:  "task-UUID-1",
-									GroupId:  "group-UUID-2",
-									ActionId: "action-UUID-2",
 								},
 							},
 						},
@@ -501,6 +491,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -579,6 +570,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -666,6 +658,7 @@ var _ = Describe("Test Rolling", func() {
 						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 							TaskUid: "task-UUID-1",
 						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
 						&Ydb_Maintenance.CompleteActionRequest{
 							ActionUids: []*Ydb_Maintenance.ActionUid{
 								{
@@ -803,6 +796,86 @@ var _ = Describe("Test Rolling", func() {
 								},
 							},
 						},
+					},
+				},
+			},
+		},
+		),
+		Entry("Disallow more than 2 major-minor combinations in the cluster", TestCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3},
+				{4},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				1: {
+					IsDynnode: false,
+					Version:   "23.4.1",
+				},
+				2: {
+					IsDynnode: false,
+					Version:   "23.4.1",
+				},
+				3: {
+					IsDynnode: false,
+					Version:   "23.4.1",
+				},
+				4: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant",
+					Version:    "23.3.1",
+				},
+			},
+			additionalMockBehaviour: &mock.AdditionalMockBehaviour{
+				RestartNodesOnNewVersion: "24.1.1",
+			},
+			steps: []StepData{
+				{
+					ydbopsInvocation: []string{
+						"--endpoint", "grpcs://localhost:2135",
+						"--verbose",
+						"--availability-mode", "strong",
+						"--user", mock.TestUser,
+						"--cms-query-interval", "1",
+						"run",
+						"--hosts", "1,2",
+						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+					},
+					expectedRequests: []proto.Message{
+						&Ydb_Auth.LoginRequest{
+							User:     mock.TestUser,
+							Password: mock.TestPassword,
+						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
+						&Ydb_Cms.ListDatabasesRequest{},
+						&Ydb_Discovery.WhoAmIRequest{},
+						&Ydb_Maintenance.ListMaintenanceTasksRequest{
+							User: &mock.TestUser,
+						},
+						&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+							TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+								TaskUid:          "task-UUID-1",
+								Description:      "Rolling restart maintenance task",
+								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+							},
+							ActionGroups: mock.MakeActionGroupsFromNodeIds(1, 2),
+						},
+						&Ydb_Maintenance.CompleteActionRequest{
+							ActionUids: []*Ydb_Maintenance.ActionUid{
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-1",
+									ActionId: "action-UUID-1",
+								},
+							},
+						},
+						&Ydb_Maintenance.RefreshMaintenanceTaskRequest{
+							TaskUid: "task-UUID-1",
+						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
+					},
+					expectedOutputRegexps: []string{
+						".*Triggered this check: 24 major is incompatible with 23-3.*",
 					},
 				},
 			},
