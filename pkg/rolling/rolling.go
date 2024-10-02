@@ -432,7 +432,7 @@ func findLowHigh(minors map[int]bool) (low, high int) {
 func checkWithinOneMajor(major int, minors map[int]bool, message *strings.Builder) {
 	low, high := findLowHigh(minors)
 	if high-low > 1 {
-		message.WriteString(fmt.Sprintf("%v-%v with %v-%v, minors too far\n", major, high, major, low))
+		fmt.Fprintf(message, "%v-%v with %v-%v, minors too far\n", major, high, major, low)
 	}
 }
 
@@ -444,7 +444,7 @@ func checkWithPreviousMajors(curMajor int, knownVersions MajorToMinors, message 
 
 		prevLow, prevHigh := findLowHigh(prevMinors)
 		if prevLow != prevHigh {
-			message.WriteString(fmt.Sprintf("%v major is incompatible with %v-%v\n", curMajor, prevMajor, prevLow))
+			fmt.Fprintf(message, "%v major is incompatible with %v-%v\n", curMajor, prevMajor, prevLow)
 		}
 	}
 }
