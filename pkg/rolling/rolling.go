@@ -1,6 +1,7 @@
 package rolling
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strings"
@@ -246,14 +247,26 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 
 func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates, restartedNodes *int) bool {
 	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
+
+	var actionStatesBuf bytes.Buffer
 	performed := collections.FilterBy(actions,
 		func(gs *Ydb_Maintenance.ActionGroupStates) bool {
-			return gs.ActionStates[0].Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED
+			st := gs.ActionStates[0]
+			if st.Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED {
+				return true
+			}
+
+			details := st.GetReasonDetails()
+			if details != "" {
+				actionStatesBuf.WriteString(st.GetReasonDetails())
+				actionStatesBuf.WriteString("\n")
+			}
+			return false
 		},
 	)
 
 	if len(performed) == 0 {
-		r.logger.Info("No actions can be taken yet, waiting for CMS to move some actions to PERFORMED...")
+		r.logger.Info("No actions can be taken yet, waiting for CMS to move some actions to PERFORMED; Got issues: ", actionStatesBuf.String())
 		return false
 	}
 
@@ -477,7 +490,7 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 
 	if message.Len() > 0 {
 		return fmt.Errorf(
-			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major. 
+			`your invocation introduced incompatibility between nodes. Nodes must not differ by more than one major.
 			Please STOP restarting and check the connectivity between nodes on different versions.
 			Triggered this check: %s.
 			Range of versions found: %v.
@@ -488,7 +501,7 @@ func (r *Rolling) tryDetectCompatibilityIssues() error {
 
 	if unknownVersionNodes > 0 {
 		r.logger.Warnf(
-			`No incompatible versions have been detected. However, %v nodes reported unparsable versions. 
+			`No incompatible versions have been detected. However, %v nodes reported unparsable versions.
 			You may have introduced incompatible versions to the cluster`, unknownVersionNodes,
 		)
 	}
