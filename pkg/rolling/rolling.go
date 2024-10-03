@@ -266,7 +266,12 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	)
 
 	if len(performed) == 0 {
-		r.logger.Info("No actions can be taken yet, CMS didn't move any actions to PERFORMED because of: ", actionStatesBuf.String())
+		msg := actionStatesBuf.String()
+		if len(msg) == 0 {
+			msg = "<CMS does not support reporting details in this YDB version yet>"
+		}
+
+		r.logger.Info("No actions can be taken yet, CMS didn't move any actions to PERFORMED because of: ", msg)
 		return false
 	}
 
