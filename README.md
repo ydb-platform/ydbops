@@ -17,7 +17,7 @@ For now, please use the below info for reference only, it might be slightly outd
 Execute build.sh
 Also Dockerfile can be used as a part of other multi-stage dockerfiles.
 
-## How to run tests:
+## How to run tests
 
 Ginkgo testing library is used. Do:
 
@@ -80,3 +80,18 @@ ydbops restart --storage \
   --availability-mode strong --verbose --hosts=7,8 \
   --user jorres --kubeconfig ~/.kube/config
 ```
+
+## How to create a new version
+### In Github
+1. Define new version number, like 1.1.0
+2. Update CHANGELOG.md with proper information about new version
+3. Push changes into the repository (git push)
+4. Add tag v{VERSION}, like v1.1.0 (git tag v1.1.0)
+5. Push tag into the repository (git push --tags)
+6. Github will create a new release
+
+## Localy
+1. Define new version number, like 1.1.0
+2. Update CHANGELOG.md with proper information about new version
+4. Add tag v{VERSION}, like v1.1.0 (git tag v1.1.0)
+5. make build-in-docker
