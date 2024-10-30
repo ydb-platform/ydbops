@@ -73,7 +73,6 @@ ydbops restart --storage \
 ```
 
 ## How to create a new version
-### In Github
 1. Define new semver version number (e.g. 1.1.0)
 2. Update CHANGELOG.md with proper information about new version. Add the following to the beginning of the file, before previous entries:
 ```
