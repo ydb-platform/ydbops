@@ -25,7 +25,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61.0
-          args: --verbose --disable-all --new-from-rev=origin/master --enable wrapcheck stylecheck funlen mnd cyclop
+          args: --verbose --disable-all --new-from-rev=origin/master --enable wrapcheck,stylecheck,funlen,mnd,cyclop
   autoformatter:
     name: autoformat check
     concurrency:
