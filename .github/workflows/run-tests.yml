@@ -12,7 +12,7 @@ jobs:
     concurrency:
       group: lint-golangci-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.58.1
-          args: -v -j 4 # verbose, 4 threads
+          args: -v -j 2 # verbose, threads
   autoformatter:
     name: autoformat check
     concurrency:
