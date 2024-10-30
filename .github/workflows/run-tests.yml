@@ -51,6 +51,9 @@ jobs:
       group: tests-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
+    needs:
+      - autoformatter
+      - golangci
     steps:
       - name: checkout
         uses: actions/checkout@v4
