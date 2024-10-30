@@ -227,7 +227,6 @@ linters:
    - goimports
    - gomoddirectives
    - gomodguard
-   - gosec
    - gosimple
    - govet
    - makezero
@@ -264,6 +263,7 @@ linters:
   # - godox - TODOs in the code are normal
   # - depguard - we don't really have a policy of forbidding stuff
   # - lll - virtually impossible to create logs \ help otherwise
+  # - gosec G115, we use too many uint32 for Node identifiers and false positives are very common
 
 issues:
   # List of regexps of issue texts to exclude, empty list by default.
