@@ -82,6 +82,6 @@ func (r *StorageK8sRestarter) Filter(
 
 	filteredNodes := applyStorageK8sFilteringRules(spec, cluster, r.FQDNToPodName)
 
-	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Storage K8s restarter selected following nodes for restart: %+v", filteredNodes)
 	return filteredNodes
 }

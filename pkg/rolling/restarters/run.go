@@ -77,7 +77,7 @@ func (r *RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) [
 
 	filteredNodes := ExcludeByCommonFields(runScopeNodes, spec)
 
-	r.logger.Debugf("Run Restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Run Restarter selected following nodes for restart: %+v", filteredNodes)
 
 	return filteredNodes
 }
