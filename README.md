@@ -2,11 +2,7 @@
 
 `ydbops` utility is used to perform various ad-hoc and maintenance operations on YDB clusters.
 
-## On the up-to-date'ness of this readme
-
-Soon an official documentation on [ydb.tech](https://ydb.tech) will be available. 
-
-For now, please use the below info for reference only, it might be slightly outdated.
+For comprehensive documentation, refer to [ydb.tech](https://ydb.tech/docs/en/reference/ydbops/)
 
 ## Prerequisites:
 
@@ -14,8 +10,7 @@ For now, please use the below info for reference only, it might be slightly outd
 
 ## How to build
 
-Execute build.sh
-Also Dockerfile can be used as a part of other multi-stage dockerfiles.
+Execute `make build-in-docker`, you will get binaries for Linux and MacOS, both amd and arm.
 
 ## How to run tests
 
@@ -25,13 +20,9 @@ Ginkgo testing library is used. Do:
 ginkgo test -vvv ./tests
 ```
 
-## Current limitations:
-
-1. [NON-CRITICAL FEATURE] Yandex IAM authorization with SA account key file is currently unsupported. However, you can always issue the token yourself and put it inside the `YDB_TOKEN` variable: `export YDB_TOKEN=$(ycp --profile <profile> iam create-token)`
-
 ## How to use:
 
-Please browse the `ydbops --help` first. Then read along for examples (substitute your own values, of course).
+Please browse the `ydbops --help` first. Then read along for examples (substitute your own values).
 
 #### Restart baremetal storage hosts
 
@@ -83,15 +74,13 @@ ydbops restart --storage \
 
 ## How to create a new version
 ### In Github
-1. Define new version number, like 1.1.0
-2. Update CHANGELOG.md with proper information about new version
-3. Push changes into the repository (git push)
-4. Add tag v{VERSION}, like v1.1.0 (git tag v1.1.0)
-5. Push tag into the repository (git push --tags)
-6. Github will create a new release
+1. Define new semver version number (e.g. 1.1.0)
+2. Update CHANGELOG.md with proper information about new version. Add the following to the beginning of the file, before previous entries:
+```
+## <your-version-number>
 
-## Localy
-1. Define new version number, like 1.1.0
-2. Update CHANGELOG.md with proper information about new version
-4. Add tag v{VERSION}, like v1.1.0 (git tag v1.1.0)
-5. make build-in-docker
+- change 1
+- change 2
+```
+3. Create a pull request, wait for it to be merged
+4. Github actions will create both the tag and the release with binaries for all platforms

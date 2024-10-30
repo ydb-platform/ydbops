@@ -1,0 +1,43 @@
+name: check-for-new-release
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tagcreated: ${{steps.tag-step.outputs.tagcreated}}
+    steps:
+    - uses: actions/checkout@v3
+    - id: extract-version-step
+      run: |
+        echo "version=$(./cicd/version.sh)" >> $GITHUB_ENV
+    - id: tag-step
+      uses: butlerlogic/action-autotag@1.1.2
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        version: "${{ env.version }}"
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: tag
+    if: ${{ needs.tag-job.outputs.tagcreated == 'yes' }}
+    steps:
+    - name: Build
+      run: |
+        make build-in-docker
+    - name: Generate Changelog
+      run: |
+        VERSION=$(cicd/version.sh)
+        cicd/changelog.sh $VERSION > bin/CHANGELOG.md
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: bin/CHANGELOG.md
+        files: bin/ydbops*
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
