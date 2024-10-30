@@ -33,10 +33,8 @@ dep:
 docker:
 	docker build --force-rm -t $(BINARY_NAME) .
 
-test: build
-	ginkgo test ./...
-
-test-macos: build-macos
+test:
+	if [ "$(shell uname)" = "Linux" ]; then make build; else make build-macos; fi
 	ginkgo test ./...
 
 build-in-docker: clear docker
