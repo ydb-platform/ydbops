@@ -63,6 +63,6 @@ jobs:
           go mod download
           echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: build ydbops
-        run: go build
+        run: make build
       - name: run tests
         run: go test -v -p 1 ./... -args -ginkgo.v 
