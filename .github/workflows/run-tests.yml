@@ -20,6 +20,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.58.1
+          args: -v -j 4 # verbose, 4 threads
   autoformatter:
     name: autoformat check
     concurrency:
