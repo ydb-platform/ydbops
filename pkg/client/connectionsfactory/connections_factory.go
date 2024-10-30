@@ -52,7 +52,7 @@ func (f *connectionsFactory) Create() (*grpc.ClientConn, error) {
 		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
 
-	return grpc.Dial(f.endpoint(),
+	return grpc.Dial(f.endpoint(), //nolint // even though deprecated, slows the test x5
 		grpc.WithTransportCredentials(cr),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallSendMsgSize(BufferSize),

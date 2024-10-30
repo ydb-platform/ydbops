@@ -9,9 +9,9 @@ on:
 jobs:
   golangci:
     name: golangci-lint
-    concurrency:
-      group: lint-golangci-${{ github.ref }}
-      cancel-in-progress: true
+    # concurrency:
+    #   group: lint-golangci-${{ github.ref }}
+    #   cancel-in-progress: true
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
@@ -20,7 +20,11 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.58.1
-          args: -v -j 2 # verbose, threads
+      - name: golangci-lint-new-code-much-stricter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.58.1
+          args: --verbose --disable-all --new-from-rev=origin/master --enable wrapcheck stylecheck funlen mnd cyclop
   autoformatter:
     name: autoformat check
     concurrency:
