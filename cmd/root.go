@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -10,14 +12,13 @@ import (
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/cmd/run"
+	"github.com/ydb-platform/ydbops/cmd/version"
 	iCli "github.com/ydb-platform/ydbops/internal/cli"
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
-
-var buildVersion = "v0.0.0"
 
 var RootCommandDescription = command.NewDescription(
 	"ydbops",
@@ -45,10 +46,11 @@ func NewRootCommand(
 	roptions := &RootOptions{
 		BaseOptions: boptions,
 	}
+
 	cmd := &cobra.Command{
 		Use:   RootCommandDescription.GetUse(),
 		Short: RootCommandDescription.GetShortDescription(),
-		Long:  RootCommandDescription.GetLongDescription() + " (" + buildVersion + ")",
+		Long:  fmt.Sprintf("%s (%s)", RootCommandDescription.GetLongDescription(), version.BuildVersion),
 		// hide --completion for more compact --help
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd: true,
@@ -95,5 +97,6 @@ func InitRootCommandTree(root *cobra.Command, f cmdutil.Factory) {
 		restart.New(f),
 		maintenance.New(f),
 		run.New(f),
+		version.New(),
 	)
 }

@@ -80,9 +80,9 @@ func (b *baseProvider) Init() error {
 			b.impl = NewMetadata(b.logger)
 		case options.None:
 			b.initErr = fmt.Errorf("determined credentials to be anonymous. Anonymous credentials are currently unsupported")
-		default:
+		case options.Unset, options.MultipleAtOnce:
 			b.initErr = fmt.Errorf(
-				"internal error: authorization type not recognized after options validation, this should never happen",
+				"internal error: these values should have not passed the CLI validation, this should never happen",
 			)
 		}
 		if b.initErr == nil {

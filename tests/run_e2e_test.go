@@ -101,7 +101,7 @@ func RunTestCase(tc TestCase) {
 			}
 		}
 
-		cmd := exec.Command(filepath.Join("..", "ydbops"), commandArgs...)
+		cmd := exec.Command(filepath.Join("..", "bin", "ydbops"), commandArgs...)
 		outputBytes, _ := cmd.CombinedOutput()
 		// TODO some tests return with an error. Maybe tune this test a bit
 		// so it includes checking the error code as well

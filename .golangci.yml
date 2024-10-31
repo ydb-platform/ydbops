@@ -4,17 +4,13 @@ run:
   concurrency: 4
 
   # timeout for analysis, e.g. 30s, 5m, default is 1m
-  deadline: 5m
+  timeout: 5m
 
   # exit code when at least one issue was found, default is 1
   issues-exit-code: 1
 
   # include test files or not, default is true
   tests: false
-
-  # list of build tags, all linters use it. Default is empty list.
-  #build-tags:
-  #  - mytag
 
   # which files to skip: they will be analyzed, but issues from them
   # won't be reported. Default value is empty list, but there is
@@ -35,7 +31,6 @@ output:
 
   # print linter name in the end of issue text, default is true
   print-linter-name: true
-
 
 # all available settings of specific linters
 linters-settings:
@@ -58,11 +53,11 @@ linters-settings:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
   gofumpt:
-    module-path: github.com/ydb-platform/ydb-go-sdk/v3
+    module-path: github.com/ydb-platform/ydbops
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: github.com/ydb-platform/ydb-go-sdk/v3
+    local-prefixes: github.com/ydb-platform/ydbops
   goconst:
     # minimal length of string constant, 3 by default
     min-len: 2
@@ -213,65 +208,62 @@ linters-settings:
         # Whether to check exported functions.
         # Default: false
         checkExported: true
+
 linters:
   disable-all: true
   enable:
-#    - cyclop
-    - dogsled
-#    - dupl
-    - errcheck
-    - errorlint
-#    - exhaustive
-#    - exhaustivestruct
-#    - forbidigo
-#    - funlen
-#    - gci
-#    - gocognit
-    - goconst
-    - gocritic
-    - gocyclo
-#    - godot
-#    - godox
-    - gofmt # On why gofmt when goimports is enabled - https://github.com/golang/go/issues/21476
-    - gofumpt
-    - goheader
-#    - goimports
-#    - gomnd
-#    - gomoddirectives
-#    - gomodguard
-    - gosec
-    - gosimple
-    - govet
-#    - depguard
-#    - ifshort
-#    - ireturn
-#    - lll
-    - makezero
-    - misspell
-    - ineffassign
-    - misspell
-    - nakedret
-    - nestif
-#    - nilnil
-#    - nlreturn
-    - nolintlint
-    - prealloc
-    - predeclared
-    - rowserrcheck
-    - revive
-#    - stylecheck
-#    - tagliatelle
-#    - testpackage
-#    - thelper
-#    - tenv
-    # - typecheck
-    - unconvert
-    - unparam
-    - unused
-#    - varnamelen
-    - whitespace
-#    - wrapcheck
-#    - wsl
+   - dogsled
+   - dupl
+   - errcheck
+   - errorlint
+   - exhaustive
+   - gocognit
+   - goconst
+   - gocritic
+   - gocyclo
+   - gofmt # On why gofmt when goimports is enabled - https://github.com/golang/go/issues/21476
+   - gofumpt
+   - goheader
+   - goimports
+   - gomoddirectives
+   - gomodguard
+   - gosimple
+   - govet
+   - makezero
+   - misspell
+   - ineffassign
+   - misspell
+   - nakedret
+   - nestif
+   - nilnil
+   - nolintlint
+   - prealloc
+   - predeclared
+   - rowserrcheck
+   - revive
+   - tagliatelle
+   - testpackage
+   - thelper
+   - tenv
+   - typecheck
+   - unconvert
+   - unparam
+   - unused
+   - whitespace
+
+  # impossible to refactor now, these are launched on all new code:
+  # - wrapcheck - too many unwrapped errors
+  # - stylecheck - abbreviations capitalization
+  # - funlen
+  # - mnd
+  # - cyclop
+  
+  # Disabled forever:
+  # - varnamelen - short variable names are more normal than this linter thinks
+  # - godox - TODOs in the code are normal
+  # - depguard - we don't really have a policy of forbidding stuff
+  # - lll - virtually impossible to create logs \ help otherwise
+  # - gosec G115, we use too many uint32 for Node identifiers and false positives are very common
 
 issues:
   # List of regexps of issue texts to exclude, empty list by default.
@@ -318,13 +310,8 @@ issues:
   # Show only new issues created in git patch with set file path.
   # new-from-patch: path/to/patch/file
   exclude-rules:
-    - path: internal/xatomic/type.go
-      linters:
-        - predeclared
     - path: _test\.go
       linters:
         - unused
         - unparam
         - gocritic
-    - path: _test\.go
-      text: "ydb.Connection is deprecated"

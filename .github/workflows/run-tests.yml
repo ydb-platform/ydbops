@@ -16,10 +16,17 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.58.1
+          fetch-depth: 0 # because we use new-from-rev in golangci-lint
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61.0
+      - name: golangci-lint-new-code-much-stricter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61.0
+          args: --verbose --disable-all --new-from-rev=origin/master --enable wrapcheck,stylecheck,funlen,mnd,cyclop
   autoformatter:
     name: autoformat check
     concurrency:
@@ -63,6 +70,6 @@ jobs:
           go mod download
           echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: build ydbops
-        run: go build
+        run: make build
       - name: run tests
         run: go test -v -p 1 ./... -args -ginkgo.v 
