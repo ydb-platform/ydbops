@@ -1,7 +1,5 @@
 name: create-release-pr
 
-# on:
-#   workflow_dispatch:
 on:
   workflow_dispatch:
 
@@ -37,4 +35,4 @@ jobs:
         title: Release ${{ steps.latest.outputs.output }}
         branch: release/${{ steps.latest.outputs.output }}
         commit-message: Release ${{ steps.latest.outputs.output }}
-        token: ${{ env.GITHUB_TOKEN }}
+        token: ${{ github.token }}
