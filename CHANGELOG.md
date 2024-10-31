@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.11
++ `--started` and `--version` no longer silently include nodes, which did not have this info supplied by CMS at all (due to old YDB version). 
+  Now `ydbops` explicitly refuses to add any nodes with empty start time or empty version and produces a warning.
+
 ## 0.0.10
 + `version` command
 + new release pipeline - modify CHANGELOG.md only, rest is automatic
