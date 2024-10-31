@@ -12,7 +12,7 @@ jobs:
     concurrency:
       group: lint-golangci-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -22,11 +22,6 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61.0
-          args: --verbose
-      - name: show-log
-        run: |
-          git log --oneline --graph --all | head -n 50
-          git merge-base HEAD origin/master
       - name: golangci-lint-new-code-much-stricter
         uses: golangci/golangci-lint-action@v6
         with:

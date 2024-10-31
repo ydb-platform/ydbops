@@ -27,7 +27,7 @@ func New() *cobra.Command {
 		Long:  VersionCommandDescription.GetLongDescription(),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return fmt.Errorf("Free args not expected: %v", args)
+				return fmt.Errorf("free args not expected: %v", args)
 			}
 			fmt.Printf(
 				"Git commit: %s\nTag: %s\nBuild date: %s",
