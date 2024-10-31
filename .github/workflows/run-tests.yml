@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # because we use new-from-rev in golangci-lint
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -24,6 +26,7 @@ jobs:
       - name: show-log
         run: |
           git log --oneline --graph --all | head -n 50
+          git merge-base HEAD origin/master
       - name: golangci-lint-new-code-much-stricter
         uses: golangci/golangci-lint-action@v6
         with:
