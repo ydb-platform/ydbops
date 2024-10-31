@@ -82,6 +82,14 @@ func SatisfiesStartingTime(node *Ydb_Maintenance.Node, startedTime *options.Star
 
 	nodeStartTime := node.GetStartTime().AsTime()
 
+	if nodeStartTime.IsZero() {
+		zap.S().Warnf(
+			"Node %s did not have startTime specified by CMS (possibly an old YDB version). Avoid using --started filter on current YDB cluster",
+			node.Host,
+		)
+		return false
+	}
+
 	if startedTime.Direction == '<' {
 		return startedTime.Timestamp.After(nodeStartTime)
 	}
@@ -139,6 +147,14 @@ func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 		}
 
 		if spec.Version != nil {
+			if node.Version == "" {
+				zap.S().Warnf(
+					"Node %s did not have version field specified by CMS (possibly an old YDB version). Avoid using --version filter on current YDB cluster",
+					node.Host,
+				)
+				continue
+			}
+
 			satisfiesVersion, err := spec.Version.Satisfies(node.Version)
 			if err != nil {
 				unknownVersions[node.Version] = append(unknownVersions[node.Version], node.Host)

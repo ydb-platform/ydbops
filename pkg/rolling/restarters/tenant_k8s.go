@@ -65,7 +65,7 @@ func (r *TenantK8sRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesI
 
 	filteredNodes := applyTenantK8sFilteringRules(spec, cluster, r.FQDNToPodName)
 
-	r.logger.Debugf("Tenant K8s restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Tenant K8s restarter selected following nodes for restart: %+v", filteredNodes)
 
 	return filteredNodes
 }

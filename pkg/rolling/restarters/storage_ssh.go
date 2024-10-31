@@ -44,7 +44,7 @@ func (r StorageSSHRestarter) Filter(
 
 	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 
-	r.logger.Debugf("Storage SSH Restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Storage SSH Restarter selected following nodes for restart: %+v", filteredNodes)
 
 	return filteredNodes
 }

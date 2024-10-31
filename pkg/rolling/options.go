@@ -184,7 +184,10 @@ after that would be considered a regular cluster failure`)
 		fmt.Sprintf("How often to query CMS while waiting for new permissions %v", DefaultCMSQueryIntervalSeconds))
 
 	fs.StringVar(&startedUnparsedFlag, "started", "",
-		fmt.Sprintf("Apply filter by node started time. Format: [<>%%Y-%%m-%%dT%%H:%%M:%%SZ], e.g. >2024-03-13T17:20:06Z"))
+		fmt.Sprintf(`Apply filter by node started time.
+Format: "<>%%Y-%%m-%%dT%%H:%%M:%%SZ", quotes are necessary, otherwise shell treats '<' or '>' as stream redirection.
+For example, --started ">2024-03-13T17:20:06Z" means all nodes started LATER than 2024 March 13, 17:20:06 UTC.
+If you reverse the sign (--started ">2024-03-13T17:20:06Z"), you will select nodes with LARGER uptimes.`))
 
 	fs.StringVar(&versionUnparsedFlag, "version", "",
 		`Apply filter by node version.

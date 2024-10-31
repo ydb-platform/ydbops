@@ -1,0 +1,41 @@
+name: tag-and-release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'CHANGELOG.md'
+  workflow_dispatch:
+
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: get-the-latest-version
+      id: latest
+      uses: miniscruff/changie-action@v2
+      with:
+        version: latest
+        args: latest
+
+    - name: create-tag
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+        custom_tag: ${{ steps.latest.outputs.output }}
+        github_token: ${{ github.token }}
+
+    - name: build
+      run: |
+        APP_VERSION=${{ steps.latest.outputs.output }} make build-in-docker 
+
+    - name: create-github-release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: .changes/${{ steps.latest.outputs.output }}.md
+        files: bin/ydbops*
+        tag_name: ${{ steps.latest.outputs.output }} 
+      env:
+        GITHUB_TOKEN: ${{ github.token }}

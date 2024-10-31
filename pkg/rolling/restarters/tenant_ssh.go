@@ -48,7 +48,7 @@ func (r TenantSSHRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesIn
 	filteredNodes := ExcludeByCommonFields(preSelectedNodes, spec)
 
 	fmt.Printf("%v\n", r)
-	r.logger.Debugf("Tenant SSH Restarter selected following nodes for restart: %v", filteredNodes)
+	r.logger.Debugf("Tenant SSH Restarter selected following nodes for restart: %+v", filteredNodes)
 
 	return filteredNodes
 }

@@ -1,11 +1,14 @@
 BINARY_NAME=ydbops
 BUILD_DIR=bin
 
-APP_VERSION=$(shell cicd/version.sh)
 TODAY=$(shell date --iso=minutes)
 GIT_COMMIT=$(shell git rev-parse HEAD)
 
-LDFLAGS="-X github.com/ydb-platform/ydbops/cmd/version.BuildVersion=${APP_VERSION} -X github.com/ydb-platform/ydbops/cmd/version.BuildTimestamp=${TODAY} -X github.com/ydb-platform/ydbops/cmd/version.BuildCommit=${GIT_COMMIT}"
+# APP_VERSION gets supplied from outside in CI as an env variable.
+# By default you can still build `ydbops` manually without specifying it, 
+# but there won't be a nice tag in `--version`. There will be a commit SHA anyway.
+APP_VERSION ?= no-APP_VERSION-supplied-in-buildtime
+LDFLAGS="-X github.com/ydb-platform/ydbops/cmd/version.BuildVersion=$(APP_VERSION) -X github.com/ydb-platform/ydbops/cmd/version.BuildTimestamp=${TODAY} -X github.com/ydb-platform/ydbops/cmd/version.BuildCommit=${GIT_COMMIT}"
 
 all: build build-macos
 
