@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate-pr:
+  create-release-pr:
     runs-on: ubuntu-latest
     steps:
     - name: checkout

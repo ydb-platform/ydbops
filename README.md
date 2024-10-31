@@ -4,23 +4,7 @@
 
 For comprehensive documentation, refer to [ydb.tech](https://ydb.tech/docs/en/reference/ydbops/)
 
-## Prerequisites:
-
-1. Go 1.21
-
-## How to build
-
-Execute `make build-in-docker`, you will get binaries for Linux and MacOS, both amd and arm.
-
-## How to run tests
-
-Ginkgo testing library is used. Do:
-
-```
-ginkgo test -vvv ./tests
-```
-
-## How to use:
+## Quick non-comprehensive cheatsheet:
 
 Please browse the `ydbops --help` first. Then read along for examples (substitute your own values).
 
@@ -72,14 +56,35 @@ ydbops restart --storage \
   --user jorres --kubeconfig ~/.kube/config
 ```
 
-## How to create a new version
-1. Define new semver version number (e.g. 1.1.0)
-2. Update CHANGELOG.md with proper information about new version. Add the following to the beginning of the file, before previous entries:
-```
-## <your-version-number>
+---
 
-- change 1
-- change 2
+## For developers:
+
+### Prerequisites
+
+- Go 1.21
+- `changie` tool for keeping a changelog
+
+### How to build
+
+Execute `make build-in-docker`, you will get binaries for Linux and MacOS, both amd and arm.
+
+### How to run tests
+
+Ginkgo testing library is used. Do:
+
 ```
-3. Create a pull request, wait for it to be merged
-4. Github actions will create both the tag and the release with binaries for all platforms
+ginkgo test -vvv ./tests
+```
+
+### How to develop
+
+- develop a feature
+- invoke `changie new` and complete a small interactive form
+- don't forget to changie-generated file to your PR
+
+### How to release a new version
+
+1. Invoke `create-release-pr` job, it will create a PR with `CHANGELOG.md` containing all diffs 
+2. After making sure that `CHANGELOG.md` looks nice, just merge the PR from step 1, and the commit into master
+   will be automatically tagged, and a new release with new binaries will be automatically published!
