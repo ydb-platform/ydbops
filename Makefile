@@ -25,16 +25,16 @@ build-macos: lint pre-build
 
 build: lint pre-build
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME} main.go
-	strip bin/${BINARY_NAME}
+	strip ${BUILD_DIR}/${BINARY_NAME}
 
 clear:
-	rm -rf bin/${BINARY_NAME}
+	rm -rf ${BUILD_DIR}/${BINARY_NAME}
 
 dep:
 	go mod download
 
 docker:
-	docker build --force-rm -t $(BINARY_NAME) .
+	docker build --force-rm -t $(BINARY_NAME) --build-arg APP_VERSION=${APP_VERSION} .
 
 test:
 	if [ "$(shell uname)" = "Linux" ]; then make build; else make build-macos; fi

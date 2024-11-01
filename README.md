@@ -80,11 +80,11 @@ ginkgo test -vvv ./tests
 ### How to develop
 
 - develop a feature
-- invoke `changie new` and complete a small interactive form
-- don't forget to changie-generated file to your PR
+- invoke `changie new` and complete a small interactive form. (Get changie from https://changie.dev )
+- don't forget to changie-generated file to your PR into master branch
 
 ### How to release a new version
 
-1. Invoke `create-release-pr` job, it will create a PR with `CHANGELOG.md` containing all diffs 
+1. Invoke Github action `create-release-pr` job, it will create a PR with `CHANGELOG.md` containing all diffs 
 2. After making sure that `CHANGELOG.md` looks nice, just merge the PR from step 1, and the commit into master
    will be automatically tagged, and a new release with new binaries will be automatically published!
