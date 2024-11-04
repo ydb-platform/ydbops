@@ -14,8 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: get-the-latest-version
-      id: latest
+    - name: get-latest-version
       uses: miniscruff/changie-action@v2
       with:
         version: latest
@@ -24,18 +23,19 @@ jobs:
     - name: create-tag
       uses: mathieudutour/github-tag-action@v6.2
       with:
-        custom_tag: ${{ steps.latest.outputs.output }}
+        tag_prefix: ""
+        custom_tag: ${{ steps.get-latest-version.outputs.output }}
         github_token: ${{ github.token }}
 
     - name: build
       run: |
-        APP_VERSION=${{ steps.latest.outputs.output }} make build-in-docker 
+        APP_VERSION=${{ steps.get-latest-version.outputs.output }} make build-in-docker 
 
     - name: create-github-release
       uses: softprops/action-gh-release@v1
       with:
-        body_path: .changes/${{ steps.latest.outputs.output }}.md
+        body_path: .changes/${{ steps.get-latest-version.outputs.output }}.md
         files: bin/ydbops*
-        tag_name: ${{ steps.latest.outputs.output }} 
+        tag_name: ${{ steps.get-latest-version.outputs.output }} 
       env:
         GITHUB_TOKEN: ${{ github.token }}
