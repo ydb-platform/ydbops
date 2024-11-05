@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.13 - 2024-11-05
+### Fixed
+* ydbops now properly continues the restart loop even if listing nodes during maintenance check fails with "retry exceeded" error
+
 ## v0.0.12 - 2024-10-31
 ### Changed
 * migrated to changie for keeping a changelog
