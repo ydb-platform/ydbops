@@ -2,6 +2,7 @@ package rolling
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -220,6 +221,7 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 		task, err = r.cms.RefreshMaintenanceTask(taskID)
 		if err != nil {
 			r.logger.Warnf("Failed to refresh maintenance task: %+v", err)
+			continue
 		}
 
 		// NOTE: compatibility check will not fire if rolling restart just
@@ -235,7 +237,10 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 		// issues once more. We better exit quickly.
 		if !r.opts.SuppressCompatibilityCheck {
 			incompatible := r.tryDetectCompatibilityIssues()
-			if incompatible != nil {
+
+			// if error is retryExceeded, just keep trying - maybe you have been asking CMS
+			// from a node that has just been restarted, and it's okay.
+			if incompatible != nil && !errors.Is(incompatible, &utils.RetryExceededError{}) {
 				return incompatible
 			}
 		}

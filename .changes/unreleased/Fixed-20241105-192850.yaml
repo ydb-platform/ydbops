@@ -1,0 +1,3 @@
+kind: Fixed
+body: ydbops now properly continues the restart loop even if listing nodes during maintenance check fails with "retry exceeded" error
+time: 2024-11-05T19:28:50.308019908+01:00
