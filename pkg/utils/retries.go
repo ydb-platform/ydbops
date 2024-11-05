@@ -11,6 +11,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type RetryExceededError struct {
+	msg string
+	err error
+}
+
+func (e *RetryExceededError) Error() string {
+	return e.msg + ". Last error:" + e.err.Error()
+}
+
+func (e *RetryExceededError) Unwrap() error {
+	return e.err
+}
+
+func (e *RetryExceededError) Is(targetErr error) bool {
+	_, ok := targetErr.(*RetryExceededError)
+	return ok
+}
+
 func backoffTimeAfter(attempt int) time.Duration {
 	return time.Second * time.Duration(int(math.Pow(2, float64(attempt))))
 }
@@ -45,5 +63,8 @@ func WrapWithRetries(
 		}
 	}
 
-	return nil, fmt.Errorf("number of retries exceeded: %v. Last error: %w", maxAttempts, lastError)
+	return nil, &RetryExceededError{
+		msg: fmt.Sprintf("number of retries exceeded: %v", maxAttempts),
+		err: lastError,
+	}
 }
