@@ -25,9 +25,9 @@ func PrepareRestarters(
 	sshArgs []string,
 	customSystemdUnitName string,
 	restartDuration int,
-) (restarters.Restarter, restarters.Restarter) {
+) (storage, tenant restarters.Restarter) {
 	if opts.KubeconfigPath != "" {
-		storageRestarter := restarters.NewStorageK8sRestarter(
+		storage = restarters.NewStorageK8sRestarter(
 			options.Logger,
 			&restarters.StorageK8sRestarterOptions{
 				K8sRestarterOptions: &restarters.K8sRestarterOptions{
@@ -37,7 +37,7 @@ func PrepareRestarters(
 				},
 			},
 		)
-		tenantRestarter := restarters.NewTenantK8sRestarter(
+		tenant = restarters.NewTenantK8sRestarter(
 			options.Logger,
 			&restarters.TenantK8sRestarterOptions{
 				K8sRestarterOptions: &restarters.K8sRestarterOptions{
@@ -47,20 +47,20 @@ func PrepareRestarters(
 				},
 			},
 		)
-		return storageRestarter, tenantRestarter
+		return storage, tenant
 	}
 
-	storageRestarter := restarters.NewStorageSSHRestarter(
+	storage = restarters.NewStorageSSHRestarter(
 		options.Logger,
 		sshArgs,
 		customSystemdUnitName,
 	)
-	tenantRestarter := restarters.NewTenantSSHRestarter(
+	tenant = restarters.NewTenantSSHRestarter(
 		options.Logger,
 		sshArgs,
 		customSystemdUnitName,
 	)
-	return storageRestarter, tenantRestarter
+	return storage, tenant
 }
 
 func (o *Options) Run(f cmdutil.Factory) error {

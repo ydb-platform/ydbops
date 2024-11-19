@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
+
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
@@ -49,12 +50,12 @@ func (o *Options) nodeIdsToNodes(
 ) []*Ydb_Maintenance.Node {
 	targetedNodes := []*Ydb_Maintenance.Node{}
 
-	// TODO @jorres arguments to PrepareRestarters are a dirty hack. 
-	// We actually only need Filter component from restarters. 2 and 3 arguments 
-	// are required in PrepareRestarters to actually perform node restarts, 
-	// but we only use restarters in the scope of this function to filter nodes 
-	// so their value does not matter. Splitting something like 'Filterers' from 
-	// Restarters into separate interface should solve this. 
+	// TODO @jorres arguments to PrepareRestarters are a dirty hack.
+	// We actually only need Filter component from restarters. 2 and 3 arguments
+	// are required in PrepareRestarters to actually perform node restarts,
+	// but we only use restarters in the scope of this function to filter nodes
+	// so their value does not matter. Splitting something like 'Filterers' from
+	// Restarters into separate interface should solve this.
 	storageRestarter, tenantRestarter := restart.PrepareRestarters(
 		&o.FilteringOptions,
 		[]string{},

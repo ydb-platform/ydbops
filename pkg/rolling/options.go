@@ -33,9 +33,7 @@ type RestartOptions struct {
 	CustomSystemdUnitName string
 }
 
-var (
-	rawSSHUnparsedArgs string
-)
+var rawSSHUnparsedArgs string
 
 func (o *RestartOptions) Validate() error {
 	err := o.FilteringOptions.Validate()
