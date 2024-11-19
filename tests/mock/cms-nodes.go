@@ -75,7 +75,7 @@ func MakeActionGroupsFromHostFQDNs(hostFQDNs ...string) []*Ydb_Maintenance.Actio
 										Host: hostFQDN,
 									},
 								},
-								Duration: durationpb.New(1 * time.Hour),
+								Duration: durationpb.New(180 * time.Second),
 							},
 						},
 					},

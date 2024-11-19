@@ -5,13 +5,10 @@ import (
 
 	"github.com/ydb-platform/ydbops/pkg/cli"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
-	"github.com/ydb-platform/ydbops/pkg/rolling"
 )
 
 func New(f cmdutil.Factory) *cobra.Command {
-	opts := &Options{
-		RestartOptions: &rolling.RestartOptions{},
-	}
+	opts := &Options{}
 
 	cmd := cli.SetDefaultsOn(&cobra.Command{
 		Use:   "create",
