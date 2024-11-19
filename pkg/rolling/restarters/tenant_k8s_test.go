@@ -19,7 +19,7 @@ var _ = Describe("Test tenant k8s Filter", func() {
 
 	It("k8s restarter filtering by --started>timestamp", func() {
 		filterSpec := FilterNodeParams{
-			MaxStaticNodeId: DefaultMaxStaticNodeId,
+			MaxStaticNodeID: DefaultMaxStaticNodeID,
 			StartedTime: &options.StartedTime{
 				Direction: '<',
 				Timestamp: fiveMinutesAgoTimestamp,

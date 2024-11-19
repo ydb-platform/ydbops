@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	DefaultMaxStaticNodeId = 50000
+	DefaultMaxStaticNodeID = 50000
 )
 
 var (
@@ -50,7 +50,7 @@ type FilteringOptions struct {
 	KubeconfigPath string
 	K8sNamespace   string
 
-	MaxStaticNodeId int
+	MaxStaticNodeID int
 }
 
 func (o *FilteringOptions) DefineFlags(fs *pflag.FlagSet) {
@@ -88,7 +88,7 @@ Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|(==|!=)VERSION_STRING], e.g.:
 '--version ~=24.1.2' or
 '--version !=24.1.2-ydb-stable-hotfix-5'`)
 
-	fs.IntVar(&o.MaxStaticNodeId, "max-static-node-id", DefaultMaxStaticNodeId,
+	fs.IntVar(&o.MaxStaticNodeID, "max-static-node-id", DefaultMaxStaticNodeID,
 		`This argument is used to help ydbops distinguish storage and dynamic nodes.
 Nodes with this nodeId or less will be considered storage.`)
 
@@ -112,13 +112,13 @@ func (o *FilteringOptions) Validate() error {
 		return fmt.Errorf("specified --kubeconfig, but not --k8s-namespace")
 	}
 
-	if o.MaxStaticNodeId < 0 {
-		return fmt.Errorf("specified invalid max-static-node-id: %d. Must be positive", o.MaxStaticNodeId)
+	if o.MaxStaticNodeID < 0 {
+		return fmt.Errorf("specified invalid max-static-node-id: %d. Must be positive", o.MaxStaticNodeID)
 	}
 
 	if len(o.TenantList) > 0 && !o.Tenant {
 		return fmt.Errorf("--tenant-list specified, but --tenant is not explicitly specified." +
-			"Please specify --tenant as well to clearly indicate your intentions.")
+			"Please specify --tenant as well to clearly indicate your intentions")
 	}
 
 	if startedUnparsedFlag != "" {

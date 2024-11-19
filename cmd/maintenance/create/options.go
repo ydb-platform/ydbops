@@ -71,7 +71,7 @@ func (o *Options) nodeIdsToNodes(
 		SelectedDatacenters: o.Datacenters,
 		StartedTime:         o.StartedTime,
 		ExcludeHosts:        o.ExcludeHosts,
-		MaxStaticNodeId:     uint32(o.MaxStaticNodeId),
+		MaxStaticNodeID:     uint32(o.MaxStaticNodeID),
 	}
 
 	clusterNodesInfo := restarters.ClusterNodesInfo{

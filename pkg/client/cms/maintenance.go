@@ -41,7 +41,7 @@ func (d *defaultCMSClient) CompleteActions(taskID string, hosts []string) (*Ydb_
 		return nil, fmt.Errorf("failed to get maintenance task %v: %w", taskID, err)
 	}
 
-	nodeIds, errIds := utils.GetNodeIds(hosts)
+	nodeIDs, errIds := utils.GetNodeIds(hosts)
 	hostFQDNs, errFqdns := utils.GetNodeFQDNs(hosts)
 
 	if errIds != nil && errFqdns != nil {
@@ -53,21 +53,21 @@ func (d *defaultCMSClient) CompleteActions(taskID string, hosts []string) (*Ydb_
 	}
 
 	hostFQDNToActionUID := make(map[string]*Ydb_Maintenance.ActionUid)
-	nodeIdToActionUID := make(map[uint32]*Ydb_Maintenance.ActionUid)
+	nodeIDToActionUID := make(map[uint32]*Ydb_Maintenance.ActionUid)
 	for _, gs := range task.GetActionGroupStates() {
 		as := gs.ActionStates[0]
 		scope := as.Action.GetLockAction().Scope
 
 		hostFqdn := scope.GetHost()
-		nodeId := scope.GetNodeId()
+		nodeID := scope.GetNodeId()
 		switch {
 		case hostFqdn != "":
 			hostFQDNToActionUID[hostFqdn] = as.ActionUid
-		case nodeId != 0:
-			nodeIdToActionUID[nodeId] = as.ActionUid
+		case nodeID != 0:
+			nodeIDToActionUID[nodeID] = as.ActionUid
 		default:
 			return nil, fmt.Errorf(
-				"failed to complete action. An action's scope didn't contain host or nodeId: %+v. Contact the developers",
+				"failed to complete action. An action's scope didn't contain host or nodeID: %+v. Contact the developers",
 				scope,
 			)
 		}
@@ -76,7 +76,7 @@ func (d *defaultCMSClient) CompleteActions(taskID string, hosts []string) (*Ydb_
 	var finishedActions []*Ydb_Maintenance.ActionUid
 
 	if errIds == nil {
-		finishedActions, err = getFinishedActions(nodeIds, nodeIdToActionUID)
+		finishedActions, err = getFinishedActions(nodeIDs, nodeIDToActionUID)
 	} else {
 		finishedActions, err = getFinishedActions(hostFQDNs, hostFQDNToActionUID)
 	}
@@ -91,12 +91,12 @@ func (d *defaultCMSClient) CompleteActions(taskID string, hosts []string) (*Ydb_
 func getFinishedActions[T uint32 | string](nodes []T, nodeToActionUID map[T]*Ydb_Maintenance.ActionUid) ([]*Ydb_Maintenance.ActionUid, error) {
 	finishedActions := []*Ydb_Maintenance.ActionUid{}
 	for _, host := range nodes {
-		actionUid, present := nodeToActionUID[host]
+		actionUID, present := nodeToActionUID[host]
 		if !present {
-			return nil, fmt.Errorf("Failed to complete host %v, corresponding CMS action not found.\n"+
+			return nil, fmt.Errorf("failed to complete host %v, corresponding CMS action not found.\n"+
 				"This host either was never requested or already completed", host)
 		}
-		finishedActions = append(finishedActions, actionUid)
+		finishedActions = append(finishedActions, actionUID)
 	}
 
 	return finishedActions, nil
