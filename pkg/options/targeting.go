@@ -33,7 +33,7 @@ var (
 	rawRegexp  = regexp.MustCompile(rawPattern)
 )
 
-type FilteringOptions struct {
+type TargetingOptions struct {
 	AvailabilityMode string
 	Datacenters      []string
 	Hosts            []string
@@ -53,7 +53,7 @@ type FilteringOptions struct {
 	MaxStaticNodeID int
 }
 
-func (o *FilteringOptions) DefineFlags(fs *pflag.FlagSet) {
+func (o *TargetingOptions) DefineFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.Storage, "storage", false, `Only include storage nodes. Otherwise, include all nodes by default`)
 
 	fs.BoolVar(&o.Tenant, "tenant", false, `Only include tenant nodes. Otherwise, include all nodes by default`)
@@ -103,7 +103,7 @@ Nodes with this nodeId or less will be considered storage.`)
 		"[can specify in profile] Limit your operations to pods in this kubernetes namespace.")
 }
 
-func (o *FilteringOptions) Validate() error {
+func (o *TargetingOptions) Validate() error {
 	if !collections.Contains(AvailabilityModes, o.AvailabilityMode) {
 		return fmt.Errorf("specified a non-existing availability mode: %s", o.AvailabilityMode)
 	}
@@ -190,7 +190,7 @@ func parseVersionFlag(versionUnparsedFlag string) (VersionSpec, error) {
 	)
 }
 
-func (o *FilteringOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
+func (o *TargetingOptions) GetAvailabilityMode() Ydb_Maintenance.AvailabilityMode {
 	title := strings.ToUpper(fmt.Sprintf("availability_mode_%s", o.AvailabilityMode))
 	value := Ydb_Maintenance.AvailabilityMode_value[title]
 

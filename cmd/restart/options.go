@@ -21,7 +21,7 @@ func (o *Options) DefineFlags(fs *pflag.FlagSet) {
 }
 
 func PrepareRestarters(
-	opts *options.FilteringOptions,
+	opts *options.TargetingOptions,
 	sshArgs []string,
 	customSystemdUnitName string,
 	restartDuration int,
@@ -65,7 +65,7 @@ func PrepareRestarters(
 
 func (o *Options) Run(f cmdutil.Factory) error {
 	storageRestarter, tenantRestarter := PrepareRestarters(
-		&o.FilteringOptions,
+		&o.TargetingOptions,
 		o.SSHArgs,
 		o.CustomSystemdUnitName,
 		o.RestartDuration,

@@ -20,7 +20,7 @@ import (
 )
 
 type Options struct {
-	options.FilteringOptions
+	options.TargetingOptions
 
 	MaintenanceDuration int
 }
@@ -30,7 +30,7 @@ const (
 )
 
 func (o *Options) DefineFlags(fs *pflag.FlagSet) {
-	o.FilteringOptions.DefineFlags(fs)
+	o.TargetingOptions.DefineFlags(fs)
 
 	fs.IntVar(&o.MaintenanceDuration, "duration", DefaultMaintenanceDurationSeconds,
 		`CMS will release the node for maintenance for duration seconds. Any maintenance
@@ -42,7 +42,7 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("specified invalid maintenance duration: %d. Must be positive", o.MaintenanceDuration)
 	}
 
-	return o.FilteringOptions.Validate()
+	return o.TargetingOptions.Validate()
 }
 
 func (o *Options) nodeIdsToNodes(
@@ -58,7 +58,7 @@ func (o *Options) nodeIdsToNodes(
 	// so their value does not matter. Splitting something like 'Filterers' from
 	// Restarters into separate interface should solve this.
 	storageRestarter, tenantRestarter := restart.PrepareRestarters(
-		&o.FilteringOptions,
+		&o.TargetingOptions,
 		[]string{},
 		"",
 		o.MaintenanceDuration,

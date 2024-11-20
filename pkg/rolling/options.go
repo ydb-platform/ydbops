@@ -18,7 +18,7 @@ const (
 )
 
 type RestartOptions struct {
-	options.FilteringOptions
+	options.TargetingOptions
 
 	RestartRetryNumber         int
 	CMSQueryInterval           int
@@ -36,7 +36,7 @@ type RestartOptions struct {
 var rawSSHUnparsedArgs string
 
 func (o *RestartOptions) Validate() error {
-	err := o.FilteringOptions.Validate()
+	err := o.TargetingOptions.Validate()
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (o *RestartOptions) Validate() error {
 }
 
 func (o *RestartOptions) DefineFlags(fs *pflag.FlagSet) {
-	o.FilteringOptions.DefineFlags(fs)
+	o.TargetingOptions.DefineFlags(fs)
 
 	fs.StringVar(&o.CustomSystemdUnitName, "systemd-unit", "", "Specify custom systemd unit name to restart")
 
