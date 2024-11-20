@@ -311,7 +311,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			defer wg.Done()
 
 			// TODO: drain node, but public draining api is not available yet
-			r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
+			r.logger.Info("DRAINING NOT IMPLEMENTED YET")
 
 			r.logger.Debugf("Restart node with id: %d", node.NodeId)
 			if err := r.restarter.RestartNode(node); err != nil {
