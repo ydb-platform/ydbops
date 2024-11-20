@@ -18,7 +18,7 @@ var _ = Describe("Test Profile", func() {
 	AfterEach(RunAfterEach)
 
 	DescribeTable("profile", RunTestCase,
-		Entry("some basic options, no --profile option, active_profile in config", TestCase{
+		Entry("some basic options, no --profile option, current-profile in config", TestCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3, 4, 5, 6, 7, 8},
 			},
@@ -27,7 +27,7 @@ var _ = Describe("Test Profile", func() {
 				{
 					ydbopsInvocation: Command{
 						"--profile-file",
-						filepath.Join(".", "test-data", "config_with_active_profile.yaml"),
+						filepath.Join(".", "test-data", "config_with_current_profile.yaml"),
 						"--availability-mode", "strong",
 						"--cms-query-interval", "1",
 						"run",
@@ -95,7 +95,7 @@ var _ = Describe("Test Profile", func() {
 			},
 		},
 		),
-		Entry("some basic options, --profile option specified, no active_profile in config", TestCase{
+		Entry("some basic options, --profile option specified, no current-profile in config", TestCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3, 4, 5, 6, 7, 8},
 			},
@@ -104,7 +104,7 @@ var _ = Describe("Test Profile", func() {
 				{
 					ydbopsInvocation: Command{
 						"--profile-file",
-						filepath.Join(".", "test-data", "config_without_active_profile.yaml"),
+						filepath.Join(".", "test-data", "config_without_current_profile.yaml"),
 						"--profile",
 						"my-profile",
 						"--availability-mode", "strong",

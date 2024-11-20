@@ -8,6 +8,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 
 	"github.com/ydb-platform/ydbops/pkg/client"
+	"github.com/ydb-platform/ydbops/pkg/utils"
 )
 
 const (
@@ -34,35 +35,71 @@ type Maintenance interface {
 }
 
 // CompleteActions implements Client.
-func (d *defaultCMSClient) CompleteActions(taskID string, hostFQDNs []string) (*Ydb_Maintenance.ManageActionResult, error) {
+func (d *defaultCMSClient) CompleteActions(taskID string, hosts []string) (*Ydb_Maintenance.ManageActionResult, error) {
 	task, err := d.GetMaintenanceTask(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get maintenance task %v: %w", taskID, err)
 	}
 
-	hostToActionUID := make(map[string]*Ydb_Maintenance.ActionUid)
+	nodeIDs, errIds := utils.GetNodeIds(hosts)
+	hostFQDNs, errFqdns := utils.GetNodeFQDNs(hosts)
+
+	if errIds != nil && errFqdns != nil {
+		return nil, fmt.Errorf(
+			"failed to parse --hosts argument as node ids (%w) or host fqdns (%w)",
+			errIds,
+			errFqdns,
+		)
+	}
+
+	hostFQDNToActionUID := make(map[string]*Ydb_Maintenance.ActionUid)
+	nodeIDToActionUID := make(map[uint32]*Ydb_Maintenance.ActionUid)
 	for _, gs := range task.GetActionGroupStates() {
 		as := gs.ActionStates[0]
 		scope := as.Action.GetLockAction().Scope
-		host := scope.GetHost()
-		if host == "" {
-			return nil, fmt.Errorf("Trying to complete an action with nodeId scope, currently unimplemented")
-		}
 
-		hostToActionUID[host] = as.ActionUid
+		hostFqdn := scope.GetHost()
+		nodeID := scope.GetNodeId()
+		switch {
+		case hostFqdn != "":
+			hostFQDNToActionUID[hostFqdn] = as.ActionUid
+		case nodeID != 0:
+			nodeIDToActionUID[nodeID] = as.ActionUid
+		default:
+			return nil, fmt.Errorf(
+				"failed to complete action. An action's scope didn't contain host or nodeID: %+v. Contact the developers",
+				scope,
+			)
+		}
 	}
 
-	completedActions := []*Ydb_Maintenance.ActionUid{}
-	for _, host := range hostFQDNs {
-		actionUid, present := hostToActionUID[host]
+	var finishedActions []*Ydb_Maintenance.ActionUid
+
+	if errIds == nil {
+		finishedActions, err = getFinishedActions(nodeIDs, nodeIDToActionUID)
+	} else {
+		finishedActions, err = getFinishedActions(hostFQDNs, hostFQDNToActionUID)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return d.CompleteAction(finishedActions)
+}
+
+func getFinishedActions[T uint32 | string](nodes []T, nodeToActionUID map[T]*Ydb_Maintenance.ActionUid) ([]*Ydb_Maintenance.ActionUid, error) {
+	finishedActions := []*Ydb_Maintenance.ActionUid{}
+	for _, host := range nodes {
+		actionUID, present := nodeToActionUID[host]
 		if !present {
-			return nil, fmt.Errorf("Failed to complete host %s, corresponding CMS action not found.\n"+
+			return nil, fmt.Errorf("failed to complete host %v, corresponding CMS action not found.\n"+
 				"This host either was never requested or already completed", host)
 		}
-		completedActions = append(completedActions, actionUid)
+		finishedActions = append(finishedActions, actionUID)
 	}
 
-	return d.CompleteAction(completedActions)
+	return finishedActions, nil
 }
 
 func (d *defaultCMSClient) queryEachTaskForActions(taskIds []string) ([]MaintenanceTask, error) {

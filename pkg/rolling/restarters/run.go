@@ -67,7 +67,7 @@ func (r *RunRestarter) Filter(spec FilterNodeParams, cluster ClusterNodesInfo) [
 	var runScopeNodes []*Ydb_Maintenance.Node
 
 	if r.storageOnly {
-		storageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeId)
+		storageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeID)
 		runScopeNodes = PopulateByCommonFields(storageNodes, spec)
 	} else if r.dynnodeOnly {
 		tenantNodes := FilterTenantNodes(cluster.AllNodes)

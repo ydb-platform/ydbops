@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Issue"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
@@ -144,4 +145,19 @@ func ParseMajorMinorPatchFromVersion(version string) (major, minor, patch int, e
 	}
 
 	return 0, 0, 0, fmt.Errorf("failed to parse the version number in any of the known patterns")
+}
+
+func PopulateTenantToNodesMapping(nodes []*Ydb_Maintenance.Node) map[string][]uint32 {
+	tenantNameToNodeIds := make(map[string][]uint32)
+	for _, node := range nodes {
+		dynamicNode := node.GetDynamic()
+		if dynamicNode != nil {
+			tenantNameToNodeIds[dynamicNode.GetTenant()] = append(
+				tenantNameToNodeIds[dynamicNode.GetTenant()],
+				node.NodeId,
+			)
+		}
+	}
+
+	return tenantNameToNodeIds
 }

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultMaxStaticNodeId = 50000
+	DefaultMaxStaticNodeID = 50000
 )
 
 func FilterStorageNodes(nodes []*Ydb_Maintenance.Node, maxStaticNodeId uint32) []*Ydb_Maintenance.Node {

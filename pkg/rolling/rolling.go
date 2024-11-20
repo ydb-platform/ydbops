@@ -138,7 +138,7 @@ func (r *Rolling) DoRestart() error {
 			StartedTime:         r.opts.StartedTime,
 			Version:             r.opts.VersionSpec,
 			ExcludeHosts:        r.opts.ExcludeHosts,
-			MaxStaticNodeId:     uint32(r.opts.MaxStaticNodeId),
+			MaxStaticNodeID:     uint32(r.opts.MaxStaticNodeID),
 		},
 		restarters.ClusterNodesInfo{
 			TenantToNodeIds: r.state.tenantNameToNodeIds,
@@ -311,7 +311,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			defer wg.Done()
 
 			// TODO: drain node, but public draining api is not available yet
-			r.logger.Warn("DRAINING NOT IMPLEMENTED YET")
+			r.logger.Info("DRAINING NOT IMPLEMENTED YET")
 
 			r.logger.Debugf("Restart node with id: %d", node.NodeId)
 			if err := r.restarter.RestartNode(node); err != nil {
@@ -361,21 +361,6 @@ func (r *Rolling) atomicRememberComplete(m *sync.Mutex, actionUID *Ydb_Maintenan
 	(*restartedNodes)++
 }
 
-func (r *Rolling) populateTenantToNodesMapping(nodes []*Ydb_Maintenance.Node) map[string][]uint32 {
-	tenantNameToNodeIds := make(map[string][]uint32)
-	for _, node := range nodes {
-		dynamicNode := node.GetDynamic()
-		if dynamicNode != nil {
-			tenantNameToNodeIds[dynamicNode.GetTenant()] = append(
-				tenantNameToNodeIds[dynamicNode.GetTenant()],
-				node.NodeId,
-			)
-		}
-	}
-
-	return tenantNameToNodeIds
-}
-
 func (r *Rolling) prepareState() (*state, error) {
 	nodes, err := r.cms.Nodes()
 
@@ -408,7 +393,7 @@ func (r *Rolling) prepareState() (*state, error) {
 
 	return &state{
 		knownVersions:                  make(MajorToMinors),
-		tenantNameToNodeIds:            r.populateTenantToNodesMapping(activeNodes),
+		tenantNameToNodeIds:            utils.PopulateTenantToNodesMapping(activeNodes),
 		tenants:                        tenants,
 		userSID:                        userSID,
 		nodes:                          collections.ToMap(activeNodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),

@@ -38,7 +38,7 @@ func (r StorageSSHRestarter) Filter(
 	spec FilterNodeParams,
 	cluster ClusterNodesInfo,
 ) []*Ydb_Maintenance.Node {
-	storageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeId)
+	storageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeID)
 
 	preSelectedNodes := PopulateByCommonFields(storageNodes, spec)
 

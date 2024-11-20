@@ -12,11 +12,17 @@ type option struct {
 	defaultValue string
 }
 
-// TODO make a generic solution, at this moment only string values are supported
-var pointersToProgramOptions = make(map[string]option)
+// TODO @jorres make a generic solution, at this moment only string values are supported
+
+// NOTE: the whole profile solution is probably a hack, and there must be a better way of doing it.
+// Currently, this map, for every key that is supported by a profile (e.g. 'kubeconfig'), holds
+// pointers to all string variables for this key across all commands (e.g. for 'kubeconfig' profile
+// option, there are multiple commands which have RestartOptions and thus need filling
+// KubeconfigPath in profile: run, maintenance, restart).
+var pointersToProgramOptions = make(map[string][]option)
 
 const (
-	activeProfileKeyName = "active_profile"
+	activeProfileKeyName = "current-profile"
 	profileArrayKeyName  = "profiles"
 )
 
@@ -60,17 +66,30 @@ func FillDefaultsFromActiveProfile(configFile, profileName string) error {
 		return fmt.Errorf("profile `%s` not found in your profile file", profileName)
 	}
 
-	for optionName, defValue := range profile.(map[any]any) {
-		option, ok := pointersToProgramOptions[optionName.(string)]
+	for optionName, valueFromFile := range profile.(map[any]any) {
+		options, ok := pointersToProgramOptions[optionName.(string)]
 		if !ok {
 			return fmt.Errorf("profile `%s` contains unsupported field `%s`", profileName, optionName)
 		}
-		if *option.ptr == option.defaultValue {
-			*option.ptr = defValue.(string)
+		for _, option := range options {
+			if *option.ptr == option.defaultValue {
+				*option.ptr = valueFromFile.(string)
+			}
 		}
 	}
 
 	return nil
+}
+
+func appendToOptions(flagName string, ptr *string, defaultValue string) {
+	if pointersToProgramOptions[flagName] == nil {
+		pointersToProgramOptions[flagName] = []option{}
+	}
+
+	pointersToProgramOptions[flagName] = append(pointersToProgramOptions[flagName], option{
+		ptr:          ptr,
+		defaultValue: defaultValue,
+	})
 }
 
 func PopulateFromProfileLaterP(
@@ -81,10 +100,7 @@ func PopulateFromProfileLaterP(
 	defaultValue string,
 	usage string,
 ) {
-	pointersToProgramOptions[flagName] = option{
-		ptr:          ptr,
-		defaultValue: defaultValue,
-	}
+	appendToOptions(flagName, ptr, defaultValue)
 	setter(ptr, flagName, shorthand, defaultValue, usage)
 }
 
@@ -95,9 +111,6 @@ func PopulateFromProfileLater(
 	defaultValue string,
 	usage string,
 ) {
-	pointersToProgramOptions[flagName] = option{
-		ptr:          ptr,
-		defaultValue: defaultValue,
-	}
+	appendToOptions(flagName, ptr, defaultValue)
 	setter(ptr, flagName, defaultValue, usage)
 }
