@@ -14,6 +14,7 @@ import (
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
 	"github.com/ydb-platform/ydbops/pkg/options"
+	"github.com/ydb-platform/ydbops/pkg/prettyprint"
 	"github.com/ydb-platform/ydbops/pkg/rolling/restarters"
 	"github.com/ydb-platform/ydbops/pkg/utils"
 )
@@ -130,6 +131,8 @@ func (o *Options) Run(f cmdutil.Factory) error {
 		"Your task id is:\n\n%s\n\nPlease write it down for refreshing and completing the task later.\n",
 		task.GetTaskUid(),
 	)
+
+	fmt.Println(prettyprint.TaskToString(task))
 
 	return nil
 }
