@@ -1,3 +1,0 @@
-kind: Changed
-body: Active profile now uses 'current-profile' key in yaml config, rather than 'active_profile', to comply with the docs
-time: 2024-11-19T22:33:36.858984953+01:00

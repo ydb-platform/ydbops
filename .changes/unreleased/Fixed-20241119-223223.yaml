@@ -1,3 +1,0 @@
-kind: Fixed
-body: '''ydbops maintenance'' command could not accept nodeIds in ''--hosts'' option (e.g. --hosts=1,2)'
-time: 2024-11-19T22:32:23.277140842+01:00
