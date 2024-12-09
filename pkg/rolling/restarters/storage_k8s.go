@@ -62,7 +62,7 @@ func applyStorageK8sFilteringRules(
 	cluster ClusterNodesInfo,
 	fqdnToPodName map[string]string,
 ) []*Ydb_Maintenance.Node {
-	allStorageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeId)
+	allStorageNodes := FilterStorageNodes(cluster.AllNodes, spec.MaxStaticNodeID)
 
 	selectedByCMSNodes := PopulateByCommonFields(allStorageNodes, spec)
 	selectedByK8sNodes := populateWithK8sRules(allStorageNodes, spec, fqdnToPodName)

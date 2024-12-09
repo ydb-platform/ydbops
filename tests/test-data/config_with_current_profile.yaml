@@ -1,4 +1,4 @@
-active_profile: my-profile
+current-profile: my-profile
 profiles:
   my-profile:
     endpoint: grpcs://localhost:2135

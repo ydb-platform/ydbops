@@ -197,6 +197,7 @@ func (c *defaultCMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (
 		},
 	}
 
+	fmt.Println(params.Duration)
 	if params.ScopeType == NodeScope {
 		request.ActionGroups = actionGroupsFromNodes(params)
 	} else { // HostScope

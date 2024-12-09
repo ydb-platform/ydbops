@@ -19,7 +19,7 @@ var _ = Describe("Test storage k8s Filter", func() {
 
 	It("k8s restarter filtering by --started>timestamp", func() {
 		filterSpec := FilterNodeParams{
-			MaxStaticNodeId: DefaultMaxStaticNodeId,
+			MaxStaticNodeID: DefaultMaxStaticNodeID,
 			StartedTime: &options.StartedTime{
 				Direction: '<',
 				Timestamp: fiveMinutesAgoTimestamp,
@@ -66,7 +66,7 @@ var _ = Describe("Test storage k8s Filter", func() {
 		firstDCName := "ru-central1-a"
 		secondDCName := "ru-central1-b"
 		filterSpec := FilterNodeParams{
-			MaxStaticNodeId:     DefaultMaxStaticNodeId,
+			MaxStaticNodeID:     DefaultMaxStaticNodeID,
 			SelectedDatacenters: []string{secondDCName},
 		}
 

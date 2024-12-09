@@ -39,7 +39,7 @@ var _ = Describe("Test storage ssh Filter", func() {
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
 		filterSpec := FilterNodeParams{
-			MaxStaticNodeId: DefaultMaxStaticNodeId,
+			MaxStaticNodeID: DefaultMaxStaticNodeID,
 			StartedTime: &options.StartedTime{
 				Direction: '<',
 				Timestamp: fiveMinutesAgoTimestamp,
@@ -90,7 +90,7 @@ var _ = Describe("Test storage ssh Filter", func() {
 		nodes := mock.CreateNodesFromShortConfig(nodeGroups, nodeInfoMap)
 
 		filterSpec := FilterNodeParams{
-			MaxStaticNodeId: DefaultMaxStaticNodeId,
+			MaxStaticNodeID: DefaultMaxStaticNodeID,
 		}
 
 		clusterInfo := ClusterNodesInfo{

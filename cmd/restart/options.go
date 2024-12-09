@@ -20,43 +20,56 @@ func (o *Options) DefineFlags(fs *pflag.FlagSet) {
 	o.RestartOptions.DefineFlags(fs)
 }
 
-func (o *Options) Run(f cmdutil.Factory) error {
-	var storageRestarter restarters.Restarter
-	var tenantRestarter restarters.Restarter
-
-	if o.RestartOptions.KubeconfigPath != "" {
-		storageRestarter = restarters.NewStorageK8sRestarter(
+func PrepareRestarters(
+	opts *options.TargetingOptions,
+	sshArgs []string,
+	customSystemdUnitName string,
+	restartDuration int,
+) (storage, tenant restarters.Restarter) {
+	if opts.KubeconfigPath != "" {
+		storage = restarters.NewStorageK8sRestarter(
 			options.Logger,
 			&restarters.StorageK8sRestarterOptions{
 				K8sRestarterOptions: &restarters.K8sRestarterOptions{
-					KubeconfigPath:  o.RestartOptions.KubeconfigPath,
-					Namespace:       o.RestartOptions.K8sNamespace,
-					RestartDuration: time.Duration(o.RestartOptions.RestartDuration) * time.Second,
+					KubeconfigPath:  opts.KubeconfigPath,
+					Namespace:       opts.K8sNamespace,
+					RestartDuration: time.Duration(restartDuration) * time.Second,
 				},
 			},
 		)
-		tenantRestarter = restarters.NewTenantK8sRestarter(
+		tenant = restarters.NewTenantK8sRestarter(
 			options.Logger,
 			&restarters.TenantK8sRestarterOptions{
 				K8sRestarterOptions: &restarters.K8sRestarterOptions{
-					KubeconfigPath:  o.RestartOptions.KubeconfigPath,
-					Namespace:       o.RestartOptions.K8sNamespace,
-					RestartDuration: time.Duration(o.RestartOptions.RestartDuration) * time.Second,
+					KubeconfigPath:  opts.KubeconfigPath,
+					Namespace:       opts.K8sNamespace,
+					RestartDuration: time.Duration(restartDuration) * time.Second,
 				},
 			},
 		)
-	} else {
-		storageRestarter = restarters.NewStorageSSHRestarter(
-			options.Logger,
-			o.RestartOptions.SSHArgs,
-			o.RestartOptions.CustomSystemdUnitName,
-		)
-		tenantRestarter = restarters.NewTenantSSHRestarter(
-			options.Logger,
-			o.RestartOptions.SSHArgs,
-			o.RestartOptions.CustomSystemdUnitName,
-		)
+		return storage, tenant
 	}
+
+	storage = restarters.NewStorageSSHRestarter(
+		options.Logger,
+		sshArgs,
+		customSystemdUnitName,
+	)
+	tenant = restarters.NewTenantSSHRestarter(
+		options.Logger,
+		sshArgs,
+		customSystemdUnitName,
+	)
+	return storage, tenant
+}
+
+func (o *Options) Run(f cmdutil.Factory) error {
+	storageRestarter, tenantRestarter := PrepareRestarters(
+		&o.TargetingOptions,
+		o.SSHArgs,
+		o.CustomSystemdUnitName,
+		o.RestartDuration,
+	)
 
 	bothUnspecified := !o.RestartOptions.Storage && !o.RestartOptions.Tenant
 

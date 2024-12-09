@@ -27,5 +27,5 @@ type FilterNodeParams struct {
 	SelectedNodeIds     []uint32
 	SelectedHosts       []string
 	SelectedDatacenters []string
-	MaxStaticNodeId     uint32
+	MaxStaticNodeID     uint32
 }
