@@ -283,9 +283,76 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	r.logger.Infof("%d ActionGroupStates moved to PERFORMED, will restart now...", len(performed))
 
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
-	wg := new(sync.WaitGroup)
 
 	rollingStateMutex := new(sync.Mutex)
+
+	// TODO(shmel1k@): increase this '1' and move to option
+	const (
+		maxConcurrentRestarts = 1
+	)
+	ch := make(chan *Ydb_Maintenance.ActionGroupStates, maxConcurrentRestarts)
+
+	wg := new(sync.WaitGroup)
+	done := make(chan struct{})
+	completedCh := make(chan struct{})
+	for i := 0; i < maxConcurrentRestarts; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				select {
+				case <-done:
+					return
+				case gs, ok := <-ch:
+					if !ok {
+						return
+					}
+					var (
+						as   = gs.ActionStates[0]
+						lock = as.Action.GetLockAction()
+						node = r.state.nodes[lock.Scope.GetNodeId()]
+					)
+					r.logger.Debugf("Drain node with id: %d", node.NodeId)
+					// TODO: drain node, but public draining api is not available yet
+					r.logger.Info("DRAINING NOT IMPLEMENTED YET")
+
+					r.logger.Debugf("Restart node with id: %d", node.NodeId)
+					if err := r.restarter.RestartNode(node); err != nil {
+						rollingStateMutex.Lock()
+						retriesUntilNow := r.state.retriesMadeForNode[node.NodeId]
+						r.state.retriesMadeForNode[node.NodeId]++
+						rollingStateMutex.Unlock()
+
+						r.logger.Warnf(
+							"Failed to restart node with id: %d, attempt number %v, because of: %s",
+							node.NodeId,
+							retriesUntilNow,
+							err.Error(),
+						)
+
+						if retriesUntilNow+1 == r.opts.RestartRetryNumber {
+							r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
+							r.logger.Warnf("Failed to retry node %v specified number of times (%v)", node.NodeId, r.opts.RestartRetryNumber)
+						}
+					} else {
+						r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
+						r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
+					}
+
+					completedCh <- struct{}{}
+
+					select {
+					case <-done:
+						return
+					case <-time.After(1 * time.Second):
+						r.logger.Info("Waiting for 1 second(s) between restarts")
+						// TODO(shmel1k@): move 10 * time.Second to options
+					}
+				}
+			}
+		}()
+	}
 
 	for _, gs := range performed {
 		var (
@@ -293,7 +360,6 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			lock = as.Action.GetLockAction()
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
-
 		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
 			r.completedActions = append(r.completedActions, as.ActionUid)
 			r.logger.Debugf(
@@ -303,41 +369,14 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			)
 			continue
 		}
-
-		r.logger.Debugf("Drain node with id: %d", node.NodeId)
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			// TODO: drain node, but public draining api is not available yet
-			r.logger.Info("DRAINING NOT IMPLEMENTED YET")
-
-			r.logger.Debugf("Restart node with id: %d", node.NodeId)
-			if err := r.restarter.RestartNode(node); err != nil {
-				rollingStateMutex.Lock()
-				retriesUntilNow := r.state.retriesMadeForNode[node.NodeId]
-				r.state.retriesMadeForNode[node.NodeId]++
-				rollingStateMutex.Unlock()
-
-				r.logger.Warnf(
-					"Failed to restart node with id: %d, attempt number %v, because of: %s",
-					node.NodeId,
-					retriesUntilNow,
-					err.Error(),
-				)
-
-				if retriesUntilNow+1 == r.opts.RestartRetryNumber {
-					r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
-					r.logger.Warnf("Failed to retry node %v specified number of times (%v)", node.NodeId, r.opts.RestartRetryNumber)
-				}
-			} else {
-				r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
-				r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
-			}
-		}()
+		ch <- gs
 	}
 
+	for i := 0; i < len(performed); i++ {
+		<-completedCh
+	}
+	close(ch)
+	close(done)
 	wg.Wait()
 
 	result, err := r.cms.CompleteAction(r.completedActions)
