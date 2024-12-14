@@ -33,6 +33,7 @@ type Rolling struct {
 	// TODO jorres@: maybe turn this into a local `map`
 	// variable in `processActionGroupStates`
 	completedActions []*Ydb_Maintenance.ActionUid
+	mu               sync.Mutex
 }
 
 type MajorToMinors map[int]map[int]bool
@@ -250,6 +251,35 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 	return nil
 }
 
+func (r *Rolling) handleRestartStatus(
+	statuses <-chan restartStatus,
+	restartedNodes *int,
+	expectedRestarts int,
+) {
+	for i := 0; i < expectedRestarts; i++ {
+		st := <-statuses
+		if st.err == nil {
+			r.atomicRememberComplete(st.as.GetActionUid(), restartedNodes)
+			continue
+		}
+
+		retriesUntilNow := r.state.retriesMadeForNode[st.nodeID]
+		r.state.retriesMadeForNode[st.nodeID]++
+
+		r.logger.Warnf(
+			"Failed to restart node with id: %d, attempt number %v, because of: %s",
+			st.nodeID,
+			retriesUntilNow,
+			st.err.Error(),
+		)
+
+		if retriesUntilNow+1 == r.opts.RestartRetryNumber {
+			r.atomicRememberComplete(st.as.GetActionUid(), restartedNodes)
+			r.logger.Warnf("Failed to retry node %v specified number of times (%v)", st.nodeID, r.opts.RestartRetryNumber)
+		}
+	}
+}
+
 func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates, restartedNodes *int) bool {
 	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
 
@@ -284,84 +314,27 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
 
-	rollingStateMutex := new(sync.Mutex)
-
 	// TODO(shmel1k@): increase this '1' and move to option
 	const (
 		maxConcurrentRestarts = 1
 	)
-	ch := make(chan *Ydb_Maintenance.ActionGroupStates, maxConcurrentRestarts)
-
-	wg := new(sync.WaitGroup)
+	statusCh := make(chan restartStatus, maxConcurrentRestarts)
+	restartHandler := newRestartHandler(r.logger, r.restarter, maxConcurrentRestarts, r.state.nodes, statusCh)
+	restartHandler.run()
 	done := make(chan struct{})
-	completedCh := make(chan struct{})
-	for i := 0; i < maxConcurrentRestarts; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
 
-			for {
-				select {
-				case <-done:
-					return
-				case gs, ok := <-ch:
-					if !ok {
-						return
-					}
-					var (
-						as   = gs.ActionStates[0]
-						lock = as.Action.GetLockAction()
-						node = r.state.nodes[lock.Scope.GetNodeId()]
-					)
-					r.logger.Debugf("Drain node with id: %d", node.NodeId)
-					// TODO: drain node, but public draining api is not available yet
-					r.logger.Info("DRAINING NOT IMPLEMENTED YET")
-
-					r.logger.Debugf("Restart node with id: %d", node.NodeId)
-					if err := r.restarter.RestartNode(node); err != nil {
-						rollingStateMutex.Lock()
-						retriesUntilNow := r.state.retriesMadeForNode[node.NodeId]
-						r.state.retriesMadeForNode[node.NodeId]++
-						rollingStateMutex.Unlock()
-
-						r.logger.Warnf(
-							"Failed to restart node with id: %d, attempt number %v, because of: %s",
-							node.NodeId,
-							retriesUntilNow,
-							err.Error(),
-						)
-
-						if retriesUntilNow+1 == r.opts.RestartRetryNumber {
-							r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
-							r.logger.Warnf("Failed to retry node %v specified number of times (%v)", node.NodeId, r.opts.RestartRetryNumber)
-						}
-					} else {
-						r.atomicRememberComplete(rollingStateMutex, as.ActionUid, restartedNodes)
-						r.logger.Debugf("Successfully restarted node with id: %d", node.NodeId)
-					}
-
-					completedCh <- struct{}{}
-
-					select {
-					case <-done:
-						return
-					case <-time.After(1 * time.Second):
-						r.logger.Info("Waiting for 1 second(s) between restarts")
-						// TODO(shmel1k@): move 10 * time.Second to options
-					}
-				}
-			}
-		}()
-	}
-
+	expectedRestarts := 0
 	for _, gs := range performed {
 		var (
 			as   = gs.ActionStates[0]
 			lock = as.Action.GetLockAction()
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
+		r.mu.Lock()
 		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
 			r.completedActions = append(r.completedActions, as.ActionUid)
+			r.mu.Unlock()
+
 			r.logger.Debugf(
 				"Node id %v already restarted, but CompleteAction failed on last iteration, "+
 					"so CMS does not know it is complete yet.",
@@ -369,16 +342,28 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			)
 			continue
 		}
-		ch <- gs
+		r.mu.Unlock()
+		expectedRestarts++
 	}
 
-	for i := 0; i < len(performed); i++ {
-		<-completedCh
-	}
-	close(ch)
-	close(done)
-	wg.Wait()
+	go func() {
+		r.handleRestartStatus(statusCh, restartedNodes, expectedRestarts)
+		close(done)
+	}()
 
+	for _, gs := range performed {
+		as := gs.ActionStates[0]
+		r.mu.Lock()
+		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
+			r.mu.Unlock()
+			continue
+		}
+		r.mu.Unlock()
+		restartHandler.push(gs)
+	}
+
+	<-done
+	restartHandler.stop()
 	result, err := r.cms.CompleteAction(r.completedActions)
 	if err != nil {
 		r.logger.Warnf("Failed to complete action: %+v", err)
@@ -391,9 +376,9 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	return len(actions) == len(result.ActionStatuses)
 }
 
-func (r *Rolling) atomicRememberComplete(m *sync.Mutex, actionUID *Ydb_Maintenance.ActionUid, restartedNodes *int) {
-	m.Lock()
-	defer m.Unlock()
+func (r *Rolling) atomicRememberComplete(actionUID *Ydb_Maintenance.ActionUid, restartedNodes *int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, actionUID.ActionId)
 	r.completedActions = append(r.completedActions, actionUID)
