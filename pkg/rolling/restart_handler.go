@@ -25,9 +25,8 @@ type restartHandler struct {
 	// TODO(shmel1k@): probably, not needed here.
 	nodes map[uint32]*Ydb_Maintenance.Node
 
-	onceDone sync.Once
-	done     chan struct{}
-	wg       sync.WaitGroup
+	done chan struct{}
+	wg   sync.WaitGroup
 
 	maxConcurrentRestarts int
 }
@@ -88,9 +87,7 @@ func (rh *restartHandler) run() {
 }
 
 func (rh *restartHandler) stop() {
-	rh.onceDone.Do(func() {
-		close(rh.done)
-	})
+	close(rh.done)
 }
 
 func newRestartHandler(
