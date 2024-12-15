@@ -88,6 +88,7 @@ func (rh *restartHandler) run() {
 
 func (rh *restartHandler) stop() {
 	close(rh.done)
+	close(rh.queue)
 }
 
 func newRestartHandler(

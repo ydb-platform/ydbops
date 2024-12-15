@@ -33,7 +33,7 @@ type Rolling struct {
 	// TODO jorres@: maybe turn this into a local `map`
 	// variable in `processActionGroupStates`
 	completedActions []*Ydb_Maintenance.ActionUid
-	mu               sync.Mutex
+	mu               sync.RWMutex
 }
 
 type MajorToMinors map[int]map[int]bool
@@ -330,8 +330,8 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			lock = as.Action.GetLockAction()
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
-		r.mu.Lock()
-		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
+		if r.atomicHasActionInUnreported(as.GetActionUid().GetActionId()) {
+			r.mu.Lock()
 			r.completedActions = append(r.completedActions, as.ActionUid)
 			r.mu.Unlock()
 
@@ -342,7 +342,6 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 			)
 			continue
 		}
-		r.mu.Unlock()
 		expectedRestarts++
 	}
 
@@ -353,12 +352,9 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 	for _, gs := range performed {
 		as := gs.ActionStates[0]
-		r.mu.Lock()
-		if collections.Contains(r.state.unreportedButFinishedActionIds, as.ActionUid.ActionId) {
-			r.mu.Unlock()
+		if r.atomicHasActionInUnreported(as.ActionUid.GetActionId()) {
 			continue
 		}
-		r.mu.Unlock()
 		restartHandler.push(gs)
 	}
 
@@ -374,6 +370,13 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 	// completed when all actions marked as completed
 	return len(actions) == len(result.ActionStatuses)
+}
+
+func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	return collections.Contains(r.state.unreportedButFinishedActionIds, actionID)
 }
 
 func (r *Rolling) atomicRememberComplete(actionUID *Ydb_Maintenance.ActionUid, restartedNodes *int) {
