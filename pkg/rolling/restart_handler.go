@@ -100,7 +100,7 @@ func newRestartHandler(
 	return &restartHandler{
 		logger:                logger,
 		restarter:             restarter,
-		queue:                 make(chan *Ydb_Maintenance.ActionGroupStates, maxConcurrentRestarts),
+		queue:                 make(chan *Ydb_Maintenance.ActionGroupStates),
 		statusCh:              statusCh,
 		done:                  make(chan struct{}),
 		maxConcurrentRestarts: maxConcurrentRestarts,
