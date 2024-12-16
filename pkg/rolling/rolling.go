@@ -314,12 +314,15 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
 
-	// TODO(shmel1k@): increase this '1' and move to option
-	const (
-		maxConcurrentRestarts = 1
+	statusCh := make(chan restartStatus, r.opts.NodesInflight)
+	restartHandler := newRestartHandler(
+		r.logger,
+		r.restarter,
+		r.opts.NodesInflight,
+		r.opts.DelayBetweenRestarts,
+		r.state.nodes,
+		statusCh,
 	)
-	statusCh := make(chan restartStatus, maxConcurrentRestarts)
-	restartHandler := newRestartHandler(r.logger, r.restarter, maxConcurrentRestarts, r.state.nodes, statusCh)
 	restartHandler.run()
 	done := make(chan struct{})
 

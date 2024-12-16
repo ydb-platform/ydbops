@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	DefaultRetryCount                  = 3
-	DefaultCMSQueryIntervalSeconds     = 10
-	DefaultRestartDurationSeconds      = 60
-	DefaultMaxConcurrentRestarts       = 1
-	DefaultDelayBetweenRestartsSeconds = 1
+	DefaultRetryCount              = 3
+	DefaultCMSQueryIntervalSeconds = 10
+	DefaultRestartDurationSeconds  = 60
+	DefaultNodesInflight           = 1
+	DefaultDelayBetweenRestarts    = time.Second
 )
 
 type RestartOptions struct {
@@ -24,8 +24,8 @@ type RestartOptions struct {
 
 	RestartRetryNumber         int
 	CMSQueryInterval           int
-	MaxConcurrentRestarts      int
-	DelayBetweenRestarts       int
+	NodesInflight              int
+	DelayBetweenRestarts       time.Duration
 	SuppressCompatibilityCheck bool
 
 	RestartDuration int
@@ -94,10 +94,10 @@ after that would be considered a regular cluster failure`)
 		`By default, nodes within one cluster can differ by at most one major release.
 ydbops will try to figure out if you broke this rule by comparing before\after of some restarted node.`)
 
-	fs.IntVar(&o.MaxConcurrentRestarts, "max-concurrent-restarts", DefaultMaxConcurrentRestarts,
-		`The limit on the number of simultaneous restarts`)
+	fs.IntVar(&o.NodesInflight, "nodes-inflight", DefaultNodesInflight,
+		`The limit on the number of simultaneous node restarts`)
 
-	fs.IntVar(&o.DelayBetweenRestarts, "delay-between-restarts-seconds", DefaultDelayBetweenRestartsSeconds,
+	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
 		`Delay between two consecutive restarts in seconds. The number of simultaneous is set by 'max-concurrent-restarts'`)
 }
 

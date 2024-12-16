@@ -28,7 +28,8 @@ type restartHandler struct {
 	done chan struct{}
 	wg   sync.WaitGroup
 
-	maxConcurrentRestarts int
+	nodesInflight        int
+	delayBetweenRestarts time.Duration
 }
 
 func (rh *restartHandler) push(state *Ydb_Maintenance.ActionGroupStates) {
@@ -39,7 +40,7 @@ func (rh *restartHandler) push(state *Ydb_Maintenance.ActionGroupStates) {
 }
 
 func (rh *restartHandler) run() {
-	for i := 0; i < rh.maxConcurrentRestarts; i++ {
+	for i := 0; i < rh.nodesInflight; i++ {
 		rh.wg.Add(1)
 		go func() {
 			defer rh.wg.Done()
@@ -77,7 +78,7 @@ func (rh *restartHandler) run() {
 					select {
 					case <-rh.done:
 						return
-					case <-time.After(1 * time.Second):
+					case <-time.After(rh.delayBetweenRestarts):
 						continue
 					}
 				}
@@ -94,17 +95,19 @@ func (rh *restartHandler) stop() {
 func newRestartHandler(
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
-	maxConcurrentRestarts int,
+	nodesInflight int,
+	delayBetweenRestarts time.Duration,
 	nodes map[uint32]*Ydb_Maintenance.Node,
 	statusCh chan<- restartStatus,
 ) *restartHandler {
 	return &restartHandler{
-		logger:                logger,
-		restarter:             restarter,
-		queue:                 make(chan *Ydb_Maintenance.ActionGroupStates),
-		statusCh:              statusCh,
-		done:                  make(chan struct{}),
-		maxConcurrentRestarts: maxConcurrentRestarts,
-		nodes:                 nodes,
+		logger:               logger,
+		restarter:            restarter,
+		queue:                make(chan *Ydb_Maintenance.ActionGroupStates),
+		statusCh:             statusCh,
+		done:                 make(chan struct{}),
+		nodesInflight:        nodesInflight,
+		nodes:                nodes,
+		delayBetweenRestarts: delayBetweenRestarts,
 	}
 }
