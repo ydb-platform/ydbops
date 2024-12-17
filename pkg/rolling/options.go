@@ -15,6 +15,8 @@ const (
 	DefaultRetryCount              = 3
 	DefaultCMSQueryIntervalSeconds = 10
 	DefaultRestartDurationSeconds  = 60
+	DefaultNodesInflight           = 1
+	DefaultDelayBetweenRestarts    = time.Second
 )
 
 type RestartOptions struct {
@@ -22,6 +24,8 @@ type RestartOptions struct {
 
 	RestartRetryNumber         int
 	CMSQueryInterval           int
+	NodesInflight              int
+	DelayBetweenRestarts       time.Duration
 	SuppressCompatibilityCheck bool
 
 	RestartDuration int
@@ -87,8 +91,14 @@ the ydbops utility is stateless. Use at your own risk.`)
 after that would be considered a regular cluster failure`)
 
 	fs.BoolVar(&o.SuppressCompatibilityCheck, "suppress-compat-check", false,
-		`By default, nodes within one cluster can differ by at most one major release. 
+		`By default, nodes within one cluster can differ by at most one major release.
 ydbops will try to figure out if you broke this rule by comparing before\after of some restarted node.`)
+
+	fs.IntVar(&o.NodesInflight, "nodes-inflight", DefaultNodesInflight,
+		`The limit on the number of simultaneous node restarts`)
+
+	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
+		`Delay between two consecutive restarts in seconds. The number of simultaneous is set by 'max-concurrent-restarts'`)
 }
 
 func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {
