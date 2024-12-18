@@ -31,7 +31,7 @@ func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 	profile.PopulateFromProfileLaterP(
 		fs.StringVarP, &o.Endpoint, "endpoint", "e",
 		"",
-		fmt.Sprintf(`[Required] PROTOCOL://HOST[:PORT]
+		fmt.Sprintf(`PROTOCOL://HOST[:PORT]
   A GRPC URL to connect to the YDB cluster. Default port is %v`, GRPCDefaultPort))
 
 	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
@@ -57,8 +57,17 @@ func (o *GRPC) Validate() error {
 		}
 	}
 
-	if (o.Endpoint) == "" {
-		return fmt.Errorf("specify a grpc endpoint with --endpoint")
+	if o.TimeoutSeconds < 0 {
+		return fmt.Errorf("invalid grpc timeout value specified: %d", o.TimeoutSeconds)
+	}
+
+	if !o.GRPCSecure && o.GRPCSkipVerify {
+		return fmt.Errorf("unexpected --grpc-skip-verify with insecure grpc schema")
+	}
+
+	// skip validation if empty endpoint
+	if o.Endpoint == "" {
+		return nil
 	}
 
 	parsedURL, err := url.Parse(o.Endpoint)
@@ -75,10 +84,6 @@ func (o *GRPC) Validate() error {
 		return fmt.Errorf("please specify the protocol in the endpoint explicitly: grpc or grpcs")
 	}
 
-	if !o.GRPCSecure && o.GRPCSkipVerify {
-		return fmt.Errorf("unexpected --grpc-skip-verify with insecure grpc schema")
-	}
-
 	// Strip o.Endpoint from protocol and port number
 	o.Endpoint = parsedURL.Hostname()
 
@@ -91,10 +96,6 @@ func (o *GRPC) Validate() error {
 			return fmt.Errorf("invalid port specified: %d, must be in range: (%d,%d)", port, 1, 65536)
 		}
 		o.GRPCPort = port
-	}
-
-	if o.TimeoutSeconds < 0 {
-		return fmt.Errorf("invalid grpc timeout value specified: %d", o.TimeoutSeconds)
 	}
 
 	return nil
