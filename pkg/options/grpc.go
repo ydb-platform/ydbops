@@ -61,10 +61,6 @@ func (o *GRPC) Validate() error {
 		return fmt.Errorf("invalid grpc timeout value specified: %d", o.TimeoutSeconds)
 	}
 
-	if !o.GRPCSecure && o.GRPCSkipVerify {
-		return fmt.Errorf("unexpected --grpc-skip-verify with insecure grpc schema")
-	}
-
 	// skip validation if empty endpoint
 	if o.Endpoint == "" {
 		return nil
@@ -82,6 +78,10 @@ func (o *GRPC) Validate() error {
 		o.GRPCSecure = false
 	default:
 		return fmt.Errorf("please specify the protocol in the endpoint explicitly: grpc or grpcs")
+	}
+
+	if !o.GRPCSecure && o.GRPCSkipVerify {
+		return fmt.Errorf("unexpected --grpc-skip-verify with insecure grpc schema")
 	}
 
 	// Strip o.Endpoint from protocol and port number
