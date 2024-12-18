@@ -52,6 +52,10 @@ func (f *connectionsFactory) Create() (*grpc.ClientConn, error) {
 		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
 
+	if f.options.GRPC.Endpoint == "" {
+		return nil, fmt.Errorf("specify a grpc endpoint with --endpoint")
+	}
+
 	return grpc.Dial(f.endpoint(),
 		grpc.WithTransportCredentials(cr),
 		grpc.WithDefaultCallOptions(
