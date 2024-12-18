@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v0.0.15 - 2024-12-18
+### Added
+* nodes-inflight option, that limits inflight restarts
+* delay-between-restarts option that adds wait between two consecutive restarts
+### Changed
+* Endpoint non required
+
 ## v0.0.14 - 2024-12-09
 ### Changed
 * Active profile now uses 'current-profile' key in yaml config, rather than 'active_profile', to comply with the docs
