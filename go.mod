@@ -74,4 +74,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
+replace google.golang.org/grpc => google.golang.org/grpc v1.63.2
+
 replace github.com/yandex-cloud/go-genproto => github.com/yandex-cloud/go-genproto v0.0.0-20240819112322-98a264d392f6
