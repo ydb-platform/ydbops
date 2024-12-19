@@ -73,3 +73,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/yandex-cloud/go-genproto => github.com/yandex-cloud/go-genproto v0.0.0-20240819112322-98a264d392f6
