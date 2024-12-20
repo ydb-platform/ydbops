@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.16 - 2024-12-20
+### Changed
+* Downgraded dependencies
+
 ## v0.0.15 - 2024-12-18
 ### Added
 * nodes-inflight option, that limits inflight restarts
