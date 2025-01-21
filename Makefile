@@ -1,6 +1,6 @@
 BINARY_NAME=ydbops
 BUILD_DIR=bin
-PREFIX ?= ~/ydb/bin
+INSTALL_DIR ?= ~/ydb/bin
 
 TODAY=$(shell date --iso=minutes)
 GIT_COMMIT=$(shell git rev-parse HEAD)
@@ -77,9 +77,9 @@ build-in-docker: clear docker
 	docker rm -f $(BINARY_NAME)
 
 install:
-ifeq ($(UNAME_S),Darwin)
-	cp ${BUILD_DIR}/${BINARY_NAME}_$(SYSTEM_OS)_$(SYSTEM_ARCH) $(PREFIX)/ydbops
+ifeq ($(SYSTEM_OS),darwin)
+	cp ${BUILD_DIR}/${BINARY_NAME}_$(SYSTEM_OS)_$(SYSTEM_ARCH) $(INSTALL_DIR)/ydbops
 else
-	cp ${BUILD_DIR}/${BINARY_NAME} $(PREFIX)/ydbops
+	cp ${BUILD_DIR}/${BINARY_NAME} $(INSTALL_DIR)/ydbops
 endif
 	chmod +x $(PREFIX)/ydbops
