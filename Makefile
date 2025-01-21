@@ -82,4 +82,4 @@ ifeq ($(SYSTEM_OS),darwin)
 else
 	cp ${BUILD_DIR}/${BINARY_NAME} $(INSTALL_DIR)/ydbops
 endif
-	chmod +x $(PREFIX)/ydbops
+	chmod +x $(INSTALL_DIR)/ydbops
