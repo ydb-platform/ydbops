@@ -98,7 +98,7 @@ ydbops will try to figure out if you broke this rule by comparing before\after o
 		`The limit on the number of simultaneous node restarts`)
 
 	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
-		`Delay between two consecutive restarts in seconds. The number of simultaneous is set by 'max-concurrent-restarts'`)
+		`Delay between two consecutive restarts in seconds. The number of simultaneous is set by 'nodes-inflight'`)
 }
 
 func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {
