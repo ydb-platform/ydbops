@@ -372,9 +372,9 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	r.state.unreportedButFinishedActionIds = []string{}
 
 	restartCompleted := len(actions) == len(result.ActionStatuses)
-	shouldWaitForDelay := !restartCompleted
+	waitForDelay := !restartCompleted
 
-	restartHandler.stop(shouldWaitForDelay)
+	restartHandler.stop(waitForDelay)
 
 	return restartCompleted
 }
