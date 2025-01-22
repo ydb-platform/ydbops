@@ -371,15 +371,12 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	r.logCompleteResult(result)
 	r.state.unreportedButFinishedActionIds = []string{}
 
-	isRestartCompleted := len(actions) == len(result.ActionStatuses)
+	restartCompleted := len(actions) == len(result.ActionStatuses)
+	shouldWaitForDelay := !restartCompleted
 
-	if !isRestartCompleted {
-		restartHandler.stopWithDelay()
-	} else {
-		restartHandler.stopRightNow()
-	}
+	restartHandler.stop(shouldWaitForDelay)
 
-	return isRestartCompleted
+	return restartCompleted
 }
 
 func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {

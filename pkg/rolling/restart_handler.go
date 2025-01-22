@@ -89,14 +89,11 @@ func (rh *restartHandler) run() {
 	}
 }
 
-func (rh *restartHandler) stopWithDelay() {
+func (rh *restartHandler) stop(shouldWaitForDelay bool) {
 	close(rh.queue)
-	rh.wg.Wait()
-	close(rh.done)
-}
-
-func (rh *restartHandler) stopRightNow() {
-	close(rh.queue)
+	if shouldWaitForDelay {
+		rh.wg.Wait()
+	}
 	close(rh.done)
 }
 
