@@ -77,8 +77,10 @@ func (rh *restartHandler) run() {
 
 					select {
 					case <-rh.done:
+						rh.logger.Debug("received from rh.done")
 						return
 					case <-time.After(rh.delayBetweenRestarts):
+						rh.logger.Debugf("successfully waited for %s", rh.delayBetweenRestarts.String())
 						continue
 					}
 				}
@@ -87,9 +89,12 @@ func (rh *restartHandler) run() {
 	}
 }
 
-func (rh *restartHandler) stop() {
-	close(rh.done)
+func (rh *restartHandler) stop(waitForDelay bool) {
 	close(rh.queue)
+	if waitForDelay {
+		rh.wg.Wait()
+	}
+	close(rh.done)
 }
 
 func newRestartHandler(

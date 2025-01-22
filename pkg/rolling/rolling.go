@@ -362,7 +362,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	}
 
 	<-done
-	restartHandler.stop()
+
 	result, err := r.cms.CompleteAction(r.completedActions)
 	if err != nil {
 		r.logger.Warnf("Failed to complete action: %+v", err)
@@ -371,8 +371,12 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	r.logCompleteResult(result)
 	r.state.unreportedButFinishedActionIds = []string{}
 
-	// completed when all actions marked as completed
-	return len(actions) == len(result.ActionStatuses)
+	restartCompleted := len(actions) == len(result.ActionStatuses)
+	waitForDelay := !restartCompleted
+
+	restartHandler.stop(waitForDelay)
+
+	return restartCompleted
 }
 
 func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
