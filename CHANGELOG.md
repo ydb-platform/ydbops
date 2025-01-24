@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.17 - 2025-01-22
+### Fixed
+* --started option help contained a critically misleading typo (> vs <)
+
 ## v0.0.16 - 2024-12-20
 ### Changed
 * Downgraded dependencies
