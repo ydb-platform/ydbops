@@ -1,4 +1,0 @@
-2024-12-25T18:13:51.105+0100	debug	Current logging level enabled: debug
-2024-12-25T18:13:51.105+0100	debug	Authentication type not specified, implicitly assuming type: iam-token
-2024-12-25T18:13:51.105+0100	info	Start rolling restart
-2024-12-25T18:13:51.105+0100	debug	Invoke ListClusterNodes method
