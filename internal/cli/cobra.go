@@ -27,7 +27,7 @@ func DeterminePadding(curCommand, subCommandLineNumber, totalCommands int) strin
 func GenerateUsage(cmd *cobra.Command) string {
 	boldUsage := color.New(color.Bold).Sprint("Usage:")
 	if cmd == cmd.Root() {
-		return fmt.Sprintf("%s ydbops [global options...] <subcommand", boldUsage)
+		return fmt.Sprintf("%s ydbops [global options...] <subcommand>", boldUsage)
 	}
 
 	cmdChain := cmd.Name()
