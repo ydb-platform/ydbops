@@ -77,10 +77,8 @@ func (rh *restartHandler) run() {
 
 					select {
 					case <-rh.done:
-						rh.logger.Debug("received from rh.done")
 						return
 					case <-time.After(rh.delayBetweenRestarts):
-						rh.logger.Debugf("successfully waited for %s", rh.delayBetweenRestarts.String())
 						continue
 					}
 				}
