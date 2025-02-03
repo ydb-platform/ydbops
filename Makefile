@@ -1,8 +1,38 @@
 BINARY_NAME=ydbops
 BUILD_DIR=bin
+INSTALL_DIR ?= ~/ydb/bin
 
 TODAY=$(shell date --iso=minutes)
 GIT_COMMIT=$(shell git rev-parse HEAD)
+
+# Detect OS and architecture
+ifeq ($(OS),Windows_NT)
+    SYSTEM_OS = win32
+    ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+        SYSTEM_ARCH = amd64
+    endif
+    ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+        SYSTEM_ARCH = x86
+    endif
+else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+        SYSTEM_OS = linux
+    endif
+    ifeq ($(UNAME_S),Darwin)
+        SYSTEM_OS = darwin
+    endif
+    UNAME_P := $(shell uname -p)
+    ifeq ($(UNAME_P),x86_64)
+        SYSTEM_ARCH = amd64
+    endif
+    ifneq ($(filter %86,$(UNAME_P)),)
+        SYSTEM_ARCH = x86
+    endif
+    ifneq ($(filter arm%,$(UNAME_P)),)
+        SYSTEM_ARCH = arm64
+    endif
+endif
 
 # APP_VERSION gets supplied from outside in CI as an env variable.
 # By default you can still build `ydbops` manually without specifying it, 
@@ -45,3 +75,11 @@ build-in-docker: clear docker
 	docker create --name $(BINARY_NAME) $(BINARY_NAME)
 	docker cp '$(BINARY_NAME):/app/bin/' $(BUILD_DIR)
 	docker rm -f $(BINARY_NAME)
+
+install:
+ifeq ($(SYSTEM_OS),darwin)
+	cp ${BUILD_DIR}/${BINARY_NAME}_$(SYSTEM_OS)_$(SYSTEM_ARCH) $(INSTALL_DIR)/ydbops
+else
+	cp ${BUILD_DIR}/${BINARY_NAME} $(INSTALL_DIR)/ydbops
+endif
+	chmod +x $(INSTALL_DIR)/ydbops
