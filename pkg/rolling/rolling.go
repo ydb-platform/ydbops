@@ -110,14 +110,9 @@ func (e *executer) Execute() error {
 			cancel()
 		}()
 	}
-	var err error
-	if e.opts.Continue {
-		e.logger.Info("Continue previous rolling restart")
-		err = r.DoRestartPrevious(ctx)
-	} else {
-		e.logger.Info("Start rolling restart")
-		err = r.DoRestart(ctx)
-	}
+
+	e.logger.Info("Start rolling restart")
+	err := r.DoRestart(ctx)
 
 	if errors.Is(err, context.Canceled) && e.opts.CleanupOnExit {
 		e.logger.Info("Operation was cancelled, cleaning up maintenance tasks")
@@ -206,10 +201,6 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 	}
 
 	return r.cmsWaitingLoop(ctx, task, len(nodesToRestart))
-}
-
-func (r *Rolling) DoRestartPrevious(ctx context.Context) error {
-	return fmt.Errorf("--continue behavior not implemented yet")
 }
 
 func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask, totalNodes int) error {
