@@ -24,7 +24,8 @@ run:
 # output configuration options
 output:
   # colored-line-number|line-number|json|tab|checkstyle, default is "colored-line-number"
-  formats: colored-line-number
+  formats:
+  - format: colored-line-number
 
   # print lines of code with issue, default is true
   print-issued-lines: true
@@ -43,12 +44,9 @@ linters-settings:
     # default is false: such cases aren't reported by default.
     check-blank: false
   govet:
-    # report about shadowed variables
-    check-shadowing: false
-    fieldalignment: true
-  golint:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.8
+    enable:
+      - shadow # report about shadowed variables
+      - fieldalignment # check struct field alignment
   gofmt:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
@@ -63,9 +61,6 @@ linters-settings:
     min-len: 2
     # minimal occurrences count to trigger, 3 by default
     min-occurrences: 2
-  fieldalignment:
-    # print struct with more effective memory layout or not, false by default
-    suggest-new: true
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Default is to use a neutral variety of English.
@@ -93,17 +88,7 @@ linters-settings:
       - name: empty-block
       - name: superfluous-else
       - name: unreachable-code
-  unused:
-    # treat code as a program (not a library) and report unused exported identifiers; default is false.
-    # XXX: if you enable this setting, unused will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find funcs usages. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    check-exported: false
   unparam:
-    # call graph construction algorithm (cha, rta). In general, use cha for libraries,
-    # and rta for programs with main packages. Default is cha.
-    algo: cha
-
     # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
     # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
     # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
@@ -173,9 +158,6 @@ linters-settings:
         # The flag is passed to the ruleguard 'debug-group' argument.
         # Default: ""
         debug: 'emptyDecl'
-        # Deprecated, use 'failOn' param.
-        # If set to true, identical to failOn='all', otherwise failOn=''
-        failOnError: false
         # Determines the behavior when an error occurs while parsing ruleguard files.
         # If flag is not set, log error and skip rule files that contain an error.
         # If flag is set, the value must be a comma-separated list of error conditions.
@@ -290,8 +272,6 @@ issues:
   # Default value for this option is true.
   exclude-use-default: true
 
-  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
-  max-per-linter: 0
 
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
