@@ -245,7 +245,7 @@ func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask, 
 
 		r.logger.Infof("Wait next %s delay. Total node progress: %v out of %v", delay, restartedNodes, totalNodes)
 
-		if err := waitOrCancel(ctx, delay); err != nil {
+		if err = waitOrCancel(ctx, delay); err != nil {
 			return err
 		}
 

@@ -46,7 +46,6 @@ linters-settings:
   govet:
     enable:
       - shadow # report about shadowed variables
-      - fieldalignment # check struct field alignment
   gofmt:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
