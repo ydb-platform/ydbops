@@ -2,11 +2,15 @@ package rolling
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,16 +95,40 @@ func (e *executer) Execute() error {
 		restarter: e.restarter,
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if e.opts.CleanupOnExit {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+		e.logger.Infof("Set up signal interception for SIGINT and SIGTERM")
+
+		go func() {
+			sig := <-sigCh
+			e.logger.Infof("Received signal: %v, canceling operations", sig)
+			cancel()
+		}()
+	}
 	var err error
 	if e.opts.Continue {
 		e.logger.Info("Continue previous rolling restart")
-		err = r.DoRestartPrevious()
+		err = r.DoRestartPrevious(ctx)
 	} else {
 		e.logger.Info("Start rolling restart")
-		err = r.DoRestart()
+		err = r.DoRestart(ctx)
 	}
 
-	if err != nil {
+	if errors.Is(err, context.Canceled) && e.opts.CleanupOnExit {
+		e.logger.Info("Operation was cancelled, cleaning up maintenance tasks")
+
+		if cleanupErr := r.cleanupRollingRestart(); cleanupErr != nil {
+			e.logger.Errorf("Failed to cleanup maintenance tasks on signal: %v", cleanupErr)
+		} else {
+			e.logger.Info("Successfully cleaned up maintenance tasks")
+		}
+		return err
+	} else if err != nil {
 		e.logger.Errorf("Failed to complete restart: %+v", err)
 		return err
 	}
@@ -109,14 +137,14 @@ func (e *executer) Execute() error {
 	return nil
 }
 
-func (r *Rolling) DoRestart() error {
+func (r *Rolling) DoRestart(ctx context.Context) error {
 	state, err := r.prepareState()
 	if err != nil {
 		return err
 	}
 	r.state = state
 
-	if err = r.cleanupOldRollingRestarts(); err != nil {
+	if err = r.cleanupRollingRestart(); err != nil {
 		return err
 	}
 
@@ -177,14 +205,14 @@ func (r *Rolling) DoRestart() error {
 		return fmt.Errorf("failed to create maintenance task: %w", err)
 	}
 
-	return r.cmsWaitingLoop(task, len(nodesToRestart))
+	return r.cmsWaitingLoop(ctx, task, len(nodesToRestart))
 }
 
-func (r *Rolling) DoRestartPrevious() error {
+func (r *Rolling) DoRestartPrevious(ctx context.Context) error {
 	return fmt.Errorf("--continue behavior not implemented yet")
 }
 
-func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error {
+func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask, totalNodes int) error {
 	var (
 		err          error
 		delay        time.Duration
@@ -216,7 +244,10 @@ func (r *Rolling) cmsWaitingLoop(task cms.MaintenanceTask, totalNodes int) error
 		}
 
 		r.logger.Infof("Wait next %s delay. Total node progress: %v out of %v", delay, restartedNodes, totalNodes)
-		time.Sleep(delay)
+
+		if err := waitOrCancel(ctx, delay); err != nil {
+			return err
+		}
 
 		r.logger.Infof("Refresh maintenance task with id: %s", taskID)
 		task, err = r.cms.RefreshMaintenanceTask(taskID)
@@ -438,8 +469,8 @@ func (r *Rolling) prepareState() (*state, error) {
 	}, nil
 }
 
-func (r *Rolling) cleanupOldRollingRestarts() error {
-	r.logger.Debugf("Will cleanup all previous maintenance tasks...")
+func (r *Rolling) cleanupRollingRestart() error {
+	r.logger.Debugf("Will cleanup all maintenance tasks...")
 
 	previousTasks, err := r.cms.MaintenanceTasks(r.state.userSID)
 	if err != nil {
@@ -548,4 +579,17 @@ func (r *Rolling) logCompleteResult(result *Ydb_Maintenance.ManageActionResult) 
 	}
 
 	r.logger.Debugf("Manage action result:\n%s", prettyprint.ResultToString(result))
+}
+
+func waitOrCancel(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	select {
+	case <-ctx.Done():
+		timer.Stop()
+		return ctx.Err()
+	case <-timer.C:
+		// Continue with operation, this was a regular wait
+	}
+
+	return nil
 }

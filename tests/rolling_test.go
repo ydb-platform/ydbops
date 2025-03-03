@@ -825,7 +825,7 @@ var _ = Describe("Test Rolling", func() {
 					Version:    "23.3.1",
 				},
 			},
-			additionalMockBehaviour: &mock.AdditionalMockBehaviour{
+			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
 				RestartNodesOnNewVersion: "24.1.1",
 			},
 			steps: []StepData{
@@ -877,6 +877,75 @@ var _ = Describe("Test Rolling", func() {
 					expectedOutputRegexps: []string{
 						".*Triggered this check: 24 major is incompatible with 23-3.*",
 					},
+				},
+			},
+		},
+		),
+		Entry("Interrupt rolling restart with SIGTERM", TestCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				1: {IsDynnode: false},
+				2: {IsDynnode: false},
+				3: {IsDynnode: false},
+			},
+			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
+				SignalDelayMs: 500, // this is carefully crafted to fire just when `ydbops` waits for second node
+			},
+			steps: []StepData{
+				{
+					ydbopsInvocation: []string{
+						"--endpoint", "grpcs://localhost:2135",
+						"--verbose",
+						"--availability-mode", "strong",
+						"--user", mock.TestUser,
+						"--cms-query-interval", "1",
+						"run",
+						"--hosts", "1,2",
+						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+						"--cleanup-on-exit",
+					},
+					expectedRequests: []proto.Message{
+						&Ydb_Auth.LoginRequest{
+							User:     mock.TestUser,
+							Password: mock.TestPassword,
+						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
+						&Ydb_Cms.ListDatabasesRequest{},
+						&Ydb_Discovery.WhoAmIRequest{},
+						&Ydb_Maintenance.ListMaintenanceTasksRequest{
+							User: &mock.TestUser,
+						},
+						&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+							TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+								TaskUid:          "task-UUID-1",
+								Description:      "Rolling restart maintenance task",
+								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+							},
+							ActionGroups: mock.MakeActionGroupsFromNodeIds(1, 2),
+						},
+						&Ydb_Maintenance.CompleteActionRequest{
+							ActionUids: []*Ydb_Maintenance.ActionUid{
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-1",
+									ActionId: "action-UUID-1",
+								},
+							},
+						},
+						&Ydb_Maintenance.ListMaintenanceTasksRequest{
+							User: &mock.TestUser,
+						},
+						&Ydb_Maintenance.GetMaintenanceTaskRequest{
+							TaskUid: "task-UUID-1",
+						},
+						&Ydb_Maintenance.DropMaintenanceTaskRequest{
+							TaskUid: "task-UUID-1",
+						},
+					},
+					expectedOutputRegexps: []string{},
 				},
 			},
 		},

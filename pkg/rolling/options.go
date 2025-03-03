@@ -27,6 +27,7 @@ type RestartOptions struct {
 	NodesInflight              int
 	DelayBetweenRestarts       time.Duration
 	SuppressCompatibilityCheck bool
+	CleanupOnExit              bool
 
 	RestartDuration int
 
@@ -99,6 +100,9 @@ ydbops will try to figure out if you broke this rule by comparing before\after o
 
 	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
 		`Delay between two consecutive restarts. E.g. '60s', '2m'. The number of simultaneous restarts is limited by 'nodes-inflight'.`)
+
+	fs.BoolVar(&o.CleanupOnExit, "cleanup-on-exit", false,
+		`When enabled, attempt to drop the maintenance task if the utility is killed by SIGTERM.`)
 }
 
 func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {

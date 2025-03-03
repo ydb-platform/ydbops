@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo/v2"
@@ -39,7 +41,7 @@ type TestCase struct {
 	nodeInfoMap       map[uint32]mock.TestNodeInfo
 
 	steps                   []StepData
-	additionalMockBehaviour *mock.AdditionalMockBehaviour
+	additionalTestBehaviour *mock.AdditionalTestBehaviour
 }
 
 var (
@@ -84,10 +86,10 @@ func RunAfterEach() {
 func RunTestCase(tc TestCase) {
 	ydb.SetNodeConfiguration(tc.nodeConfiguration, tc.nodeInfoMap)
 
-	if tc.additionalMockBehaviour == nil {
-		tc.additionalMockBehaviour = &mock.AdditionalMockBehaviour{}
+	if tc.additionalTestBehaviour == nil {
+		tc.additionalTestBehaviour = &mock.AdditionalTestBehaviour{}
 	}
-	ydb.SetMockBehaviour(*tc.additionalMockBehaviour)
+	ydb.SetMockBehaviour(*tc.additionalTestBehaviour)
 
 	var maintenanceTaskId string
 	for _, step := range tc.steps {
@@ -102,10 +104,15 @@ func RunTestCase(tc TestCase) {
 		}
 
 		cmd := exec.Command(filepath.Join("..", "bin", "ydbops"), commandArgs...)
+
+		if tc.additionalTestBehaviour.SignalDelayMs > 0 {
+			go func() {
+				time.Sleep(time.Duration(tc.additionalTestBehaviour.SignalDelayMs) * time.Millisecond)
+				cmd.Process.Signal(syscall.SIGTERM)
+			}()
+		}
+
 		outputBytes, _ := cmd.CombinedOutput()
-		// TODO some tests return with an error. Maybe tune this test a bit
-		// so it includes checking the error code as well
-		// Expect(err).To(BeNil())
 		output := string(outputBytes)
 
 		for _, expectedOutputRegexp := range step.expectedOutputRegexps {
