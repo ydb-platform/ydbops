@@ -40,7 +40,7 @@ func determineRestartDuration(nNodes int) time.Duration {
 	defaultRestartDuration := time.Second * 60
 	singleBatchRestartTime := defaultRestartDuration * 3
 
-	singleBatchWithWait := singleBatchRestartTime + 1 * time.Second
+	singleBatchWithWait := singleBatchRestartTime + 1*time.Second
 	maximumTotalBatches := nNodes
 
 	return time.Duration(maximumTotalBatches) * singleBatchWithWait
