@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -101,7 +103,12 @@ Password search order:
 
 func (a *AuthStatic) Validate() error {
 	if a.PasswordFile != "" {
-		content, err := os.ReadFile(a.PasswordFile)
+		tempPath := a.PasswordFile
+		if strings.HasPrefix(tempPath, "~/") {
+			currentUser, _ := user.Current()
+			tempPath = filepath.Join(currentUser.HomeDir, tempPath[2:])
+		}
+		content, err := os.ReadFile(tempPath)
 		if err != nil {
 			return fmt.Errorf("error reading file with static password: %w", err)
 		}

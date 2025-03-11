@@ -30,7 +30,7 @@ func New() *cobra.Command {
 				return fmt.Errorf("free args not expected: %v", args)
 			}
 			fmt.Printf(
-				"Git commit: %s\nTag: %s\nBuild date: %s",
+				"Git commit: %s\nTag: %s\nBuild date: %s\n",
 				BuildCommit,
 				BuildVersion,
 				BuildTimestamp,
