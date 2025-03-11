@@ -38,8 +38,9 @@ type fakeMaintenanceTask struct {
 	actionGroupStates []*ActionGroupStates
 }
 
-type AdditionalMockBehaviour struct {
+type AdditionalTestBehaviour struct {
 	RestartNodesOnNewVersion string
+	SignalDelayMs            int // Send SIGTERM after this delay in milliseconds
 }
 
 type YdbMock struct {
@@ -51,7 +52,7 @@ type YdbMock struct {
 	grpcServer              *grpc.Server
 	caFile                  string
 	keyFile                 string
-	additionalMockBehaviour AdditionalMockBehaviour
+	additionalTestBehaviour AdditionalTestBehaviour
 
 	// This field contains the list of Nodes that is suitable to return
 	// to ListClusterNodes request from rolling restart.
@@ -174,7 +175,7 @@ func (s *YdbMock) CompleteAction(ctx context.Context, req *CompleteActionRequest
 	for _, completedActionUid := range req.ActionUids {
 		task := s.tasks[completedActionUid.TaskUid]
 
-		if s.additionalMockBehaviour.RestartNodesOnNewVersion != "" {
+		if s.additionalTestBehaviour.RestartNodesOnNewVersion != "" {
 			for _, actionGroup := range task.actionGroups {
 				lock := actionGroup.Actions[0].GetLockAction()
 				nodeHost := lock.Scope.GetHost()
@@ -182,7 +183,7 @@ func (s *YdbMock) CompleteAction(ctx context.Context, req *CompleteActionRequest
 
 				for _, node := range s.nodes {
 					if node.NodeId == nodeId || node.Host == nodeHost {
-						node.Version = s.additionalMockBehaviour.RestartNodesOnNewVersion
+						node.Version = s.additionalTestBehaviour.RestartNodesOnNewVersion
 					}
 				}
 			}
@@ -302,6 +303,6 @@ func (s *YdbMock) Teardown() {
 	s.grpcServer.GracefulStop()
 }
 
-func (s *YdbMock) SetMockBehaviour(additionalMockBehaviour AdditionalMockBehaviour) {
-	s.additionalMockBehaviour = additionalMockBehaviour
+func (s *YdbMock) SetMockBehaviour(additionalMockBehaviour AdditionalTestBehaviour) {
+	s.additionalTestBehaviour = additionalMockBehaviour
 }

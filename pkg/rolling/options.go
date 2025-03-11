@@ -27,10 +27,9 @@ type RestartOptions struct {
 	NodesInflight              int
 	DelayBetweenRestarts       time.Duration
 	SuppressCompatibilityCheck bool
+	CleanupOnExit              bool
 
 	RestartDuration int
-
-	Continue bool
 
 	SSHArgs []string
 
@@ -81,11 +80,6 @@ Examples:
 	fs.IntVar(&o.CMSQueryInterval, "cms-query-interval", DefaultCMSQueryIntervalSeconds,
 		fmt.Sprintf("How often to query CMS while waiting for new permissions %v", DefaultCMSQueryIntervalSeconds))
 
-	fs.BoolVar(&o.Continue, "continue", false,
-		`Attempt to continue previous rolling restart, if there was one. The set of selected nodes
-for this invocation must be the same as for the previous invocation, and this can not be verified at runtime since
-the ydbops utility is stateless. Use at your own risk.`)
-
 	fs.IntVar(&o.RestartDuration, "duration", DefaultRestartDurationSeconds,
 		`CMS will release the node for maintenance for duration * restart-retry-number seconds. Any maintenance
 after that would be considered a regular cluster failure`)
@@ -99,6 +93,9 @@ ydbops will try to figure out if you broke this rule by comparing before\after o
 
 	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
 		`Delay between two consecutive restarts. E.g. '60s', '2m'. The number of simultaneous restarts is limited by 'nodes-inflight'.`)
+
+	fs.BoolVar(&o.CleanupOnExit, "cleanup-on-exit", true,
+		`When enabled, attempt to drop the maintenance task if the utility is killed by SIGTERM.`)
 }
 
 func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {

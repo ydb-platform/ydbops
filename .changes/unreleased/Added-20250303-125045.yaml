@@ -1,0 +1,3 @@
+kind: Added
+body: New --cleanup-on-exit flag for `ydbops restart`. If specified, will intercept SIGTERM\SIGINT, safely finish current CMS batch and exit, cleaning up request
+time: 2025-03-03T12:50:45.370454584+01:00
