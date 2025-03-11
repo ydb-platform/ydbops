@@ -36,6 +36,41 @@ func makeNode(nodeID uint32) *Ydb_Maintenance.Node {
 	}
 }
 
+func determineRestartDuration(nNodes int) time.Duration {
+	defaultRestartDuration := time.Second * 60
+	singleBatchRestartTime := defaultRestartDuration * 3
+
+	singleBatchWithWait := singleBatchRestartTime + 1*time.Second
+	maximumTotalBatches := nNodes
+
+	return time.Duration(maximumTotalBatches) * singleBatchWithWait
+}
+
+func MakeActionGroupsFromNodesIdsFixedDuration(duration time.Duration, nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
+	result := []*Ydb_Maintenance.ActionGroup{}
+	for _, nodeID := range nodeIDs {
+		result = append(result,
+			&Ydb_Maintenance.ActionGroup{
+				Actions: []*Ydb_Maintenance.Action{
+					{
+						Action: &Ydb_Maintenance.Action_LockAction{
+							LockAction: &Ydb_Maintenance.LockAction{
+								Scope: &Ydb_Maintenance.ActionScope{
+									Scope: &Ydb_Maintenance.ActionScope_NodeId{
+										NodeId: nodeID,
+									},
+								},
+								Duration: durationpb.New(duration),
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+	return result
+}
+
 func MakeActionGroupsFromNodeIds(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
 	result := []*Ydb_Maintenance.ActionGroup{}
 	for _, nodeID := range nodeIDs {
@@ -50,7 +85,32 @@ func MakeActionGroupsFromNodeIds(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGro
 										NodeId: nodeID,
 									},
 								},
-								Duration: durationpb.New(180 * time.Second),
+								Duration: durationpb.New(determineRestartDuration(len(nodeIDs))),
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+	return result
+}
+
+func MakeActionGroupsFromHostFQDNsFixedDuration(duration time.Duration, hostFQDNs ...string) []*Ydb_Maintenance.ActionGroup {
+	result := []*Ydb_Maintenance.ActionGroup{}
+	for _, hostFQDN := range hostFQDNs {
+		result = append(result,
+			&Ydb_Maintenance.ActionGroup{
+				Actions: []*Ydb_Maintenance.Action{
+					{
+						Action: &Ydb_Maintenance.Action_LockAction{
+							LockAction: &Ydb_Maintenance.LockAction{
+								Scope: &Ydb_Maintenance.ActionScope{
+									Scope: &Ydb_Maintenance.ActionScope_Host{
+										Host: hostFQDN,
+									},
+								},
+								Duration: durationpb.New(duration),
 							},
 						},
 					},
@@ -75,7 +135,7 @@ func MakeActionGroupsFromHostFQDNs(hostFQDNs ...string) []*Ydb_Maintenance.Actio
 										Host: hostFQDN,
 									},
 								},
-								Duration: durationpb.New(180 * time.Second),
+								Duration: durationpb.New(determineRestartDuration(len(hostFQDNs))),
 							},
 						},
 					},

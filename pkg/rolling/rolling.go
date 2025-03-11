@@ -190,7 +190,7 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 	taskParams := cms.MaintenanceTaskParams{
 		TaskUID:          r.state.restartTaskUID,
 		AvailabilityMode: r.opts.GetAvailabilityMode(),
-		Duration:         r.opts.GetRestartDuration(),
+		Duration:         r.opts.GetRestartDuration(len(nodesToRestart)),
 		ScopeType:        cms.NodeScope,
 		Nodes:            nodesToRestart,
 	}

@@ -2,6 +2,7 @@ package rolling
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -98,6 +99,11 @@ ydbops will try to figure out if you broke this rule by comparing before\after o
 		`When enabled, attempt to drop the maintenance task if the utility is killed by SIGTERM.`)
 }
 
-func (o *RestartOptions) GetRestartDuration() *durationpb.Duration {
-	return durationpb.New(time.Second * time.Duration(o.RestartDuration) * time.Duration(o.RestartRetryNumber))
+func (o *RestartOptions) GetRestartDuration(nNodes int) *durationpb.Duration {
+	singleBatchRestartTime := time.Second * time.Duration(o.RestartDuration) * time.Duration(o.RestartRetryNumber)
+	singleBatchWithWait := singleBatchRestartTime + o.DelayBetweenRestarts
+	maximumTotalBatches := int(math.Ceil(float64(nNodes) / float64(o.NodesInflight)))
+
+	finalDuration := time.Duration(maximumTotalBatches) * singleBatchWithWait
+	return durationpb.New(finalDuration)
 }

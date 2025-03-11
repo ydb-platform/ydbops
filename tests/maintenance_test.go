@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
@@ -49,7 +50,7 @@ var _ = Describe("Test Maintenance", func() {
 								Description:      "Rolling restart maintenance task",
 								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 							},
-							ActionGroups: mock.MakeActionGroupsFromHostFQDNs("ydb-1.ydb.tech", "ydb-2.ydb.tech"),
+							ActionGroups: mock.MakeActionGroupsFromHostFQDNsFixedDuration(time.Second * 180, "ydb-1.ydb.tech", "ydb-2.ydb.tech"),
 						},
 					},
 					expectedOutputRegexps: []string{
@@ -237,7 +238,7 @@ var _ = Describe("Test Maintenance", func() {
 								Description:      "Rolling restart maintenance task",
 								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
 							},
-							ActionGroups: mock.MakeActionGroupsFromNodeIds(1, 2),
+							ActionGroups: mock.MakeActionGroupsFromNodesIdsFixedDuration(time.Second * 180, 1, 2),
 						},
 					},
 					expectedOutputRegexps: []string{
