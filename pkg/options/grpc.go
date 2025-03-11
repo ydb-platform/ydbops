@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -51,7 +53,10 @@ func (o *GRPC) Validate() error {
 		if !strings.Contains(o.Endpoint, "grpcs") {
 			return fmt.Errorf("--ca-file must be specified only for secure connection")
 		}
-
+		if strings.HasPrefix(o.CaFile, "~/") {
+			currentUser, _ := user.Current()
+			o.CaFile = filepath.Join(currentUser.HomeDir, o.CaFile[2:])
+		}
 		if _, err := os.Stat(o.CaFile); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("--ca-file file not found: %w", err)
 		}
