@@ -573,13 +573,10 @@ func (r *Rolling) logCompleteResult(result *Ydb_Maintenance.ManageActionResult) 
 }
 
 func waitOrCancel(ctx context.Context, delay time.Duration) error {
-	timer := time.NewTimer(delay)
 	select {
 	case <-ctx.Done():
-		timer.Stop()
 		return ctx.Err()
-	case <-timer.C:
-		// Continue with operation, this was a regular wait
+	case <-time.After(delay):
 	}
 
 	return nil
