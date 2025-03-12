@@ -11,10 +11,6 @@ import (
 type Options struct {
 }
 
-const (
-	DefaultMaintenanceDurationSeconds = 3600
-)
-
 func (o *Options) DefineFlags(fs *pflag.FlagSet) {
 }
 
