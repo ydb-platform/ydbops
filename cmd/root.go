@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/ydb-platform/ydbops/cmd/maintenance"
+	nodes "github.com/ydb-platform/ydbops/cmd/nodes"
 	"github.com/ydb-platform/ydbops/cmd/restart"
 	"github.com/ydb-platform/ydbops/cmd/run"
 	"github.com/ydb-platform/ydbops/cmd/version"
@@ -95,6 +96,7 @@ func NewRootCommand(
 func InitRootCommandTree(root *cobra.Command, f cmdutil.Factory) {
 	root.AddCommand(
 		restart.New(f),
+		nodes.New(f),
 		maintenance.New(f),
 		run.New(f),
 		version.New(),
