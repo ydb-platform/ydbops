@@ -30,7 +30,7 @@ func NewStorageK8sRestarter(logger *zap.SugaredLogger, params *StorageK8sRestart
 }
 
 func (r StorageK8sRestarter) RestartNode(node *Ydb_Maintenance.Node) error {
-	return r.restartNodeByRestartingPod(node.Host, r.Opts.namespace)
+	return r.restartNodeByRestartingPod(node.Host, node.Port, r.Opts.namespace)
 }
 
 func populateWithK8sRules(

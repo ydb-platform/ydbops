@@ -3,6 +3,7 @@
 
 ```
 openssl req -new -addext "subjectAltName = DNS:localhost" -x509 -newkey rsa:4096 -days 365 -keyout ca.key -out ca.crt
+openssl req -nodes -new -addext "subjectAltName = DNS:localhost" -x509 -subj "/C=AU/ST=Some-State/O=Internet Widgits Pty Ltd/CN=localhost" -newkey rsa:4096 -days 3650 -keyout ca.key -out ca.crt
 ```
 
 2. Decrypt the cert by specifying the same PEM phrase
