@@ -1,0 +1,3 @@
+kind: Fixed
+body: storage pod selection by node id in k8s
+time: 2025-03-14T18:58:34.960207+01:00
