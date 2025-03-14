@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.18 - 2025-03-14
+### Added
+* Add new target into Makefile - install
+* New --cleanup-on-exit flag for `ydbops restart`. If specified, will intercept SIGTERM\SIGINT, safely finish current CMS batch and exit, cleaning up request
+### Changed
+* bumped Go version to 1.23
+### Removed
+* Removed an unimplemented --continue flag. Turned out it's not necessary, filtering by uptime etc is expressive and much simpler
+### Fixed
+* 'delay-between-restarts' applies between CMS batches as well
+* Returned forgotten bracket in <subcommand> help message
+
 ## v0.0.17 - 2025-01-22
 ### Fixed
 * --started option help contained a critically misleading typo (> vs <)
