@@ -1,3 +1,0 @@
-kind: Removed
-body: Removed an unimplemented --continue flag. Turned out it's not necessary, filtering by uptime etc is expressive and much simpler
-time: 2025-03-03T13:26:24.60035851+01:00
