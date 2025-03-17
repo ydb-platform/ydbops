@@ -1,6 +1,11 @@
 # Changelog
 
 
+## v0.0.19 - 2025-03-17
+### Fixed
+* storage pod selection by node id in k8s
+* update ssl certificate for tests
+
 ## v0.0.18 - 2025-03-14
 ### Added
 * Add new target into Makefile - install
