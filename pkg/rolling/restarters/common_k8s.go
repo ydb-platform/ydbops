@@ -6,13 +6,16 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	DefaultPodPhasePollingInterval = time.Second * 10
+	ContainerStorageName = "ydb-storage"
+	ContainerDynnodeName = "ydb-dynamic"
+	PortInterconnectName = "interconnect"
 )
 
 type k8sRestarter struct {
@@ -53,6 +56,20 @@ func (r *k8sRestarter) createK8sClient(kubeconfigPath string) *kubernetes.Client
 	return clientset
 }
 
+func podInterconnectPort(p *v1.Pod) int32 {
+	for _, container := range p.Spec.Containers {
+		if container.Name != ContainerStorageName && container.Name != ContainerDynnodeName {
+			continue
+		}
+		for _, port := range container.Ports {
+			if port.Name == PortInterconnectName {
+				return port.ContainerPort
+			}
+		}
+	}
+	return -1
+}
+
 func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace string) {
 	r.k8sClient = r.createK8sClient(kubeconfigPath)
 
@@ -66,6 +83,11 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 		r.FQDNToPodName[pod.Name] = pod.Name
 		r.FQDNToPodName[fullPodFQDN] = pod.Name
 		r.FQDNToPodName[pod.Spec.NodeName] = pod.Name
+		if icPort := podInterconnectPort(&pod); icPort != -1 {
+			r.FQDNToPodName[fmt.Sprintf("%s:%d", pod.Name, icPort)] = pod.Name
+			r.FQDNToPodName[fmt.Sprintf("%s:%d", fullPodFQDN, icPort)] = pod.Name
+			r.FQDNToPodName[fmt.Sprintf("%s:%d", pod.Spec.NodeName, icPort)] = pod.Name
+		}
 	}
 
 	if err != nil {
@@ -73,13 +95,16 @@ func (r *k8sRestarter) prepareK8sState(kubeconfigPath, labelSelector, namespace 
 	}
 }
 
-func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN, namespace string) error {
-	podName, present := r.FQDNToPodName[nodeFQDN]
+func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN string, icPort uint32, namespace string) error {
+	podName, present := r.FQDNToPodName[fmt.Sprintf("%s:%d", nodeFQDN, icPort)]
+	if !present {
+		podName, present = r.FQDNToPodName[nodeFQDN]
+	}
 	if !present {
 		return fmt.Errorf(
-			"failed to determine which pod corresponds to node fqdn %s\n"+
+			"failed to determine which pod corresponds to node fqdn %s port %d\n"+
 				"This is most likely a bug, contact the developers.\n"+
-				"If possible, attach logs from invocation with --verbose flag", nodeFQDN)
+				"If possible, attach logs from invocation with --verbose flag", nodeFQDN, icPort)
 	}
 
 	r.logger.Infof("Restarting pod %s on the %s node", podName, nodeFQDN)
