@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	//nolint:staticcheck
 	. "github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

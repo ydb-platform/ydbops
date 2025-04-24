@@ -52,6 +52,8 @@ type state struct {
 	userSID                        string
 	unreportedButFinishedActionIds []string
 	restartTaskUID                 string
+	alreadyRestartedNodes          int
+	totalFilteredNodes             int
 }
 
 const (
@@ -200,18 +202,18 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 		return fmt.Errorf("failed to create maintenance task: %w", err)
 	}
 
-	return r.cmsWaitingLoop(ctx, task, len(nodesToRestart))
+	r.state.totalFilteredNodes = len(nodesToRestart)
+
+	return r.cmsWaitingLoop(ctx, task)
 }
 
-func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask, totalNodes int) error {
+func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask) error {
 	var (
 		err          error
 		delay        time.Duration
 		taskID       = task.GetTaskUid()
 		defaultDelay = time.Duration(r.opts.CMSQueryInterval) * time.Second
 	)
-
-	restartedNodes := 0
 
 	r.logger.Infof("Maintenance task %v, processing loop started", taskID)
 	for {
@@ -229,12 +231,12 @@ func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask, 
 				}
 			}
 
-			if completed := r.processActionGroupStates(task.GetActionGroupStates(), &restartedNodes); completed {
+			if completed := r.processActionGroupStates(task.GetActionGroupStates()); completed {
 				break
 			}
 		}
 
-		r.logger.Infof("Wait next %s delay. Total node progress: %v out of %v", delay, restartedNodes, totalNodes)
+		r.logger.Infof("Wait next %s delay before refreshing maintenance task in CMS", delay)
 
 		if err = waitOrCancel(ctx, delay); err != nil {
 			return err
@@ -273,15 +275,11 @@ func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask, 
 	return nil
 }
 
-func (r *Rolling) handleRestartStatus(
-	statuses <-chan restartStatus,
-	restartedNodes *int,
-	expectedRestarts int,
-) {
+func (r *Rolling) handleRestartStatus(statuses <-chan restartStatus, expectedRestarts int) {
 	for i := 0; i < expectedRestarts; i++ {
 		st := <-statuses
 		if st.err == nil {
-			r.atomicRememberComplete(st.as.GetActionUid(), restartedNodes)
+			r.atomicRememberComplete(st.as.GetActionUid())
 			continue
 		}
 
@@ -296,13 +294,13 @@ func (r *Rolling) handleRestartStatus(
 		)
 
 		if retriesUntilNow+1 == r.opts.RestartRetryNumber {
-			r.atomicRememberComplete(st.as.GetActionUid(), restartedNodes)
+			r.atomicRememberComplete(st.as.GetActionUid())
 			r.logger.Warnf("Failed to retry node %v specified number of times (%v)", st.nodeID, r.opts.RestartRetryNumber)
 		}
 	}
 }
 
-func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates, restartedNodes *int) bool {
+func (r *Rolling) getPerformedActions(actions []*Ydb_Maintenance.ActionGroupStates) []*Ydb_Maintenance.ActionGroupStates {
 	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
 
 	var actionStatesBuf bytes.Buffer
@@ -329,6 +327,14 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		}
 
 		r.logger.Info("No actions can be taken yet, CMS didn't move any actions to PERFORMED because of: ", msg)
+	}
+
+	return performed
+}
+
+func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
+	performed := r.getPerformedActions(actions)
+	if len(performed) == 0 {
 		return false
 	}
 
@@ -371,7 +377,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	}
 
 	go func() {
-		r.handleRestartStatus(statusCh, restartedNodes, expectedRestarts)
+		r.handleRestartStatus(statusCh, expectedRestarts)
 		close(done)
 	}()
 
@@ -408,13 +414,14 @@ func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
 	return collections.Contains(r.state.unreportedButFinishedActionIds, actionID)
 }
 
-func (r *Rolling) atomicRememberComplete(actionUID *Ydb_Maintenance.ActionUid, restartedNodes *int) {
+func (r *Rolling) atomicRememberComplete(actionUID *Ydb_Maintenance.ActionUid) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.state.unreportedButFinishedActionIds = append(r.state.unreportedButFinishedActionIds, actionUID.ActionId)
 	r.completedActions = append(r.completedActions, actionUID)
-	(*restartedNodes)++
+	r.state.alreadyRestartedNodes++
+	r.logger.Infof("Total node progress: %v out of %v", r.state.alreadyRestartedNodes, r.state.totalFilteredNodes)
 }
 
 func (r *Rolling) prepareState() (*state, error) {
@@ -457,6 +464,8 @@ func (r *Rolling) prepareState() (*state, error) {
 		retriesMadeForNode:             make(map[uint32]int),
 		unreportedButFinishedActionIds: []string{},
 		restartTaskUID:                 RestartTaskPrefix + uuid.New().String(),
+		alreadyRestartedNodes:          0,
+		totalFilteredNodes:             0,
 	}, nil
 }
 

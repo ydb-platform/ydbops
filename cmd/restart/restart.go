@@ -32,7 +32,7 @@ func New(
 		PreRunE: cli.PopulateProfileDefaultsAndValidate(f.GetBaseOptions(), opts.RestartOptions),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return fmt.Errorf("Free args not expected: %v", args)
+				return fmt.Errorf("free args not expected: %v", args)
 			}
 
 			err := opts.Validate()

@@ -76,7 +76,7 @@ func compareRaw(sign, nodeVersion, userVersion string) bool {
 func (v MajorMinorPatchVersion) Satisfies(otherVersion string) (bool, error) {
 	major, minor, patch, err := utils.ParseMajorMinorPatchFromVersion(otherVersion)
 	if err != nil {
-		return false, fmt.Errorf("Failed to extract major.minor.patch from version %s", otherVersion)
+		return false, fmt.Errorf("failed to extract major.minor.patch from version %s", otherVersion)
 	}
 
 	return compareMajorMinorPatch(

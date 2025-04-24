@@ -1,0 +1,3 @@
+kind: Changed
+body: Total node progress is logged in between --delay-between-restarts too
+time: 2025-04-24T14:53:31.8278171+02:00
