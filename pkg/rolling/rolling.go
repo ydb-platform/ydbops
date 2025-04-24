@@ -300,7 +300,7 @@ func (r *Rolling) handleRestartStatus(statuses <-chan restartStatus, expectedRes
 	}
 }
 
-func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
+func (r *Rolling) getPerformedActions(actions []*Ydb_Maintenance.ActionGroupStates) []*Ydb_Maintenance.ActionGroupStates {
 	r.logger.Debugf("Unfiltered ActionGroupStates: %v", actions)
 
 	var actionStatesBuf bytes.Buffer
@@ -327,6 +327,14 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 		}
 
 		r.logger.Info("No actions can be taken yet, CMS didn't move any actions to PERFORMED because of: ", msg)
+	}
+
+	return performed
+}
+
+func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
+	performed := r.getPerformedActions(actions)
+	if len(performed) == 0 {
 		return false
 	}
 
