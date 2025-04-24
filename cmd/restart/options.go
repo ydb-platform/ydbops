@@ -71,11 +71,11 @@ func (o *Options) Run(f cmdutil.Factory) error {
 		o.RestartDuration,
 	)
 
-	bothUnspecified := !o.RestartOptions.Storage && !o.RestartOptions.Tenant
+	bothUnspecified := !o.Storage && !o.Tenant
 
 	var executer rolling.Executer
 	var err error
-	if o.RestartOptions.Storage || bothUnspecified {
+	if o.Storage || bothUnspecified {
 		// TODO(shmel1k@): add logger to NewExecuter parameters
 		executer = rolling.NewExecuter(o.RestartOptions, zap.S(), f.GetCMSClient(), f.GetDiscoveryClient(), storageRestarter)
 		err = executer.Execute()
@@ -85,7 +85,7 @@ func (o *Options) Run(f cmdutil.Factory) error {
 		return err
 	}
 
-	if o.RestartOptions.Tenant || bothUnspecified {
+	if o.Tenant || bothUnspecified {
 		executer = rolling.NewExecuter(o.RestartOptions, zap.S(), f.GetCMSClient(), f.GetDiscoveryClient(), tenantRestarter)
 		err = executer.Execute()
 	}

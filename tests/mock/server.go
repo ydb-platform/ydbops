@@ -11,6 +11,8 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/Ydb_Cms_V1"
 	"github.com/ydb-platform/ydb-go-genproto/Ydb_Discovery_V1"
 	"github.com/ydb-platform/ydb-go-genproto/draft/Ydb_Maintenance_V1"
+
+	//nolint:staticcheck
 	. "github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Auth"

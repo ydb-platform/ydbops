@@ -114,7 +114,7 @@ func (r *k8sRestarter) restartNodeByRestartingPod(nodeFQDN string, icPort uint32
 		return fmt.Errorf("pod scheduled for deletion %s not found: %w", podName, err)
 	}
 
-	oldUID := pod.ObjectMeta.UID
+	oldUID := pod.UID
 	r.logger.Debugf("Pod %s id: %v", podName, oldUID)
 
 	err = r.k8sClient.CoreV1().Pods(namespace).Delete(

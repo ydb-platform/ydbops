@@ -170,7 +170,7 @@ func ExcludeByCommonFields(nodes []*Ydb_Maintenance.Node, spec FilterNodeParams)
 
 	if spec.Version != nil && len(unknownVersions) > 0 {
 		prettyUnknownVersions, _ := json.MarshalIndent(unknownVersions, "", "  ")
-		zap.S().Warnf(`Failed to extract major.minor.patch when filtering by %s from some nodes.
+		zap.S().Warnf(`failed to extract major.minor.patch when filtering by %s from some nodes.
 Here is a map from node version to node FQDNs with this version: 
 %s`,
 			spec.Version.String(),

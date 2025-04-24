@@ -57,7 +57,7 @@ func (r *Options) Validate() error {
 }
 
 func (r *Options) Run(f cmdutil.Factory) error {
-	bothUnspecified := !r.RestartOptions.Storage && !r.RestartOptions.Tenant
+	bothUnspecified := !r.Storage && !r.Tenant
 
 	restarter := restarters.NewRunRestarter(zap.S(), &restarters.RunRestarterParams{
 		PayloadFilePath: r.PayloadFilePath,
@@ -65,13 +65,13 @@ func (r *Options) Run(f cmdutil.Factory) error {
 
 	var executer rolling.Executer
 	var err error
-	if r.RestartOptions.Storage || bothUnspecified {
+	if r.Storage || bothUnspecified {
 		restarter.SetStorageOnly()
 		executer = rolling.NewExecuter(r.RestartOptions, options.Logger, f.GetCMSClient(), f.GetDiscoveryClient(), restarter)
 		err = executer.Execute()
 	}
 
-	if err == nil && (r.RestartOptions.Tenant || bothUnspecified) {
+	if err == nil && (r.Tenant || bothUnspecified) {
 		restarter.SetDynnodeOnly()
 		executer = rolling.NewExecuter(r.RestartOptions, options.Logger, f.GetCMSClient(), f.GetDiscoveryClient(), restarter)
 		err = executer.Execute()

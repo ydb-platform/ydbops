@@ -21,12 +21,12 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.61.0
+          version: v2.1.2
       - name: golangci-lint-new-code-much-stricter
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.61.0
-          args: --verbose --disable-all --new-from-rev=origin/master --enable stylecheck,funlen
+          version: v2.1.2
+          args: --verbose --new-from-rev=origin/master --enable-only funlen
 
   tests:
     name: run tests
