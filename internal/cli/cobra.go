@@ -92,8 +92,12 @@ func GenerateShortGlobalOptions(rootCmd *cobra.Command) []string {
 }
 
 func ColorizeUsages(cmd *cobra.Command) string {
+	return ColorizeUsagesFromFlagSet(cmd.LocalFlags())
+}
+
+func ColorizeUsagesFromFlagSet(flagSet *pflag.FlagSet) string {
 	flagOccurences := []string{}
-	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+	flagSet.VisitAll(func(f *pflag.Flag) {
 		longFlagName := fmt.Sprintf("--%s", f.Name)
 		flagOccurences = append(flagOccurences, longFlagName)
 		if len(f.Shorthand) > 0 {
@@ -117,25 +121,43 @@ func ColorizeUsages(cmd *cobra.Command) string {
 
 	replacer := strings.NewReplacer(replacementPairs...)
 
-	flagUsages := cmd.LocalFlags().FlagUsages()
+	flagUsages := flagSet.FlagUsages()
 
 	return replacer.Replace(flagUsages)
 }
 
 func GenerateCommandOptionsMessage(cmd *cobra.Command) []string {
+	seenFlags := make(map[string]bool)
 	result := []string{}
 
+	result = generateCommandOptionsMessageWithTracking(cmd, seenFlags, result)
+	return result
+}
+
+func generateCommandOptionsMessageWithTracking(cmd *cobra.Command, seenFlags map[string]bool, result []string) []string {
 	local := cmd.LocalFlags()
 	if len(local.FlagUsages()) > 0 {
 		if cmd == cmd.Root() {
 			return GenerateShortGlobalOptions(cmd)
 		}
 
-		result = append(result, ColorizeUsages(cmd))
+		filteredFlags := pflag.NewFlagSet(cmd.Name(), pflag.ContinueOnError)
+
+		local.VisitAll(func(flag *pflag.Flag) {
+			if !seenFlags[flag.Name] {
+				filteredFlags.AddFlag(flag)
+				seenFlags[flag.Name] = true
+			}
+		})
+
+		if len(filteredFlags.FlagUsages()) > 0 {
+			result = append(result, ColorizeUsagesFromFlagSet(filteredFlags))
+		}
 	}
 
 	if cmd.HasParent() {
-		result = append(result, GenerateCommandOptionsMessage(cmd.Parent())...)
+		parentResult := generateCommandOptionsMessageWithTracking(cmd.Parent(), seenFlags, []string{})
+		result = append(result, parentResult...)
 	}
 
 	return result
