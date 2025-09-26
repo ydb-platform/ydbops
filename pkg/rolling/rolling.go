@@ -231,7 +231,7 @@ func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask) 
 				}
 			}
 
-			if completed := r.processActionGroupStates(task.GetActionGroupStates()); completed {
+			if completed := r.processActionGroupStates(ctx, task.GetActionGroupStates()); completed {
 				break
 			}
 		}
@@ -275,27 +275,33 @@ func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask) 
 	return nil
 }
 
-func (r *Rolling) handleRestartStatus(statuses <-chan restartStatus, expectedRestarts int) {
+func (r *Rolling) handleRestartStatus(ctx context.Context, statuses <-chan restartStatus, expectedRestarts int) {
 	for i := 0; i < expectedRestarts; i++ {
-		st := <-statuses
-		if st.err == nil {
-			r.atomicRememberComplete(st.as.GetActionUid())
-			continue
-		}
+		select {
+		case <-ctx.Done():
+			// if we caught cancellation here, we will close the done channel of restartHandler as soon as this function
+			// exits, restartHandler will exit as well
+			return
+		case st := <-statuses:
+			if st.err == nil {
+				r.atomicRememberComplete(st.as.GetActionUid())
+				continue
+			}
 
-		retriesUntilNow := r.state.retriesMadeForNode[st.nodeID]
-		r.state.retriesMadeForNode[st.nodeID]++
+			retriesUntilNow := r.state.retriesMadeForNode[st.nodeID]
+			r.state.retriesMadeForNode[st.nodeID]++
 
-		r.logger.Warnf(
-			"Failed to restart node with id: %d, attempt number %v, because of: %s",
-			st.nodeID,
-			retriesUntilNow,
-			st.err.Error(),
-		)
+			r.logger.Warnf(
+				"Failed to restart node with id: %d, attempt number %v, because of: %s",
+				st.nodeID,
+				retriesUntilNow,
+				st.err.Error(),
+			)
 
-		if retriesUntilNow+1 == r.opts.RestartRetryNumber {
-			r.atomicRememberComplete(st.as.GetActionUid())
-			r.logger.Warnf("Failed to retry node %v specified number of times (%v)", st.nodeID, r.opts.RestartRetryNumber)
+			if retriesUntilNow+1 == r.opts.RestartRetryNumber {
+				r.atomicRememberComplete(st.as.GetActionUid())
+				r.logger.Warnf("Failed to retry node %v specified number of times (%v)", st.nodeID, r.opts.RestartRetryNumber)
+			}
 		}
 	}
 }
@@ -332,7 +338,7 @@ func (r *Rolling) getPerformedActions(actions []*Ydb_Maintenance.ActionGroupStat
 	return performed
 }
 
-func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGroupStates) bool {
+func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates) bool {
 	performed := r.getPerformedActions(actions)
 	if len(performed) == 0 {
 		return false
@@ -377,7 +383,7 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	}
 
 	go func() {
-		r.handleRestartStatus(statusCh, expectedRestarts)
+		r.handleRestartStatus(ctx, statusCh, expectedRestarts)
 		close(done)
 	}()
 
@@ -400,7 +406,14 @@ func (r *Rolling) processActionGroupStates(actions []*Ydb_Maintenance.ActionGrou
 	r.state.unreportedButFinishedActionIds = []string{}
 
 	restartCompleted := len(actions) == len(result.ActionStatuses)
-	waitForDelay := !restartCompleted
+
+	var waitForDelay bool
+	select {
+	case <-ctx.Done():
+		waitForDelay = false
+	default:
+		waitForDelay = !restartCompleted
+	}
 
 	restartHandler.stop(waitForDelay)
 
