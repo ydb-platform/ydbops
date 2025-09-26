@@ -1,6 +1,7 @@
 package rolling
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -67,7 +68,6 @@ func (rh *restartHandler) run() {
 					// TODO: drain node, but public draining api is not available yet
 					rh.logger.Info("DRAINING NOT IMPLEMENTED YET")
 
-					rh.logger.Debugf("Restart node with id: %d", node.GetNodeId())
 					err := rh.restarter.RestartNode(node)
 					rh.statusCh <- restartStatus{
 						nodeID: lock.Scope.GetNodeId(),
