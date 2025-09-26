@@ -1,7 +1,6 @@
 package rolling
 
 import (
-	"context"
 	"sync"
 	"time"
 
