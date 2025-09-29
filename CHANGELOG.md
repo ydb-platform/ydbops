@@ -1,6 +1,12 @@
 # Changelog
 
 
+## v0.0.20 - 2025-09-29
+### Changed
+* Total node progress is logged in between --delay-between-restarts too
+### Fixed
+* SIGINT \ SIGTERM now interrupts, not waiting for `delay-between-intervals` to complete
+
 ## v0.0.19 - 2025-03-17
 ### Fixed
 * storage pod selection by node id in k8s
