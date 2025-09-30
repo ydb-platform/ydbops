@@ -1,6 +1,7 @@
 package rolling
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ type restartStatus struct {
 }
 
 type restartHandler struct {
+	ctx       context.Context
 	logger    *zap.SugaredLogger
 	queue     chan *Ydb_Maintenance.ActionGroupStates
 	restarter restarters.Restarter
@@ -25,8 +27,7 @@ type restartHandler struct {
 	// TODO(shmel1k@): probably, not needed here.
 	nodes map[uint32]*Ydb_Maintenance.Node
 
-	done chan struct{}
-	wg   sync.WaitGroup
+	wg sync.WaitGroup
 
 	nodesInflight        int
 	delayBetweenRestarts time.Duration
@@ -34,7 +35,7 @@ type restartHandler struct {
 
 func (rh *restartHandler) push(state *Ydb_Maintenance.ActionGroupStates) {
 	select {
-	case <-rh.done:
+	case <-rh.ctx.Done():
 	case rh.queue <- state:
 	}
 }
@@ -47,7 +48,7 @@ func (rh *restartHandler) run() {
 
 			for {
 				select {
-				case <-rh.done:
+				case <-rh.ctx.Done():
 					return
 				case gs, ok := <-rh.queue:
 					if !ok {
@@ -75,7 +76,7 @@ func (rh *restartHandler) run() {
 					}
 
 					select {
-					case <-rh.done:
+					case <-rh.ctx.Done():
 						return
 					case <-time.After(rh.delayBetweenRestarts):
 						continue
@@ -91,10 +92,10 @@ func (rh *restartHandler) stop(waitForDelay bool) {
 	if waitForDelay {
 		rh.wg.Wait()
 	}
-	close(rh.done)
 }
 
 func newRestartHandler(
+	ctx context.Context,
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 	nodesInflight int,
@@ -103,11 +104,11 @@ func newRestartHandler(
 	statusCh chan<- restartStatus,
 ) *restartHandler {
 	return &restartHandler{
+		ctx:                  ctx,
 		logger:               logger,
 		restarter:            restarter,
 		queue:                make(chan *Ydb_Maintenance.ActionGroupStates),
 		statusCh:             statusCh,
-		done:                 make(chan struct{}),
 		nodesInflight:        nodesInflight,
 		nodes:                nodes,
 		delayBetweenRestarts: delayBetweenRestarts,

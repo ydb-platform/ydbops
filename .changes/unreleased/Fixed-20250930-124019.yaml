@@ -1,0 +1,3 @@
+kind: Fixed
+body: Race in restartHandler during SIGTERM cancellation
+time: 2025-09-30T12:40:19.649916672+02:00

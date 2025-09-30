@@ -350,6 +350,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 
 	statusCh := make(chan restartStatus, r.opts.NodesInflight)
 	restartHandler := newRestartHandler(
+		ctx,
 		r.logger,
 		r.restarter,
 		r.opts.NodesInflight,
@@ -406,7 +407,6 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	r.state.unreportedButFinishedActionIds = []string{}
 
 	restartCompleted := len(actions) == len(result.ActionStatuses)
-
 	var waitForDelay bool
 	select {
 	case <-ctx.Done():
@@ -414,7 +414,6 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	default:
 		waitForDelay = !restartCompleted
 	}
-
 	restartHandler.stop(waitForDelay)
 
 	return restartCompleted
