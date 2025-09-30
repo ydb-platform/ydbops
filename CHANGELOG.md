@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.21 - 2025-09-30
+### Fixed
+* Race in restartHandler during SIGTERM cancellation
+
 ## v0.0.20 - 2025-09-29
 ### Changed
 * Total node progress is logged in between --delay-between-restarts too
