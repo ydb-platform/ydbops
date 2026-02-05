@@ -678,7 +678,7 @@ var _ = Describe("Test Rolling", func() {
 			},
 		},
 		),
-		Entry("restart tenants sequentially with --tenants-inflight=1", TestCase{
+		Entry("restart two tenants concurrently with --tenants-inflight=2", TestCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3, 4, 5, 6, 7, 8},
 				{9, 10},
@@ -710,7 +710,7 @@ var _ = Describe("Test Rolling", func() {
 						"--availability-mode", "strong",
 						"--user", mock.TestUser,
 						"--cms-query-interval", "1",
-						"--tenants-inflight", "1",
+						"--tenants-inflight", "2",
 						"run",
 						"--tenant",
 						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
@@ -767,6 +767,14 @@ var _ = Describe("Test Rolling", func() {
 								},
 							},
 						},
+					},
+					expectedOutputRegexps: []string{
+						"2 ActionGroupStates moved to PERFORMED",
+						"Starting a separate rolling instance for tenant",
+						"Starting a separate rolling instance for tenant",
+						"2 ActionGroupStates moved to PERFORMED",
+						"Starting a separate rolling instance for tenant",
+						"Starting a separate rolling instance for tenant",
 					},
 				},
 			},

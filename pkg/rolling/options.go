@@ -96,11 +96,12 @@ after that would be considered a regular cluster failure`)
 ydbops will try to figure out if you broke this rule by comparing before\after of some restarted node.`)
 
 	fs.IntVar(&o.NodesInflight, "nodes-inflight", DefaultNodesInflight,
-		`The limit on the number of simultaneous node restarts`)
+		`The limit on the number of simultaneous node restarts. When --tenants-inflight is set,
+this is a per-tenant limit: each tenant gets up to this many tenant nodes restarted in parallel.`)
 
 	fs.IntVar(&o.TenantsInflight, "tenants-inflight", DefaultTenantsInflight,
-		`When set to a positive number, group nodes by tenant and process up to N tenants concurrently.
-Each tenant gets up to --nodes-inflight parallel restarts. Default 0 means flat dispatch (no tenant grouping).`)
+		`The number of tenants (databases) to restart concurrently. Each tenant gets up to
+--nodes-inflight parallel restarts. Default 0 means no grouping by tenant, restarting with global --nodes-inflight`)
 
 	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
 		`Delay between two consecutive restarts. E.g. '60s', '2m'. The number of simultaneous restarts is limited by 'nodes-inflight'.`)
