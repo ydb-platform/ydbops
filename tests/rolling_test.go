@@ -780,6 +780,102 @@ var _ = Describe("Test Rolling", func() {
 			},
 		},
 		),
+		Entry("restart multiple tenants and multiple nodes per tenant, both nodes and tenants inflight = 2", TestCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3, 4, 5, 6, 7, 8},
+				{9, 10},
+				{11, 12},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{
+				9: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant1",
+				},
+				10: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant1",
+				},
+				11: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant2",
+				},
+				12: {
+					IsDynnode:  true,
+					TenantName: "fakeTenant2",
+				},
+			},
+			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
+				MaxDynnodesPerformedPerTenant: 2,
+			},
+			steps: []StepData{
+				{
+					ydbopsInvocation: []string{
+						"--endpoint", "grpcs://localhost:2135",
+						"--verbose",
+						"--availability-mode", "strong",
+						"--user", mock.TestUser,
+						"--cms-query-interval", "1",
+						"--nodes-inflight", "2",
+						"--tenants-inflight", "2",
+						"run",
+						"--tenant",
+						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+					},
+					expectedRequests: []proto.Message{
+						&Ydb_Auth.LoginRequest{
+							User:     mock.TestUser,
+							Password: mock.TestPassword,
+						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
+						&Ydb_Cms.ListDatabasesRequest{},
+						&Ydb_Discovery.WhoAmIRequest{},
+						&Ydb_Maintenance.ListMaintenanceTasksRequest{
+							User: &mock.TestUser,
+						},
+						&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+							TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+								TaskUid:          "task-UUID-1",
+								Description:      "Rolling restart maintenance task",
+								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+							},
+							ActionGroups: mock.MakeActionGroupsFromNodeIdsWithInflight(2, 9, 10, 11, 12),
+						},
+						&Ydb_Maintenance.CompleteActionRequest{
+							ActionUids: []*Ydb_Maintenance.ActionUid{
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-1",
+									ActionId: "action-UUID-1",
+								},
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-2",
+									ActionId: "action-UUID-2",
+								},
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-3",
+									ActionId: "action-UUID-3",
+								},
+								{
+									TaskUid:  "task-UUID-1",
+									GroupId:  "group-UUID-4",
+									ActionId: "action-UUID-4",
+								},
+							},
+						},
+					},
+					expectedOutputRegexps: []string{
+						"4 ActionGroupStates moved to PERFORMED",
+						"Starting a separate rolling instance for tenant",
+						"Starting a separate rolling instance for tenant",
+						"Restart completed successfully",
+					},
+				},
+			},
+		},
+		),
 		Entry("do not restart nodes that are down", TestCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3},
