@@ -18,11 +18,12 @@ type restartStatus struct {
 }
 
 type restartHandler struct {
-	ctx       context.Context
-	logger    *zap.SugaredLogger
-	queue     chan *Ydb_Maintenance.ActionGroupStates
-	restarter restarters.Restarter
-	statusCh  chan<- restartStatus
+	ctx        context.Context
+	logger     *zap.SugaredLogger
+	queue      chan *Ydb_Maintenance.ActionGroupStates
+	batchQueue chan []*Ydb_Maintenance.ActionGroupStates
+	restarter  restarters.Restarter
+	statusCh   chan<- restartStatus
 
 	// TODO(shmel1k@): probably, not needed here.
 	nodes map[uint32]*Ydb_Maintenance.Node
@@ -30,17 +31,37 @@ type restartHandler struct {
 	wg sync.WaitGroup
 
 	nodesInflight        int
+	tenantsInflight      int
 	delayBetweenRestarts time.Duration
 }
 
-func (rh *restartHandler) push(state *Ydb_Maintenance.ActionGroupStates) {
+func (rh *restartHandler) push(states []*Ydb_Maintenance.ActionGroupStates) {
 	select {
 	case <-rh.ctx.Done():
-	case rh.queue <- state:
+		return
+	case rh.batchQueue <- states:
 	}
 }
 
 func (rh *restartHandler) run() {
+	go rh.processQueue()
+
+	go func() {
+		for {
+			select {
+			case <-rh.ctx.Done():
+				return
+			case batch := <-rh.batchQueue:
+				for _, s := range batch {
+					rh.queue <- s
+				}
+			}
+		}
+	}()
+
+}
+
+func (rh *restartHandler) processQueue() {
 	for i := 0; i < rh.nodesInflight; i++ {
 		rh.wg.Add(1)
 		go func() {
@@ -99,17 +120,21 @@ func newRestartHandler(
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 	nodesInflight int,
+	tenantsInFlight int,
 	delayBetweenRestarts time.Duration,
 	nodes map[uint32]*Ydb_Maintenance.Node,
 	statusCh chan<- restartStatus,
 ) *restartHandler {
 	return &restartHandler{
-		ctx:                  ctx,
-		logger:               logger,
-		restarter:            restarter,
-		queue:                make(chan *Ydb_Maintenance.ActionGroupStates),
+		ctx:       ctx,
+		logger:    logger,
+		restarter: restarter,
+		// Note: the channel buffer size is set to 1. More info: https://github.com/uber-go/guide/blob/master/style.md#channel-size-is-one-or-none
+		queue:                make(chan *Ydb_Maintenance.ActionGroupStates, 1),
+		batchQueue:           make(chan []*Ydb_Maintenance.ActionGroupStates),
 		statusCh:             statusCh,
 		nodesInflight:        nodesInflight,
+		tenantsInflight:      tenantsInFlight,
 		nodes:                nodes,
 		delayBetweenRestarts: delayBetweenRestarts,
 	}

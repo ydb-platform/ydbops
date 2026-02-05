@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -171,6 +172,8 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 			AllNodes:        collections.Values(r.state.nodes),
 		},
 	)
+
+	nodesToRestart = reOrderNodesByOrderingKey(r.opts.OrderingKey, nodesToRestart)
 
 	excludedNodes := 0
 	for _, node := range nodesToRestart {
@@ -354,6 +357,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 		r.logger,
 		r.restarter,
 		r.opts.NodesInflight,
+		r.opts.TenantsInflight,
 		r.opts.DelayBetweenRestarts,
 		r.state.nodes,
 		statusCh,
@@ -361,6 +365,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	restartHandler.run()
 	done := make(chan struct{})
 
+	filteredActions := make([]*Ydb_Maintenance.ActionGroupStates, 0, len(performed))
 	expectedRestarts := 0
 	for _, gs := range performed {
 		var (
@@ -381,6 +386,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 			continue
 		}
 		expectedRestarts++
+		filteredActions = append(filteredActions, gs)
 	}
 
 	go func() {
@@ -388,13 +394,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 		close(done)
 	}()
 
-	for _, gs := range performed {
-		as := gs.ActionStates[0]
-		if r.atomicHasActionInUnreported(as.ActionUid.GetActionId()) {
-			continue
-		}
-		restartHandler.push(gs)
-	}
+	r.dispatchActionBatches(filteredActions, restartHandler)
 
 	<-done
 
@@ -417,6 +417,27 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	restartHandler.stop(waitForDelay)
 
 	return restartCompleted
+}
+
+func (r *Rolling) dispatchActionBatches(states []*Ydb_Maintenance.ActionGroupStates, handler *restartHandler) {
+	// pushes all states as one batch because it contains an storage node!
+	// This probably will not happen because storage nodes restart separately in the command.
+	if slices.ContainsFunc(states, r.isStorageNodeActionGroupState) {
+		handler.push(states)
+
+		return
+	}
+
+	// TODO: discuss batch size
+	batchSize := r.opts.NodesInflight * 2
+	batches := collections.Batch(states, batchSize, r.opts.TenantsInflight, r.getStateNodeTenant)
+
+	r.logger.Debugf("Calculated batches count: %d", len(batches))
+
+	for i, batch := range batches {
+		r.logger.Debugf("Dispatching batch %d", i)
+		handler.push(batch)
+	}
 }
 
 func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
@@ -496,6 +517,20 @@ func (r *Rolling) cleanupRollingRestart() error {
 		}
 	}
 	return nil
+}
+
+func (r *Rolling) isStorageNodeActionGroupState(gs *Ydb_Maintenance.ActionGroupStates) bool {
+	as := gs.ActionStates[0]
+	lock := as.Action.GetLockAction()
+	node := r.state.nodes[lock.Scope.GetNodeId()]
+	return node.GetDynamic() == nil
+}
+
+func (r *Rolling) getStateNodeTenant(gs *Ydb_Maintenance.ActionGroupStates) string {
+	as := gs.ActionStates[0]
+	lock := as.Action.GetLockAction()
+	node := r.state.nodes[lock.Scope.GetNodeId()]
+	return node.GetDynamic().Tenant
 }
 
 func findLowHigh(minors map[int]bool) (low, high int) {

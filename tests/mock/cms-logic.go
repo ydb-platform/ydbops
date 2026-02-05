@@ -22,6 +22,33 @@ func (s *YdbMock) setPendingOrPerformed(
 	currentNodeID uint32,
 	availabilityMode AvailabilityMode,
 ) ActionState_ActionStatus {
+	if s.isNodeCurrentlyReleased[currentNodeID] {
+		return ActionState_ACTION_STATUS_PERFORMED
+	}
+
+	// for dynamic nodes: for convenience, we just configure the
+	// CMS mock to release UP TO N nodes per tenant.
+	for _, n := range s.nodes {
+		if n.NodeId == currentNodeID && n.GetDynamic() != nil &&
+			s.additionalTestBehaviour.MaxDynnodesPerformedPerTenant > 0 {
+			tenant := n.GetDynamic().GetTenant()
+			releasedInTenant := 0
+			for _, other := range s.nodes {
+				if other.GetDynamic() != nil &&
+					other.GetDynamic().GetTenant() == tenant &&
+					s.isNodeCurrentlyReleased[other.NodeId] {
+					releasedInTenant++
+				}
+			}
+			if releasedInTenant < s.additionalTestBehaviour.MaxDynnodesPerformedPerTenant {
+				s.isNodeCurrentlyReleased[currentNodeID] = true
+				return ActionState_ACTION_STATUS_PERFORMED
+			}
+			return ActionState_ACTION_STATUS_PENDING
+		}
+	}
+
+	// for storage nodes
 	for _, nodeGroup := range s.nodeGroups {
 		alreadyReleased := 0
 		for _, nodeID := range nodeGroup {

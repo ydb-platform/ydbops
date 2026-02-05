@@ -4,6 +4,11 @@ import (
 	"sort"
 )
 
+const (
+	UnlimitedBatchSize          = -1
+	UnlimitedBatchPerGroupLimit = -1
+)
+
 func Convert[T any, P any](items []T, converterF func(T) P) []P {
 	values := make([]P, 0, len(items))
 
@@ -23,6 +28,11 @@ func Contains[T comparable](elems []T, elem T) bool {
 	return false
 }
 
+func MapContains[K comparable, V any](data map[K]V, key K) bool {
+	_, ok := data[key]
+	return ok
+}
+
 func ToMap[T any, K comparable](items []T, keyF func(T) K) map[K]T {
 	m := make(map[K]T, len(items))
 
@@ -32,6 +42,55 @@ func ToMap[T any, K comparable](items []T, keyF func(T) K) map[K]T {
 	}
 
 	return m
+}
+
+func Batch[K comparable, T any](items []T, batchSize, groupLimitPerBatch int, keyFn func(T) K) [][]T {
+	type batchItem struct {
+		elems []T
+		keys  []K
+	}
+
+	batches := make(map[int]batchItem)
+
+	for _, item := range items {
+		groupKey := keyFn(item)
+
+		for i := 0; true; i++ {
+			if !MapContains(batches, i) {
+				batches[i] = batchItem{elems: []T{}, keys: []K{}}
+			}
+
+			if len(batches[i].elems) >= batchSize && batchSize != UnlimitedBatchSize {
+				continue
+			}
+
+			currentBatchItem := batches[i]
+			if Contains(batches[i].keys, groupKey) {
+				currentBatchItem.elems = append(currentBatchItem.elems, item)
+				batches[i] = currentBatchItem
+
+				break
+			}
+
+			// negative
+			if len(currentBatchItem.keys) >= groupLimitPerBatch && groupLimitPerBatch != UnlimitedBatchPerGroupLimit {
+				continue
+			}
+
+			currentBatchItem.elems = append(currentBatchItem.elems, item)
+			currentBatchItem.keys = append(currentBatchItem.keys, groupKey)
+			batches[i] = currentBatchItem
+
+			break
+		}
+	}
+
+	result := make([][]T, 0, len(batches))
+	for _, bi := range batches {
+		result = append(result, bi.elems)
+	}
+
+	return result
 }
 
 func ToIndexMap[T comparable](items []T) map[T]bool {
