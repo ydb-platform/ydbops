@@ -178,6 +178,7 @@ func RunTestCase(tc TestCase) {
 			Expect(cmp.Diff(expected, actual,
 				protocmp.Transform(),
 				blackmagic.ActionGroupSorter(),
+				blackmagic.ActionUidSorter(),
 				blackmagic.UUIDComparer(expectedPlaceholders, actualPlaceholders),
 			)).To(BeEmpty())
 		}
