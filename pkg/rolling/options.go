@@ -17,6 +17,7 @@ const (
 	DefaultCMSQueryIntervalSeconds = 10
 	DefaultRestartDurationSeconds  = 60
 	DefaultNodesInflight           = 1
+	DefaultTenantsInflight         = 0
 	DefaultDelayBetweenRestarts    = time.Second
 )
 
@@ -26,6 +27,7 @@ type RestartOptions struct {
 	RestartRetryNumber         int
 	CMSQueryInterval           int
 	NodesInflight              int
+	TenantsInflight            int
 	DelayBetweenRestarts       time.Duration
 	SuppressCompatibilityCheck bool
 	CleanupOnExit              bool
@@ -55,6 +57,10 @@ func (o *RestartOptions) Validate() error {
 
 	if o.RestartDuration < 0 {
 		return fmt.Errorf("specified invalid restart duration: %d. Must be positive", o.RestartDuration)
+	}
+
+	if o.TenantsInflight < 0 {
+		return fmt.Errorf("specified invalid tenants inflight: %d. Must be non-negative", o.TenantsInflight)
 	}
 
 	o.SSHArgs = utils.ParseSSHArgs(rawSSHUnparsedArgs)
@@ -90,7 +96,12 @@ after that would be considered a regular cluster failure`)
 ydbops will try to figure out if you broke this rule by comparing before\after of some restarted node.`)
 
 	fs.IntVar(&o.NodesInflight, "nodes-inflight", DefaultNodesInflight,
-		`The limit on the number of simultaneous node restarts`)
+		`The limit on the number of simultaneous node restarts. When --tenants-inflight is set,
+this is a per-tenant limit: each tenant gets up to this many tenant nodes restarted in parallel.`)
+
+	fs.IntVar(&o.TenantsInflight, "tenants-inflight", DefaultTenantsInflight,
+		`The number of tenants (databases) to restart concurrently. Each tenant gets up to
+--nodes-inflight parallel restarts. Default 0 means no grouping by tenant, restarting with global --nodes-inflight`)
 
 	fs.DurationVar(&o.DelayBetweenRestarts, "delay-between-restarts", DefaultDelayBetweenRestarts,
 		`Delay between two consecutive restarts. E.g. '60s', '2m'. The number of simultaneous restarts is limited by 'nodes-inflight'.`)

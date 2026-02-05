@@ -41,8 +41,9 @@ type fakeMaintenanceTask struct {
 }
 
 type AdditionalTestBehaviour struct {
-	RestartNodesOnNewVersion string
-	SignalDelayMs            int // Send SIGTERM after this delay in milliseconds
+	RestartNodesOnNewVersion      string
+	SignalDelayMs                 int // Send SIGTERM after this delay in milliseconds
+	MaxDynnodesPerformedPerTenant int // 0 = use default nodeGroup logic for dynnodes
 }
 
 type YdbMock struct {

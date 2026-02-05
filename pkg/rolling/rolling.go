@@ -47,6 +47,7 @@ type state struct {
 	nodes                          map[uint32]*Ydb_Maintenance.Node
 	inactiveNodes                  map[uint32]*Ydb_Maintenance.Node
 	tenantNameToNodeIds            map[string][]uint32
+	nodeIdToTenantName             map[uint32]string
 	retriesMadeForNode             map[uint32]int
 	tenants                        []string
 	userSID                        string
@@ -348,26 +349,18 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
 
-	statusCh := make(chan restartStatus, r.opts.NodesInflight)
-	restartHandler := newRestartHandler(
-		ctx,
-		r.logger,
-		r.restarter,
-		r.opts.NodesInflight,
-		r.opts.DelayBetweenRestarts,
-		r.state.nodes,
-		statusCh,
-	)
-	restartHandler.run()
-	done := make(chan struct{})
-
 	expectedRestarts := 0
+	var filteredPerformed []*Ydb_Maintenance.ActionGroupStates
 	for _, gs := range performed {
 		var (
 			as   = gs.ActionStates[0]
 			lock = as.Action.GetLockAction()
 			node = r.state.nodes[lock.Scope.GetNodeId()]
 		)
+
+		// Some actions MIGHT have failed on last CompleteAction,
+		// ydbops has local knowledge about that. We don't want to restart them once more. We will
+		// just put them in complete action right here
 		if r.atomicHasActionInUnreported(as.GetActionUid().GetActionId()) {
 			r.mu.Lock()
 			r.completedActions = append(r.completedActions, as.ActionUid)
@@ -381,19 +374,26 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 			continue
 		}
 		expectedRestarts++
+		filteredPerformed = append(filteredPerformed, gs)
 	}
 
+	statusChSize := r.opts.NodesInflight
+	if r.opts.TenantsInflight > 0 {
+		// at max, we can have --tenants-inflight * --nodes-inflight restarting at once
+		statusChSize = r.opts.TenantsInflight * r.opts.NodesInflight
+	}
+	statusCh := make(chan restartStatus, statusChSize)
+
+	done := make(chan struct{})
 	go func() {
 		r.handleRestartStatus(ctx, statusCh, expectedRestarts)
 		close(done)
 	}()
 
-	for _, gs := range performed {
-		as := gs.ActionStates[0]
-		if r.atomicHasActionInUnreported(as.ActionUid.GetActionId()) {
-			continue
-		}
-		restartHandler.push(gs)
+	if r.opts.TenantsInflight > 0 {
+		r.dispatchByTenant(ctx, filteredPerformed, statusCh)
+	} else {
+		r.dispatchFlat(ctx, filteredPerformed, statusCh)
 	}
 
 	<-done
@@ -407,16 +407,88 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	r.state.unreportedButFinishedActionIds = []string{}
 
 	restartCompleted := len(actions) == len(result.ActionStatuses)
-	var waitForDelay bool
-	select {
-	case <-ctx.Done():
-		waitForDelay = false
-	default:
-		waitForDelay = !restartCompleted
-	}
-	restartHandler.stop(waitForDelay)
-
 	return restartCompleted
+}
+
+func (r *Rolling) dispatchFlat(
+	ctx context.Context,
+	filteredPerformed []*Ydb_Maintenance.ActionGroupStates,
+	statusCh chan restartStatus,
+) {
+	handler := newRestartHandler(
+		ctx,
+		r.logger,
+		r.restarter,
+		r.opts.NodesInflight,
+		r.opts.DelayBetweenRestarts,
+		r.state.nodes,
+		statusCh,
+	)
+	handler.run()
+
+	for _, gs := range filteredPerformed {
+		handler.push(gs)
+	}
+
+	handler.stop(true)
+}
+
+func (r *Rolling) dispatchByTenant(
+	ctx context.Context,
+	filteredPerformed []*Ydb_Maintenance.ActionGroupStates,
+	statusCh chan restartStatus,
+) {
+	groups := r.groupByTenant(filteredPerformed)
+
+	sem := make(chan struct{}, r.opts.TenantsInflight)
+	var wg sync.WaitGroup
+
+	for tenantName, tenantActions := range groups {
+		select {
+		case <-ctx.Done():
+			wg.Wait()
+			return
+		case sem <- struct{}{}:
+		}
+
+		wg.Add(1)
+		go func(tenant string, actions []*Ydb_Maintenance.ActionGroupStates) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			r.logger.Infof("Starting a separate rolling instance for tenant %q (%d nodes)", tenant, len(actions))
+
+			handler := newRestartHandler(
+				ctx,
+				r.logger,
+				r.restarter,
+				r.opts.NodesInflight,
+				r.opts.DelayBetweenRestarts,
+				r.state.nodes,
+				statusCh,
+			)
+			handler.run()
+
+			for _, gs := range actions {
+				handler.push(gs)
+			}
+
+			handler.stop(true)
+		}(tenantName, tenantActions)
+	}
+
+	wg.Wait()
+}
+
+func (r *Rolling) groupByTenant(performed []*Ydb_Maintenance.ActionGroupStates) map[string][]*Ydb_Maintenance.ActionGroupStates {
+	groups := make(map[string][]*Ydb_Maintenance.ActionGroupStates)
+	for _, gs := range performed {
+		as := gs.ActionStates[0]
+		nodeID := as.Action.GetLockAction().Scope.GetNodeId()
+		tenant := r.state.nodeIdToTenantName[nodeID] // missing key → ""
+		groups[tenant] = append(groups[tenant], gs)
+	}
+	return groups
 }
 
 func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
@@ -466,9 +538,18 @@ func (r *Rolling) prepareState() (*state, error) {
 		return nil, fmt.Errorf("failed to determine the user SID: %w", err)
 	}
 
+	tenantNameToNodeIds := utils.PopulateTenantToNodesMapping(activeNodes)
+	nodeIdToTenantName := make(map[uint32]string)
+	for tenantName, nodeIds := range tenantNameToNodeIds {
+		for _, nodeId := range nodeIds {
+			nodeIdToTenantName[nodeId] = tenantName
+		}
+	}
+
 	return &state{
 		knownVersions:                  make(MajorToMinors),
-		tenantNameToNodeIds:            utils.PopulateTenantToNodesMapping(activeNodes),
+		tenantNameToNodeIds:            tenantNameToNodeIds,
+		nodeIdToTenantName:             nodeIdToTenantName,
 		tenants:                        tenants,
 		userSID:                        userSID,
 		nodes:                          collections.ToMap(activeNodes, func(n *Ydb_Maintenance.Node) uint32 { return n.NodeId }),
