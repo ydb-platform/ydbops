@@ -173,6 +173,7 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 		},
 	)
 
+	r.logger.Debugf("re-ordering nodes with ordering key: %s", r.opts.OrderingKey)
 	nodesToRestart = reOrderNodesByOrderingKey(r.opts.OrderingKey, nodesToRestart)
 
 	excludedNodes := 0
@@ -357,7 +358,6 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 		r.logger,
 		r.restarter,
 		r.opts.NodesInflight,
-		r.opts.TenantsInflight,
 		r.opts.DelayBetweenRestarts,
 		r.state.nodes,
 		statusCh,
@@ -420,9 +420,9 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 }
 
 func (r *Rolling) dispatchActionBatches(states []*Ydb_Maintenance.ActionGroupStates, handler *restartHandler) {
-	// pushes all states as one batch because it contains an storage node!
-	// This probably will not happen because storage nodes restart separately in the command.
+	// Processing storage nodes as one batch and ignoring tenantsInflight
 	if slices.ContainsFunc(states, r.isStorageNodeActionGroupState) {
+		r.logger.Debugf("ignoring tenants-inflight. sending all storage nodes as one batch")
 		handler.push(states)
 
 		return
@@ -430,11 +430,10 @@ func (r *Rolling) dispatchActionBatches(states []*Ydb_Maintenance.ActionGroupSta
 
 	batchSize := r.opts.NodesInflight
 	batches := collections.Batch(states, batchSize, r.opts.TenantsInflight, r.getStateNodeTenant)
-
-	r.logger.Debugf("Calculated batches count: %d", len(batches))
+	r.logger.Debugf("calculated batches count: %d", len(batches))
 
 	for i, batch := range batches {
-		r.logger.Debugf("Dispatching batch %d", i)
+		r.logger.Debugf("dispatching batch %d", i)
 		handler.push(batch)
 	}
 }

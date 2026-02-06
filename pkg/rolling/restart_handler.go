@@ -17,10 +17,15 @@ type restartStatus struct {
 	err    error
 }
 
+type queueItem struct {
+	value *Ydb_Maintenance.ActionGroupStates
+	wg    *sync.WaitGroup
+}
+
 type restartHandler struct {
 	ctx        context.Context
 	logger     *zap.SugaredLogger
-	queue      chan *Ydb_Maintenance.ActionGroupStates
+	queue      chan queueItem
 	batchQueue chan []*Ydb_Maintenance.ActionGroupStates
 	restarter  restarters.Restarter
 	statusCh   chan<- restartStatus
@@ -31,7 +36,6 @@ type restartHandler struct {
 	wg sync.WaitGroup
 
 	nodesInflight        int
-	tenantsInflight      int
 	delayBetweenRestarts time.Duration
 }
 
@@ -52,9 +56,19 @@ func (rh *restartHandler) run() {
 			case <-rh.ctx.Done():
 				return
 			case batch := <-rh.batchQueue:
+				wg := &sync.WaitGroup{}
 				for _, s := range batch {
-					rh.queue <- s
+					// the purpose of this select statement is to avoid sending more nodes to restart if the context is canceled during a batch processing
+					select {
+					case <-rh.ctx.Done():
+						return
+					case rh.queue <- queueItem{value: s, wg: wg}:
+						wg.Add(1)
+					}
 				}
+
+				// waits until the whole batch is processed
+				wg.Wait()
 			}
 		}
 	}()
@@ -71,10 +85,12 @@ func (rh *restartHandler) processQueue() {
 				select {
 				case <-rh.ctx.Done():
 					return
-				case gs, ok := <-rh.queue:
+				case qItem, ok := <-rh.queue:
 					if !ok {
 						return
 					}
+
+					gs := qItem.value
 
 					var (
 						as   = gs.ActionStates[0]
@@ -95,6 +111,8 @@ func (rh *restartHandler) processQueue() {
 						as:     as,
 						err:    err,
 					}
+
+					qItem.wg.Done()
 
 					select {
 					case <-rh.ctx.Done():
@@ -120,21 +138,18 @@ func newRestartHandler(
 	logger *zap.SugaredLogger,
 	restarter restarters.Restarter,
 	nodesInflight int,
-	tenantsInFlight int,
 	delayBetweenRestarts time.Duration,
 	nodes map[uint32]*Ydb_Maintenance.Node,
 	statusCh chan<- restartStatus,
 ) *restartHandler {
 	return &restartHandler{
-		ctx:       ctx,
-		logger:    logger,
-		restarter: restarter,
-		// Note: the channel buffer size is set to 1. More info: https://github.com/uber-go/guide/blob/master/style.md#channel-size-is-one-or-none
-		queue:                make(chan *Ydb_Maintenance.ActionGroupStates, 1),
+		ctx:                  ctx,
+		logger:               logger,
+		restarter:            restarter,
+		queue:                make(chan queueItem),
 		batchQueue:           make(chan []*Ydb_Maintenance.ActionGroupStates),
 		statusCh:             statusCh,
 		nodesInflight:        nodesInflight,
-		tenantsInflight:      tenantsInFlight,
 		nodes:                nodes,
 		delayBetweenRestarts: delayBetweenRestarts,
 	}
