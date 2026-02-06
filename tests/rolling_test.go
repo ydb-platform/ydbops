@@ -771,8 +771,8 @@ var _ = Describe("Test Rolling", func() {
 					},
 					expectedOutputRegexps: []string{
 						"2 ActionGroupStates moved to PERFORMED",
-						"Calculated batches",
-						"Dispatching batch",
+						"calculated batches",
+						"dispatching batch",
 						"Restart completed successfully",
 					},
 				},
@@ -868,8 +868,8 @@ var _ = Describe("Test Rolling", func() {
 					},
 					expectedOutputRegexps: []string{
 						"4 ActionGroupStates moved to PERFORMED",
-						"Calculated batches",
-						"Dispatching batch",
+						"calculated batches",
+						"dispatching batch",
 						"Restart completed successfully",
 					},
 				},
