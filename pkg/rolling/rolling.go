@@ -428,8 +428,7 @@ func (r *Rolling) dispatchActionBatches(states []*Ydb_Maintenance.ActionGroupSta
 		return
 	}
 
-	// TODO: discuss batch size
-	batchSize := r.opts.NodesInflight * 2
+	batchSize := r.opts.NodesInflight
 	batches := collections.Batch(states, batchSize, r.opts.TenantsInflight, r.getStateNodeTenant)
 
 	r.logger.Debugf("Calculated batches count: %d", len(batches))
