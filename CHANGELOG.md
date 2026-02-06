@@ -1,6 +1,11 @@
 # Changelog
 
 
+## v0.1.0 - 2026-02-06
+### Added
+* Add support for concurrent tenant nodes restart. `--tenant-inflight` flag can be used for this feature.
+* Add support for re-ordering nodes based on `cluster` or `tenant` keys before restarting them. `--ordering-key` can be passed to the cli for this purpose
+
 ## v0.0.21 - 2025-09-30
 ### Fixed
 * Race in restartHandler during SIGTERM cancellation
