@@ -65,7 +65,9 @@ func (o *RestartOptions) Validate() error {
 	}
 
 	if !collections.Contains(OrderingKeyChoices, o.OrderingKey) {
-		return fmt.Errorf("specified invalid ordering key: %s", o.OrderingKey)
+		return fmt.Errorf("specified invalid ordering key: %s, valid values are %s",
+			o.OrderingKey,
+			strings.Join(OrderingKeyChoices, ","))
 	}
 
 	if o.TenantsInflight < 1 {
