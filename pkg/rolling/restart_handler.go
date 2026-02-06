@@ -55,15 +55,18 @@ func (rh *restartHandler) run() {
 			select {
 			case <-rh.ctx.Done():
 				return
-			case batch := <-rh.batchQueue:
+			case batch, ok := <-rh.batchQueue:
+				if !ok {
+					return
+				}
 				wg := &sync.WaitGroup{}
 				for _, s := range batch {
+					wg.Add(1)
 					// the purpose of this select statement is to avoid sending more nodes to restart if the context is canceled during a batch processing
 					select {
 					case <-rh.ctx.Done():
 						return
 					case rh.queue <- queueItem{value: s, wg: wg}:
-						wg.Add(1)
 					}
 				}
 
@@ -128,6 +131,7 @@ func (rh *restartHandler) processQueue() {
 
 func (rh *restartHandler) stop(waitForDelay bool) {
 	close(rh.queue)
+	close(rh.batchQueue)
 	if waitForDelay {
 		rh.wg.Wait()
 	}

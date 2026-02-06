@@ -119,7 +119,7 @@ ydbops will try to figure out if you broke this rule by comparing before\after o
 		fmt.Sprintf("Re-orders nodes for restart by a key. Available choices: %s", strings.Join(OrderingKeyChoices, ", ")))
 
 	fs.IntVar(&o.TenantsInflight, "tenants-inflight", DefaultTenantsInflight,
-		`The number of tenants that can be used for restart in parallel. Example: 2 means there will be at most 2 nodes from different tenants being restarted concurrently.`)
+		`Maximum number of distinct tenants to restart in parallel. Example: 2 means only up to 2 tenants can have nodes restarting at the same time.`)
 }
 
 func (o *RestartOptions) GetRestartDuration(nNodes int) *durationpb.Duration {

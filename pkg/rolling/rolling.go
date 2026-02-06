@@ -420,7 +420,6 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 }
 
 func (r *Rolling) dispatchActionBatches(states []*Ydb_Maintenance.ActionGroupStates, handler *restartHandler) {
-	// Processing storage nodes as one batch and ignoring tenantsInflight
 	if slices.ContainsFunc(states, r.isStorageNodeActionGroupState) {
 		r.logger.Debugf("ignoring tenants-inflight. sending all storage nodes as one batch")
 		handler.push(states)
