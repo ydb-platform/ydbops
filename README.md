@@ -56,6 +56,22 @@ ydbops restart --storage \
   --user jorres --kubeconfig ~/.kube/config
 ```
 
+##### Restart tenant in k8s concurrently and nodes ordered by tenant
+
+
+An example of concurrent restarts will spawn 3 goroutines for node restarts. it will make sure to not restart nodes from more than 2 tenants at the same time:
+
+```
+export YDB_PASSWORD=password_123
+ydbops restart --tenant \
+  --endpoint grpc://<cluster-fqdn> \
+  --availability-mode strong --verbose --hosts=7,8 \
+  --user jorres --kubeconfig ~/.kube/config 
+  --ordering-key tenant \
+  --nodes-inflight 3 \
+  --tenants-inflight 2
+```
+
 ---
 
 ## For developers:
