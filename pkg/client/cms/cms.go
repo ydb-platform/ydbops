@@ -156,7 +156,7 @@ func wrapSingleScopeInActionGroup(
 }
 
 func actionGroupsFromNodes(params MaintenanceTaskParams) []*Ydb_Maintenance.ActionGroup {
-	ags := []*Ydb_Maintenance.ActionGroup{}
+	ags := make([]*Ydb_Maintenance.ActionGroup, 0, len(params.Nodes))
 
 	for _, node := range params.Nodes {
 		scope := &Ydb_Maintenance.ActionScope{
@@ -172,7 +172,7 @@ func actionGroupsFromNodes(params MaintenanceTaskParams) []*Ydb_Maintenance.Acti
 }
 
 func actionGroupsFromHosts(params MaintenanceTaskParams) []*Ydb_Maintenance.ActionGroup {
-	ags := []*Ydb_Maintenance.ActionGroup{}
+	ags := make([]*Ydb_Maintenance.ActionGroup, 0, len(params.Hosts))
 
 	for _, hostFQDN := range params.Hosts {
 		scope := &Ydb_Maintenance.ActionScope{

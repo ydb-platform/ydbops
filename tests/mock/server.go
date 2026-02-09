@@ -145,7 +145,7 @@ func (s *YdbMock) DropMaintenanceTask(ctx context.Context, req *DropMaintenanceT
 
 func (s *YdbMock) ListMaintenanceTasks(ctx context.Context, req *ListMaintenanceTasksRequest) (*ListMaintenanceTasksResponse, error) {
 	s.RequestLog = append(s.RequestLog, req)
-	taskUids := []string{}
+	taskUids := make([]string, 0, len(s.tasks))
 	// Note that we don't calculate anything in this request. ListMaintenanceTasks is very simple -
 	// it returns the existing task uids, nothing more. Actual content of each task is not returned.
 	for task := range s.tasks {
@@ -174,7 +174,7 @@ func (s *YdbMock) GetMaintenanceTask(
 func (s *YdbMock) CompleteAction(ctx context.Context, req *CompleteActionRequest) (*ManageActionResponse, error) {
 	s.RequestLog = append(s.RequestLog, req)
 
-	actionStatuses := []*ManageActionResult_Status{}
+	actionStatuses := make([]*ManageActionResult_Status, 0, len(req.ActionUids))
 
 	for _, completedActionUid := range req.ActionUids {
 		task := s.tasks[completedActionUid.TaskUid]

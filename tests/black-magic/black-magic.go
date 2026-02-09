@@ -71,7 +71,7 @@ func ActionGroupSorter() cmp.Option {
 // When user specifies what CMS requests are expected, within one CompleteActionRequest
 // ActionUids can shuffle if we restart more than one tenant in parallel.
 //
-// This small helper relaxes this behaviour - we only expect in each CompleteActionRequest
+// This small helper relaxes this behavior - we only expect in each CompleteActionRequest
 // the dynnodes of DIFFERENT tenants, but not the order.
 func ActionUidSorter() cmp.Option {
 	return protocmp.SortRepeated(func(a, b *Ydb_Maintenance.ActionUid) bool {

@@ -37,7 +37,7 @@ func makeNode(nodeID uint32) *Ydb_Maintenance.Node {
 	}
 }
 
-func determineRestartDuration(nNodes int, nodesInflight int) time.Duration {
+func determineRestartDuration(nNodes, nodesInflight int) time.Duration {
 	defaultRestartDuration := time.Second * 60
 	singleBatchRestartTime := defaultRestartDuration * 3
 
@@ -48,7 +48,7 @@ func determineRestartDuration(nNodes int, nodesInflight int) time.Duration {
 }
 
 func MakeActionGroupsFromNodesIdsFixedDuration(duration time.Duration, nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
-	result := []*Ydb_Maintenance.ActionGroup{}
+	result := make([]*Ydb_Maintenance.ActionGroup, 0, len(nodeIDs))
 	for _, nodeID := range nodeIDs {
 		result = append(result,
 			&Ydb_Maintenance.ActionGroup{
@@ -77,7 +77,7 @@ func MakeActionGroupsFromNodeIds(nodeIDs ...uint32) []*Ydb_Maintenance.ActionGro
 }
 
 func MakeActionGroupsFromNodeIdsWithInflight(nodesInflight int, nodeIDs ...uint32) []*Ydb_Maintenance.ActionGroup {
-	result := []*Ydb_Maintenance.ActionGroup{}
+	result := make([]*Ydb_Maintenance.ActionGroup, 0, len(nodeIDs))
 	for _, nodeID := range nodeIDs {
 		result = append(result,
 			&Ydb_Maintenance.ActionGroup{
@@ -102,7 +102,7 @@ func MakeActionGroupsFromNodeIdsWithInflight(nodesInflight int, nodeIDs ...uint3
 }
 
 func MakeActionGroupsFromHostFQDNsFixedDuration(duration time.Duration, hostFQDNs ...string) []*Ydb_Maintenance.ActionGroup {
-	result := []*Ydb_Maintenance.ActionGroup{}
+	result := make([]*Ydb_Maintenance.ActionGroup, 0, len(hostFQDNs))
 	for _, hostFQDN := range hostFQDNs {
 		result = append(result,
 			&Ydb_Maintenance.ActionGroup{
@@ -127,7 +127,7 @@ func MakeActionGroupsFromHostFQDNsFixedDuration(duration time.Duration, hostFQDN
 }
 
 func MakeActionGroupsFromHostFQDNs(hostFQDNs ...string) []*Ydb_Maintenance.ActionGroup {
-	result := []*Ydb_Maintenance.ActionGroup{}
+	result := make([]*Ydb_Maintenance.ActionGroup, 0, len(hostFQDNs))
 	for _, hostFQDN := range hostFQDNs {
 		result = append(result,
 			&Ydb_Maintenance.ActionGroup{

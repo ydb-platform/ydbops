@@ -75,7 +75,6 @@ func (rh *restartHandler) run() {
 			}
 		}
 	}()
-
 }
 
 func (rh *restartHandler) processQueue() {

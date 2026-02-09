@@ -49,7 +49,7 @@ func (o *Options) nodeIdsToNodes(
 	nodes []*Ydb_Maintenance.Node,
 	nodeIds []uint32,
 ) []*Ydb_Maintenance.Node {
-	targetedNodes := []*Ydb_Maintenance.Node{}
+	targetedNodes := make([]*Ydb_Maintenance.Node, 0, len(nodes))
 
 	// TODO @jorres arguments to PrepareRestarters are a dirty hack.
 	// We actually only need Filter component from restarters. 2 and 3 arguments

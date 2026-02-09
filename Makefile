@@ -51,6 +51,7 @@ all: build build-macos
 lint:
 	@echo "Linting code..."
 	@go vet ./...
+	@golangci-lint run ./...
 
 pre-build:
 	@mkdir -p $(BUILD_DIR)
