@@ -173,8 +173,13 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 		},
 	)
 
-	r.logger.Debugf("re-ordering nodes with ordering key: %s", r.opts.OrderingKey)
-	nodesToRestart = reOrderNodesByOrderingKey(r.opts.OrderingKey, nodesToRestart)
+	if r.opts.TenantsInflight > 1 {
+		r.logger.Debugf("re-ordering nodes with ordering key: %s", TenantOrderingKey)
+		nodesToRestart = reOrderNodesByOrderingKey(TenantOrderingKey, nodesToRestart)
+	} else {
+		r.logger.Debugf("re-ordering nodes with ordering key: %s", ClusterOrderingKey)
+		nodesToRestart = reOrderNodesByOrderingKey(ClusterOrderingKey, nodesToRestart)
+	}
 
 	excludedNodes := 0
 	for _, node := range nodesToRestart {

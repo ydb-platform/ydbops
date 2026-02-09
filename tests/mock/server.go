@@ -44,6 +44,7 @@ type AdditionalTestBehaviour struct {
 	RestartNodesOnNewVersion      string
 	SignalDelayMs                 int // Send SIGTERM after this delay in milliseconds
 	MaxDynnodesPerformedPerTenant int
+	MaximumExpectedDuration       time.Duration
 }
 
 type YdbMock struct {

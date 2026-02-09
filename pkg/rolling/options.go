@@ -3,11 +3,9 @@ package rolling
 import (
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
-	"github.com/ydb-platform/ydbops/internal/collections"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/ydb-platform/ydbops/pkg/options"
@@ -20,7 +18,6 @@ const (
 	DefaultRestartDurationSeconds  = 60
 	DefaultNodesInflight           = 1
 	DefaultDelayBetweenRestarts    = time.Second
-	DefaultOrderingKey             = ClusterOrderingKey
 	DefaultTenantsInflight         = 1
 )
 
@@ -34,7 +31,6 @@ type RestartOptions struct {
 	SuppressCompatibilityCheck bool
 	CleanupOnExit              bool
 
-	OrderingKey     string
 	TenantsInflight int
 
 	RestartDuration int
@@ -62,12 +58,6 @@ func (o *RestartOptions) Validate() error {
 
 	if o.RestartDuration < 0 {
 		return fmt.Errorf("specified invalid restart duration: %d. Must be positive", o.RestartDuration)
-	}
-
-	if !collections.Contains(OrderingKeyChoices, o.OrderingKey) {
-		return fmt.Errorf("specified invalid ordering key: %s, valid values are %s",
-			o.OrderingKey,
-			strings.Join(OrderingKeyChoices, ","))
 	}
 
 	if o.TenantsInflight < 1 {
@@ -114,9 +104,6 @@ ydbops will try to figure out if you broke this rule by comparing before\after o
 
 	fs.BoolVar(&o.CleanupOnExit, "cleanup-on-exit", true,
 		`When enabled, attempt to drop the maintenance task if the utility is killed by SIGTERM.`)
-
-	fs.StringVar(&o.OrderingKey, "ordering-key", DefaultOrderingKey,
-		fmt.Sprintf("Re-orders nodes for restart by a key. Available choices: %s", strings.Join(OrderingKeyChoices, ", ")))
 
 	fs.IntVar(&o.TenantsInflight, "tenants-inflight", DefaultTenantsInflight,
 		`Maximum number of distinct tenants to restart in parallel. Example: 2 means only up to 2 tenants can have nodes restarting at the same time.`)

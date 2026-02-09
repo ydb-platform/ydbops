@@ -112,8 +112,14 @@ func RunTestCase(tc TestCase) {
 			}()
 		}
 
+		started := time.Now()
 		outputBytes, _ := cmd.CombinedOutput()
 		output := string(outputBytes)
+		duration := time.Since(started)
+
+		if tc.additionalTestBehaviour.MaximumExpectedDuration != time.Duration(0) {
+			Expect(duration).To(BeNumerically("<", tc.additionalTestBehaviour.MaximumExpectedDuration))
+		}
 
 		for _, expectedOutputRegexp := range step.expectedOutputRegexps {
 			// This `if` means that `ydbops maintenance create` command has just

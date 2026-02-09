@@ -711,7 +711,6 @@ var _ = Describe("Test Rolling", func() {
 						"--user", mock.TestUser,
 						"--cms-query-interval", "1",
 						"--tenants-inflight", "2",
-						"--ordering-key", "tenant",
 						"run",
 						"--tenant",
 						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
@@ -805,6 +804,7 @@ var _ = Describe("Test Rolling", func() {
 			},
 			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
 				MaxDynnodesPerformedPerTenant: 4,
+				MaximumExpectedDuration:       time.Second * 2,
 			},
 			steps: []StepData{
 				{
@@ -812,11 +812,11 @@ var _ = Describe("Test Rolling", func() {
 						"--endpoint", "grpcs://localhost:2135",
 						"--verbose",
 						"--availability-mode", "strong",
+						"--delay-between-restarts", "1s",
 						"--user", mock.TestUser,
 						"--cms-query-interval", "1",
 						"--nodes-inflight", "2",
 						"--tenants-inflight", "2",
-						"--ordering-key", "tenant",
 						"run",
 						"--tenant",
 						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
