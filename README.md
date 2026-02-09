@@ -66,8 +66,7 @@ export YDB_PASSWORD=password_123
 ydbops restart --tenant \
   --endpoint grpc://<cluster-fqdn> \
   --availability-mode strong --verbose --hosts=7,8 \
-  --user jorres --kubeconfig ~/.kube/config 
-  --ordering-key tenant \
+  --user jorres --kubeconfig ~/.kube/config \
   --nodes-inflight 3 \
   --tenants-inflight 2
 ```
