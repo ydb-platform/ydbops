@@ -770,11 +770,14 @@ var _ = Describe("Test Rolling", func() {
 					},
 					expectedOutputRegexps: []string{
 						"2 ActionGroupStates moved to PERFORMED",
-						"calculated batches",
-						"dispatching batch",
+						"Starting a separate rolling instance for tenant",
+						"Starting a separate rolling instance for tenant",
 						"Restart completed successfully",
 					},
 				},
+			},
+			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
+				MaximumExpectedDuration: time.Second * 4,
 			},
 		},
 		),
@@ -867,9 +870,8 @@ var _ = Describe("Test Rolling", func() {
 						},
 					},
 					expectedOutputRegexps: []string{
-						"4 ActionGroupStates moved to PERFORMED",
-						"calculated batches",
-						"dispatching batch",
+						"Starting a separate rolling instance for tenant",
+						"Starting a separate rolling instance for tenant",
 						"Restart completed successfully",
 					},
 				},

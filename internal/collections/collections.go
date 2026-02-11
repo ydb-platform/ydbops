@@ -33,6 +33,15 @@ func MapContains[K comparable, V any](data map[K]V, key K) bool {
 	return ok
 }
 
+func GroupByFunc[K comparable, V any](items []V, fn func(item V) K) map[K][]V {
+	result := make(map[K][]V)
+	for _, item := range items {
+		k := fn(item)
+		result[k] = append(result[k], item)
+	}
+	return result
+}
+
 func ToMap[T any, K comparable](items []T, keyF func(T) K) map[K]T {
 	m := make(map[K]T, len(items))
 

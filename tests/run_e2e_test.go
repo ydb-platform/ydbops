@@ -121,6 +121,8 @@ func RunTestCase(tc TestCase) {
 			Expect(duration).To(BeNumerically("<", tc.additionalTestBehaviour.MaximumExpectedDuration))
 		}
 
+		fmt.Println(output)
+
 		for _, expectedOutputRegexp := range step.expectedOutputRegexps {
 			// This `if` means that `ydbops maintenance create` command has just
 			// finished executing. We will extract maintenance task id from it

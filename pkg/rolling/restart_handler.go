@@ -17,18 +17,12 @@ type restartStatus struct {
 	err    error
 }
 
-type queueItem struct {
-	value *Ydb_Maintenance.ActionGroupStates
-	wg    *sync.WaitGroup
-}
-
 type restartHandler struct {
-	ctx        context.Context
-	logger     *zap.SugaredLogger
-	queue      chan queueItem
-	batchQueue chan []*Ydb_Maintenance.ActionGroupStates
-	restarter  restarters.Restarter
-	statusCh   chan<- restartStatus
+	ctx       context.Context
+	logger    *zap.SugaredLogger
+	queue     chan *Ydb_Maintenance.ActionGroupStates
+	restarter restarters.Restarter
+	statusCh  chan<- restartStatus
 
 	// TODO(shmel1k@): probably, not needed here.
 	nodes map[uint32]*Ydb_Maintenance.Node
@@ -39,45 +33,15 @@ type restartHandler struct {
 	delayBetweenRestarts time.Duration
 }
 
-func (rh *restartHandler) push(states []*Ydb_Maintenance.ActionGroupStates) {
+func (rh *restartHandler) push(state *Ydb_Maintenance.ActionGroupStates) {
 	select {
 	case <-rh.ctx.Done():
 		return
-	case rh.batchQueue <- states:
+	case rh.queue <- state:
 	}
 }
 
 func (rh *restartHandler) run() {
-	go rh.processQueue()
-
-	go func() {
-		for {
-			select {
-			case <-rh.ctx.Done():
-				return
-			case batch, ok := <-rh.batchQueue:
-				if !ok {
-					return
-				}
-				wg := &sync.WaitGroup{}
-				for _, s := range batch {
-					wg.Add(1)
-					// the purpose of this select statement is to avoid sending more nodes to restart if the context is canceled during a batch processing
-					select {
-					case <-rh.ctx.Done():
-						return
-					case rh.queue <- queueItem{value: s, wg: wg}:
-					}
-				}
-
-				// waits until the whole batch is processed
-				wg.Wait()
-			}
-		}
-	}()
-}
-
-func (rh *restartHandler) processQueue() {
 	for i := 0; i < rh.nodesInflight; i++ {
 		rh.wg.Add(1)
 		go func() {
@@ -87,12 +51,10 @@ func (rh *restartHandler) processQueue() {
 				select {
 				case <-rh.ctx.Done():
 					return
-				case qItem, ok := <-rh.queue:
+				case gs, ok := <-rh.queue:
 					if !ok {
 						return
 					}
-
-					gs := qItem.value
 
 					var (
 						as   = gs.ActionStates[0]
@@ -114,8 +76,6 @@ func (rh *restartHandler) processQueue() {
 						err:    err,
 					}
 
-					qItem.wg.Done()
-
 					select {
 					case <-rh.ctx.Done():
 						return
@@ -130,7 +90,6 @@ func (rh *restartHandler) processQueue() {
 
 func (rh *restartHandler) stop(waitForDelay bool) {
 	close(rh.queue)
-	close(rh.batchQueue)
 	if waitForDelay {
 		rh.wg.Wait()
 	}
@@ -149,8 +108,7 @@ func newRestartHandler(
 		ctx:                  ctx,
 		logger:               logger,
 		restarter:            restarter,
-		queue:                make(chan queueItem),
-		batchQueue:           make(chan []*Ydb_Maintenance.ActionGroupStates),
+		queue:                make(chan *Ydb_Maintenance.ActionGroupStates),
 		statusCh:             statusCh,
 		nodesInflight:        nodesInflight,
 		nodes:                nodes,

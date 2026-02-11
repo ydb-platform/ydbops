@@ -173,14 +173,6 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 		},
 	)
 
-	if r.opts.TenantsInflight > 1 {
-		r.logger.Debugf("re-ordering nodes with ordering key: %s", TenantOrderingKey)
-		nodesToRestart = reOrderNodesByOrderingKey(TenantOrderingKey, nodesToRestart)
-	} else {
-		r.logger.Debugf("re-ordering nodes with ordering key: %s", ClusterOrderingKey)
-		nodesToRestart = reOrderNodesByOrderingKey(ClusterOrderingKey, nodesToRestart)
-	}
-
 	excludedNodes := 0
 	for _, node := range nodesToRestart {
 		if _, present := r.state.inactiveNodes[node.NodeId]; present {
@@ -357,17 +349,12 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
 
-	statusCh := make(chan restartStatus, r.opts.NodesInflight)
-	restartHandler := newRestartHandler(
-		ctx,
-		r.logger,
-		r.restarter,
-		r.opts.NodesInflight,
-		r.opts.DelayBetweenRestarts,
-		r.state.nodes,
-		statusCh,
-	)
-	restartHandler.run()
+	chSize := r.opts.NodesInflight
+	if r.opts.TenantsInflight > 0 {
+		chSize *= r.opts.TenantsInflight
+	}
+
+	statusCh := make(chan restartStatus, chSize)
 	done := make(chan struct{})
 
 	filteredActions := make([]*Ydb_Maintenance.ActionGroupStates, 0, len(performed))
@@ -399,7 +386,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 		close(done)
 	}()
 
-	r.dispatchActionBatches(filteredActions, restartHandler)
+	r.dispatchActions(ctx, filteredActions, statusCh)
 
 	<-done
 
@@ -412,34 +399,85 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	r.state.unreportedButFinishedActionIds = []string{}
 
 	restartCompleted := len(actions) == len(result.ActionStatuses)
-	var waitForDelay bool
-	select {
-	case <-ctx.Done():
-		waitForDelay = false
-	default:
-		waitForDelay = !restartCompleted
-	}
-	restartHandler.stop(waitForDelay)
 
 	return restartCompleted
 }
 
-func (r *Rolling) dispatchActionBatches(states []*Ydb_Maintenance.ActionGroupStates, handler *restartHandler) {
-	if slices.ContainsFunc(states, r.isStorageNodeActionGroupState) {
-		r.logger.Debugf("ignoring tenants-inflight. sending all storage nodes as one batch")
-		handler.push(states)
+func (r *Rolling) dispatchActions(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates, statusCh chan restartStatus) {
+	if slices.ContainsFunc(actions, r.isStorageNodeActionGroupState) {
+		r.logger.Debugf("ignoring tenants-inflight. dispatching all storage nodes")
+		r.dispatchAll(ctx, actions, statusCh)
 
 		return
 	}
 
-	batchSize := r.opts.NodesInflight
-	batches := collections.Batch(states, batchSize, r.opts.TenantsInflight, r.getStateNodeTenant)
-	r.logger.Debugf("calculated batches count: %d", len(batches))
-
-	for i, batch := range batches {
-		r.logger.Debugf("dispatching batch %d", i)
-		handler.push(batch)
+	if r.opts.TenantsInflight > 0 {
+		r.dispatchByTenant(ctx, actions, statusCh)
+	} else {
+		r.dispatchAll(ctx, actions, statusCh)
 	}
+}
+
+func (r *Rolling) dispatchAll(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates, statusCh chan restartStatus) {
+	handler := newRestartHandler(
+		ctx,
+		r.logger,
+		r.restarter,
+		r.opts.NodesInflight,
+		r.opts.DelayBetweenRestarts,
+		r.state.nodes,
+		statusCh,
+	)
+	handler.run()
+
+	for _, gs := range actions {
+		handler.push(gs)
+	}
+
+	handler.stop(true)
+}
+
+func (r *Rolling) dispatchByTenant(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates, statusCh chan restartStatus) {
+	groups := collections.GroupByFunc(actions, r.getStateNodeTenant)
+
+	sem := make(chan struct{}, r.opts.TenantsInflight)
+	var wg sync.WaitGroup
+
+	for tenantName, tenantActions := range groups {
+		select {
+		case <-ctx.Done():
+			wg.Wait()
+			return
+		case sem <- struct{}{}:
+		}
+
+		wg.Add(1)
+		go func(tenant string, actions []*Ydb_Maintenance.ActionGroupStates) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			r.logger.Infof("Starting a separate rolling instance for tenant %q (%d nodes)", tenant, len(actions))
+
+			handler := newRestartHandler(
+				ctx,
+				r.logger,
+				r.restarter,
+				r.opts.NodesInflight,
+				r.opts.DelayBetweenRestarts,
+				r.state.nodes,
+				statusCh,
+			)
+			handler.run()
+
+			for _, gs := range actions {
+				handler.push(gs)
+			}
+
+			handler.stop(true)
+		}(tenantName, tenantActions)
+	}
+
+	wg.Wait()
 }
 
 func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
