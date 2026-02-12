@@ -56,10 +56,10 @@ lint:
 pre-build:
 	@mkdir -p $(BUILD_DIR)
 
-build-macos: lint pre-build
+build-macos: pre-build
 	GOOS=darwin GOARCH=$(SYSTEM_ARCH) go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME} main.go
 
-build: lint pre-build
+build: pre-build
 	CGO_ENABLED=0 GOARCH=$(SYSTEM_ARCH) GOOS=linux go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME} main.go
 	strip ${BUILD_DIR}/${BINARY_NAME}
 
