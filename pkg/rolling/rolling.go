@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -348,19 +349,15 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 
 	r.completedActions = []*Ydb_Maintenance.ActionUid{}
 
-	statusCh := make(chan restartStatus, r.opts.NodesInflight)
-	restartHandler := newRestartHandler(
-		ctx,
-		r.logger,
-		r.restarter,
-		r.opts.NodesInflight,
-		r.opts.DelayBetweenRestarts,
-		r.state.nodes,
-		statusCh,
-	)
-	restartHandler.run()
+	chSize := r.opts.NodesInflight
+	if r.opts.TenantsInflight > 0 {
+		chSize *= r.opts.TenantsInflight
+	}
+
+	statusCh := make(chan restartStatus, chSize)
 	done := make(chan struct{})
 
+	filteredActions := make([]*Ydb_Maintenance.ActionGroupStates, 0, len(performed))
 	expectedRestarts := 0
 	for _, gs := range performed {
 		var (
@@ -381,6 +378,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 			continue
 		}
 		expectedRestarts++
+		filteredActions = append(filteredActions, gs)
 	}
 
 	go func() {
@@ -388,13 +386,7 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 		close(done)
 	}()
 
-	for _, gs := range performed {
-		as := gs.ActionStates[0]
-		if r.atomicHasActionInUnreported(as.ActionUid.GetActionId()) {
-			continue
-		}
-		restartHandler.push(gs)
-	}
+	r.dispatchActions(ctx, filteredActions, statusCh)
 
 	<-done
 
@@ -407,16 +399,85 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	r.state.unreportedButFinishedActionIds = []string{}
 
 	restartCompleted := len(actions) == len(result.ActionStatuses)
-	var waitForDelay bool
-	select {
-	case <-ctx.Done():
-		waitForDelay = false
-	default:
-		waitForDelay = !restartCompleted
-	}
-	restartHandler.stop(waitForDelay)
 
 	return restartCompleted
+}
+
+func (r *Rolling) dispatchActions(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates, statusCh chan restartStatus) {
+	if slices.ContainsFunc(actions, r.isStorageNodeActionGroupState) {
+		r.logger.Debugf("ignoring tenants-inflight. dispatching all storage nodes")
+		r.dispatchAll(ctx, actions, statusCh)
+
+		return
+	}
+
+	if r.opts.TenantsInflight > 0 {
+		r.dispatchByTenant(ctx, actions, statusCh)
+	} else {
+		r.dispatchAll(ctx, actions, statusCh)
+	}
+}
+
+func (r *Rolling) dispatchAll(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates, statusCh chan restartStatus) {
+	handler := newRestartHandler(
+		ctx,
+		r.logger,
+		r.restarter,
+		r.opts.NodesInflight,
+		r.opts.DelayBetweenRestarts,
+		r.state.nodes,
+		statusCh,
+	)
+	handler.run()
+
+	for _, gs := range actions {
+		handler.push(gs)
+	}
+
+	handler.stop(true)
+}
+
+func (r *Rolling) dispatchByTenant(ctx context.Context, actions []*Ydb_Maintenance.ActionGroupStates, statusCh chan restartStatus) {
+	groups := collections.GroupByFunc(actions, r.getStateNodeTenant)
+
+	sem := make(chan struct{}, r.opts.TenantsInflight)
+	var wg sync.WaitGroup
+
+	for tenantName, tenantActions := range groups {
+		select {
+		case <-ctx.Done():
+			wg.Wait()
+			return
+		case sem <- struct{}{}:
+		}
+
+		wg.Add(1)
+		go func(tenant string, actions []*Ydb_Maintenance.ActionGroupStates) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			r.logger.Infof("Starting a separate rolling instance for tenant %q (%d nodes)", tenant, len(actions))
+
+			handler := newRestartHandler(
+				ctx,
+				r.logger,
+				r.restarter,
+				r.opts.NodesInflight,
+				r.opts.DelayBetweenRestarts,
+				r.state.nodes,
+				statusCh,
+			)
+			handler.run()
+
+			for _, gs := range actions {
+				handler.push(gs)
+			}
+
+			handler.stop(true)
+		}(tenantName, tenantActions)
+	}
+
+	wg.Wait()
 }
 
 func (r *Rolling) atomicHasActionInUnreported(actionID string) bool {
@@ -496,6 +557,20 @@ func (r *Rolling) cleanupRollingRestart() error {
 		}
 	}
 	return nil
+}
+
+func (r *Rolling) isStorageNodeActionGroupState(gs *Ydb_Maintenance.ActionGroupStates) bool {
+	as := gs.ActionStates[0]
+	lock := as.Action.GetLockAction()
+	node := r.state.nodes[lock.Scope.GetNodeId()]
+	return node.GetDynamic() == nil
+}
+
+func (r *Rolling) getStateNodeTenant(gs *Ydb_Maintenance.ActionGroupStates) string {
+	as := gs.ActionStates[0]
+	lock := as.Action.GetLockAction()
+	node := r.state.nodes[lock.Scope.GetNodeId()]
+	return node.GetDynamic().Tenant
 }
 
 func findLowHigh(minors map[int]bool) (low, high int) {

@@ -4,6 +4,11 @@ import (
 	"sort"
 )
 
+const (
+	UnlimitedBatchSize          = -1
+	UnlimitedBatchPerGroupLimit = -1
+)
+
 func Convert[T any, P any](items []T, converterF func(T) P) []P {
 	values := make([]P, 0, len(items))
 
@@ -21,6 +26,20 @@ func Contains[T comparable](elems []T, elem T) bool {
 		}
 	}
 	return false
+}
+
+func MapContains[K comparable, V any](data map[K]V, key K) bool {
+	_, ok := data[key]
+	return ok
+}
+
+func GroupByFunc[K comparable, V any](items []V, fn func(item V) K) map[K][]V {
+	result := make(map[K][]V)
+	for _, item := range items {
+		k := fn(item)
+		result[k] = append(result[k], item)
+	}
+	return result
 }
 
 func ToMap[T any, K comparable](items []T, keyF func(T) K) map[K]T {

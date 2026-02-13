@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	//nolint:staticcheck
 	. "github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -22,6 +21,53 @@ func (s *YdbMock) setPendingOrPerformed(
 	currentNodeID uint32,
 	availabilityMode AvailabilityMode,
 ) ActionState_ActionStatus {
+	result, err := s.setPendingOrPerformedDynNodes(currentNodeID)
+	if err == nil {
+		return result
+	}
+
+	return s.setPendingOrPerformedStorageNodes(currentNodeID, availabilityMode)
+}
+
+func (s *YdbMock) setPendingOrPerformedDynNodes(
+	currentNodeID uint32,
+) (ActionState_ActionStatus, error) {
+	if s.isNodeCurrentlyReleased[currentNodeID] {
+		return ActionState_ACTION_STATUS_PERFORMED, nil
+	}
+
+	// for dynamic nodes: for convenience, we just configure the
+	// CMS mock to release UP TO N nodes per tenant.
+	for _, n := range s.nodes {
+		if n.NodeId != currentNodeID || n.GetDynamic() == nil ||
+			s.additionalTestBehaviour.MaxDynnodesPerformedPerTenant <= 0 {
+			continue
+		}
+
+		tenant := n.GetDynamic().GetTenant()
+		releasedInTenant := 0
+		for _, other := range s.nodes {
+			if other.GetDynamic() != nil &&
+				other.GetDynamic().GetTenant() == tenant &&
+				s.isNodeCurrentlyReleased[other.NodeId] {
+				releasedInTenant++
+			}
+		}
+		if releasedInTenant < s.additionalTestBehaviour.MaxDynnodesPerformedPerTenant {
+			s.isNodeCurrentlyReleased[currentNodeID] = true
+			return ActionState_ACTION_STATUS_PERFORMED, nil
+		}
+		return ActionState_ACTION_STATUS_PENDING, nil
+	}
+
+	return ActionState_ACTION_STATUS_UNSPECIFIED, fmt.Errorf("no dyn node found")
+}
+
+func (s *YdbMock) setPendingOrPerformedStorageNodes(
+	currentNodeID uint32,
+	availabilityMode AvailabilityMode,
+) ActionState_ActionStatus {
+	// for storage nodes
 	for _, nodeGroup := range s.nodeGroups {
 		alreadyReleased := 0
 		for _, nodeID := range nodeGroup {
@@ -98,7 +144,7 @@ func (s *YdbMock) givePerformedOrPendingStatus(taskOptions *MaintenanceTaskOptio
 }
 
 func (s *YdbMock) makeGroupStatesFor(taskOptions *MaintenanceTaskOptions, actionGroups []*ActionGroup) []*ActionGroupStates {
-	result := []*ActionGroupStates{}
+	result := make([]*ActionGroupStates, 0, len(actionGroups))
 	for _, ag := range actionGroups {
 		ags := &ActionGroupStates{
 			ActionStates: []*ActionState{},

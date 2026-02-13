@@ -36,6 +36,7 @@ type restartHandler struct {
 func (rh *restartHandler) push(state *Ydb_Maintenance.ActionGroupStates) {
 	select {
 	case <-rh.ctx.Done():
+		return
 	case rh.queue <- state:
 	}
 }

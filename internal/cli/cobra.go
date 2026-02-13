@@ -113,7 +113,7 @@ func ColorizeUsagesFromFlagSet(flagSet *pflag.FlagSet) string {
 		return len(b) - len(a)
 	})
 
-	replacementPairs := []string{}
+	replacementPairs := make([]string, 0, len(flagOccurences))
 
 	for _, flag := range flagOccurences {
 		replacementPairs = append(replacementPairs, flag, color.GreenString(flag))
