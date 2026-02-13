@@ -1,0 +1,3 @@
+kind: Added
+body: Add support for concurrent tenant nodes restart. `tenants-inflight` flag can be used for this feature.
+time: 2026-02-13T15:45:35.757468028+01:00
