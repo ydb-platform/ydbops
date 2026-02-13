@@ -1,7 +1,7 @@
 # Changelog
 
 
-## v0.1.0 - 2026-02-06
+## v0.0.22 - 2026-02-13
 ### Added
 * Add support for concurrent tenant nodes restart. `tenants-inflight` flag can be used for this feature.
 
