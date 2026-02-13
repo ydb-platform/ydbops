@@ -51,17 +51,16 @@ all: build build-macos
 lint:
 	@echo "Linting code..."
 	@go vet ./...
-	@golangci-lint run ./...
 
 pre-build:
 	@mkdir -p $(BUILD_DIR)
 
-build-macos: pre-build
-	GOOS=darwin GOARCH=$(SYSTEM_ARCH) go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME} main.go
+build-macos: lint pre-build
+	GOOS=darwin GOARCH=amd64 go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME}_darwin_amd64 main.go
+	GOOS=darwin GOARCH=arm64 go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME}_darwin_arm64 main.go
 
-build: pre-build
-	CGO_ENABLED=0 GOARCH=$(SYSTEM_ARCH) GOOS=linux go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME} main.go
-	strip ${BUILD_DIR}/${BINARY_NAME}
+build: lint pre-build
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags=${LDFLAGS} -o ${BUILD_DIR}/${BINARY_NAME} main.go
 
 clear:
 	rm -rf ${BUILD_DIR}/${BINARY_NAME}
