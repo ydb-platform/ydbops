@@ -51,6 +51,7 @@ type TargetingOptions struct {
 	K8sNamespace   string
 
 	MaxStaticNodeID int
+	Priority        int
 }
 
 func (o *TargetingOptions) DefineFlags(fs *pflag.FlagSet) {
@@ -91,6 +92,9 @@ Format: [(<|>|!=|~=)MAJOR.MINOR.PATCH|(==|!=)VERSION_STRING], e.g.:
 	fs.IntVar(&o.MaxStaticNodeID, "max-static-node-id", DefaultMaxStaticNodeID,
 		`This argument is used to help ydbops distinguish storage and dynamic nodes.
 Nodes with this nodeId or less will be considered storage.`)
+
+	fs.IntVar(&o.Priority, "priority", 0,
+		`Priority. Lower value means higher priority. Supported values are from -100 to 100.`)
 
 	profile.PopulateFromProfileLater(
 		fs.StringVar, &o.KubeconfigPath, "kubeconfig",
