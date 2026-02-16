@@ -193,6 +193,7 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 	taskParams := cms.MaintenanceTaskParams{
 		TaskUID:          r.state.restartTaskUID,
 		AvailabilityMode: r.opts.GetAvailabilityMode(),
+		Priority:         int32(r.opts.Priority),
 		Duration:         r.opts.GetRestartDuration(len(nodesToRestart)),
 		ScopeType:        cms.NodeScope,
 		Nodes:            nodesToRestart,
