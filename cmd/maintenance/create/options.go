@@ -110,6 +110,7 @@ func (o *Options) Run(f cmdutil.Factory) error {
 			Nodes:            o.nodeIdsToNodes(nodes, nodeIds),
 			Duration:         durationpb.New(duration),
 			AvailabilityMode: o.GetAvailabilityMode(),
+			Priority:         int32(o.Priority),
 			ScopeType:        cms.NodeScope,
 			TaskUID:          taskUID,
 		})
@@ -118,6 +119,7 @@ func (o *Options) Run(f cmdutil.Factory) error {
 			Hosts:            hostFQDNs,
 			Duration:         durationpb.New(duration),
 			AvailabilityMode: o.GetAvailabilityMode(),
+			Priority:         int32(o.Priority),
 			ScopeType:        cms.HostScope,
 			TaskUID:          taskUID,
 		})

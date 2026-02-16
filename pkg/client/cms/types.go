@@ -16,6 +16,7 @@ const (
 type MaintenanceTaskParams struct {
 	TaskUID          string
 	AvailabilityMode Ydb_Maintenance.AvailabilityMode
+	Priority         int32
 	Duration         *durationpb.Duration
 
 	ScopeType MaintenanceScopeType
