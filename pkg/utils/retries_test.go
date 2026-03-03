@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"errors"
-	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"go.uber.org/zap"
@@ -12,187 +12,150 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func init() {
-	// Initialize zap with a no-op logger to avoid panics
-	logger := zap.NewNop()
-	zap.ReplaceGlobals(logger)
-}
-
-func TestWrapWithRetries_Success(t *testing.T) {
-	callCount := 0
-	op := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
-
-	result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		return op, nil
+var _ = Describe("WrapWithRetries", func() {
+	BeforeEach(func() {
+		// Initialize zap with a no-op logger to avoid panics
+		logger := zap.NewNop()
+		zap.ReplaceGlobals(logger)
 	})
 
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if result != op {
-		t.Errorf("expected operation %v, got %v", op, result)
-	}
-	if callCount != 1 {
-		t.Errorf("expected exactly 1 call, got %d", callCount)
-	}
-}
-
-func TestWrapWithRetries_ErrorNonRetryable(t *testing.T) {
-	callCount := 0
-	expectedErr := status.Error(codes.Internal, "internal error")
-
-	result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		return nil, expectedErr
+	AfterEach(func() {
+		// Reset zap global logger
+		zap.ReplaceGlobals(zap.NewNop())
 	})
 
-	if !errors.Is(err, expectedErr) {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-	if result != nil {
-		t.Errorf("expected nil operation, got %v", result)
-	}
-	if callCount != 1 {
-		t.Errorf("expected exactly 1 call, got %d", callCount)
-	}
-}
+	Describe("Successful operation", func() {
+		It("should return operation immediately", func() {
+			callCount := 0
+			op := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
 
-func TestWrapWithRetries_ErrorRetryable_EventuallySucceeds(t *testing.T) {
-	callCount := 0
-	successOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
+			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return op, nil
+			})
 
-	result, err := WrapWithRetries(5, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		if callCount < 3 {
-			return nil, status.Error(codes.Unavailable, "unavailable")
-		}
-		return successOp, nil
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(op))
+			Expect(callCount).To(Equal(1))
+		})
 	})
 
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if result != successOp {
-		t.Errorf("expected operation %v, got %v", successOp, result)
-	}
-	if callCount != 3 {
-		t.Errorf("expected 3 calls, got %d", callCount)
-	}
-}
+	Describe("Non-retryable error", func() {
+		It("should return error immediately", func() {
+			callCount := 0
+			expectedErr := status.Error(codes.Internal, "internal error")
 
-func TestWrapWithRetries_ErrorRetryable_MaxAttemptsExceeded(t *testing.T) {
-	callCount := 0
-	expectedErr := status.Error(codes.Unavailable, "unavailable")
+			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return nil, expectedErr
+			})
 
-	result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		return nil, expectedErr
+			Expect(err).To(MatchError(expectedErr))
+			Expect(result).To(BeNil())
+			Expect(callCount).To(Equal(1))
+		})
 	})
 
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if _, ok := err.(*RetryExceededError); !ok {
-		t.Errorf("expected RetryExceededError, got %T: %v", err, err)
-	}
-	if result != nil {
-		t.Errorf("expected nil operation, got %v", result)
-	}
-	if callCount != 3 {
-		t.Errorf("expected 3 calls, got %d", callCount)
-	}
-}
+	Describe("Retryable gRPC error", func() {
+		It("should retry and eventually succeed", func() {
+			callCount := 0
+			successOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
 
-func TestWrapWithRetries_OperationStatusUnavailable_Retries(t *testing.T) {
-	callCount := 0
-	unavailableOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_UNAVAILABLE}
-	successOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
+			result, err := WrapWithRetries(5, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				if callCount < 3 {
+					return nil, status.Error(codes.Unavailable, "unavailable")
+				}
+				return successOp, nil
+			})
 
-	result, err := WrapWithRetries(5, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		if callCount < 3 {
-			return unavailableOp, nil
-		}
-		return successOp, nil
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(successOp))
+			Expect(callCount).To(Equal(3))
+		})
+
+		It("should exceed max attempts and return RetryExceededError", func() {
+			callCount := 0
+			expectedErr := status.Error(codes.Unavailable, "unavailable")
+
+			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return nil, expectedErr
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&RetryExceededError{}))
+			Expect(result).To(BeNil())
+			Expect(callCount).To(Equal(3))
+		})
 	})
 
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if result != successOp {
-		t.Errorf("expected operation %v, got %v", successOp, result)
-	}
-	if callCount != 3 {
-		t.Errorf("expected 3 calls, got %d", callCount)
-	}
-}
+	Describe("Operation status UNAVAILABLE", func() {
+		It("should retry and eventually succeed", func() {
+			callCount := 0
+			unavailableOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_UNAVAILABLE}
+			successOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
 
-func TestWrapWithRetries_OperationStatusUnavailable_MaxAttemptsExceeded(t *testing.T) {
-	callCount := 0
-	unavailableOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_UNAVAILABLE}
+			result, err := WrapWithRetries(5, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				if callCount < 3 {
+					return unavailableOp, nil
+				}
+				return successOp, nil
+			})
 
-	result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		return unavailableOp, nil
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(successOp))
+			Expect(callCount).To(Equal(3))
+		})
+
+		It("should exceed max attempts and return RetryExceededError", func() {
+			callCount := 0
+			unavailableOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_UNAVAILABLE}
+
+			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return unavailableOp, nil
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&RetryExceededError{}))
+			Expect(result).To(BeNil())
+			Expect(callCount).To(Equal(3))
+		})
 	})
 
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if _, ok := err.(*RetryExceededError); !ok {
-		t.Errorf("expected RetryExceededError, got %T: %v", err, err)
-	}
-	if result != nil {
-		t.Errorf("expected nil operation, got %v", result)
-	}
-	if callCount != 3 {
-		t.Errorf("expected 3 calls, got %d", callCount)
-	}
-}
+	Describe("Operation status BAD_REQUEST", func() {
+		It("should not retry and return operation", func() {
+			callCount := 0
+			badRequestOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_BAD_REQUEST}
 
-func TestWrapWithRetries_OperationStatusBadRequest_NoRetry(t *testing.T) {
-	callCount := 0
-	badRequestOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_BAD_REQUEST}
+			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return badRequestOp, nil
+			})
 
-	result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		return badRequestOp, nil
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(badRequestOp))
+			Expect(callCount).To(Equal(1))
+		})
 	})
 
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if result != badRequestOp {
-		t.Errorf("expected operation %v, got %v", badRequestOp, result)
-	}
-	if callCount != 1 {
-		t.Errorf("expected exactly 1 call, got %d", callCount)
-	}
-}
+	Describe("Backoff timing", func() {
+		It("should sleep between retries", func() {
+			callCount := 0
+			start := time.Now()
+			result, err := WrapWithRetries(2, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return nil, status.Error(codes.Unavailable, "unavailable")
+			})
+			elapsed := time.Since(start)
 
-func TestWrapWithRetries_BackoffTiming(t *testing.T) {
-	// This test ensures that backoff increases with attempts.
-	// We'll mock time.Sleep by capturing the delay.
-	// Since we cannot easily mock time.Sleep, we can skip this test or use a custom sleeper.
-	// For simplicity, we'll just verify that the function doesn't panic.
-	callCount := 0
-	start := time.Now()
-	result, err := WrapWithRetries(2, func() (*Ydb_Operations.Operation, error) {
-		callCount++
-		return nil, status.Error(codes.Unavailable, "unavailable")
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&RetryExceededError{}))
+			Expect(result).To(BeNil())
+			Expect(callCount).To(Equal(2))
+			Expect(elapsed).To(BeNumerically(">=", time.Second))
+		})
 	})
-	elapsed := time.Since(start)
-
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	// Should have slept at least 1 second (backoff for attempt 0 is 1 second)
-	if elapsed < time.Second {
-		t.Errorf("expected at least 1 second sleep, got %v", elapsed)
-	}
-	if callCount != 2 {
-		t.Errorf("expected 2 calls, got %d", callCount)
-	}
-	_ = result // unused
-}
+})
