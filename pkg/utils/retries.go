@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -38,6 +39,11 @@ func shouldRetry(code codes.Code) bool {
 	return code == codes.Unavailable
 }
 
+func isRetryableStatus(status Ydb.StatusIds_StatusCode) bool {
+	// TODO what other statuses?
+	return status == Ydb.StatusIds_UNAVAILABLE
+}
+
 func WrapWithRetries(
 	maxAttempts int,
 	f func() (*Ydb_Operations.Operation, error),
@@ -47,7 +53,13 @@ func WrapWithRetries(
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		op, err := f()
 		if err == nil {
-			return op, nil
+			// Check if operation status is retryable
+			if isRetryableStatus(op.Status) {
+				// Treat as a transient error
+				err = status.Error(codes.Unavailable, "operation status UNAVAILABLE")
+			} else {
+				return op, nil
+			}
 		}
 
 		if s, ok := status.FromError(err); ok && shouldRetry(s.Code()) {
