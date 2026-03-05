@@ -360,11 +360,12 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 	filteredActions := make([]*Ydb_Maintenance.ActionGroupStates, 0, len(performed))
 	expectedRestarts := 0
 	for _, gs := range performed {
-		var (
-			as   = gs.ActionStates[0]
-			lock = as.Action.GetLockAction()
-			node = r.state.nodes[lock.Scope.GetNodeId()]
-		)
+		as := gs.ActionStates[0]
+		lock := as.Action.GetLockAction()
+		if lock == nil {
+			panic(fmt.Sprintf("unexpected non-lock action type in processActionGroupStates: %v", as.Action))
+		}
+		node := r.state.nodes[lock.Scope.GetNodeId()]
 		if r.atomicHasActionInUnreported(as.GetActionUid().GetActionId()) {
 			r.mu.Lock()
 			r.completedActions = append(r.completedActions, as.ActionUid)
@@ -562,6 +563,9 @@ func (r *Rolling) cleanupRollingRestart() error {
 func (r *Rolling) isStorageNodeActionGroupState(gs *Ydb_Maintenance.ActionGroupStates) bool {
 	as := gs.ActionStates[0]
 	lock := as.Action.GetLockAction()
+	if lock == nil {
+		panic(fmt.Sprintf("unexpected non-lock action type in isStorageNodeActionGroupState: %v", as.Action))
+	}
 	node := r.state.nodes[lock.Scope.GetNodeId()]
 	return node.GetDynamic() == nil
 }
@@ -569,6 +573,9 @@ func (r *Rolling) isStorageNodeActionGroupState(gs *Ydb_Maintenance.ActionGroupS
 func (r *Rolling) getStateNodeTenant(gs *Ydb_Maintenance.ActionGroupStates) string {
 	as := gs.ActionStates[0]
 	lock := as.Action.GetLockAction()
+	if lock == nil {
+		panic(fmt.Sprintf("unexpected non-lock action type in getStateNodeTenant: %v", as.Action))
+	}
 	node := r.state.nodes[lock.Scope.GetNodeId()]
 	return node.GetDynamic().Tenant
 }
