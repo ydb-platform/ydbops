@@ -1081,6 +1081,55 @@ var _ = Describe("Test Rolling", func() {
 			},
 		},
 		),
+		Entry("panics on non-lock action type from CMS", TestCase{
+			nodeConfiguration: [][]uint32{
+				{1, 2, 3},
+			},
+			nodeInfoMap: map[uint32]mock.TestNodeInfo{},
+			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
+				InjectNonLockAction: true,
+			},
+			steps: []StepData{
+				{
+					ydbopsInvocation: []string{
+						"--endpoint", "grpcs://localhost:2135",
+						"--verbose",
+						"--availability-mode", "strong",
+						"--hosts=1",
+						"--user", mock.TestUser,
+						"--cms-query-interval", "1",
+						"run",
+						"--storage",
+						"--payload", filepath.Join(".", "mock", "noop-payload.sh"),
+						"--ca-file", filepath.Join(".", "test-data", "ssl-data", "ca.crt"),
+					},
+					expectedRequests: []proto.Message{
+						&Ydb_Auth.LoginRequest{
+							User:     mock.TestUser,
+							Password: mock.TestPassword,
+						},
+						&Ydb_Maintenance.ListClusterNodesRequest{},
+						&Ydb_Cms.ListDatabasesRequest{},
+						&Ydb_Discovery.WhoAmIRequest{},
+						&Ydb_Maintenance.ListMaintenanceTasksRequest{
+							User: &mock.TestUser,
+						},
+						&Ydb_Maintenance.CreateMaintenanceTaskRequest{
+							TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
+								TaskUid:          "task-UUID-1",
+								Description:      "Rolling restart maintenance task",
+								AvailabilityMode: Ydb_Maintenance.AvailabilityMode_AVAILABILITY_MODE_STRONG,
+							},
+							ActionGroups: mock.MakeActionGroupsFromNodeIds(1),
+						},
+					},
+					expectedOutputRegexps: []string{
+						"panic: unexpected non-lock action type",
+					},
+				},
+			},
+		},
+		),
 		Entry("Interrupt rolling restart with SIGTERM", TestCase{
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3},

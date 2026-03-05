@@ -45,6 +45,7 @@ type AdditionalTestBehaviour struct {
 	SignalDelayMs                 int // Send SIGTERM after this delay in milliseconds
 	MaxDynnodesPerformedPerTenant int
 	MaximumExpectedDuration       time.Duration
+	InjectNonLockAction           bool
 }
 
 type YdbMock struct {
@@ -123,6 +124,25 @@ func (s *YdbMock) CreateMaintenanceTask(ctx context.Context, req *CreateMaintena
 		TaskUid:           taskUid,
 		ActionGroupStates: s.tasks[taskUid].actionGroupStates,
 	}
+
+	if s.additionalTestBehaviour.InjectNonLockAction {
+		injected := &ActionGroupStates{
+			ActionStates: []*ActionState{
+				{
+					Action:   &Action{},
+					Status:   ActionState_ACTION_STATUS_PERFORMED,
+					Deadline: timestamppb.New(time.Now().Add(time.Minute * 3)),
+					ActionUid: &ActionUid{
+						TaskUid:  taskUid,
+						GroupId:  "injected-group",
+						ActionId: "injected-action",
+					},
+				},
+			},
+		}
+		result.ActionGroupStates = append([]*ActionGroupStates{injected}, result.ActionGroupStates...)
+	}
+
 	return &MaintenanceTaskResponse{Operation: wrapIntoOperation(result)}, nil
 }
 
