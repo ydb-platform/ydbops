@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.24 - 2026-03-05
+### Fixed
+* Fix retry for operation status - UNAVAILABLE
+
 ## v0.0.23 - 2026-02-13
 ### Fixed
 * Reverted the ydbops build to publish three binaries instead of one MacOS one
