@@ -193,6 +193,7 @@ func (c *defaultCMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (
 		TaskOptions: &Ydb_Maintenance.MaintenanceTaskOptions{
 			TaskUid:          params.TaskUID,
 			AvailabilityMode: params.AvailabilityMode,
+			Priority:         params.Priority,
 			Description:      "Rolling restart maintenance task",
 		},
 	}
