@@ -21,17 +21,22 @@ func TaskToString(task cms.MaintenanceTask) string {
 	for _, gs := range task.GetActionGroupStates() {
 		as := gs.ActionStates[0]
 
-		nodeId := as.Action.GetLockAction().Scope.GetNodeId()
-		if nodeId != 0 {
-			sb.WriteString(fmt.Sprintf("  Lock on node %d ", as.Action.GetLockAction().Scope.GetNodeId()))
+		lock := as.Action.GetLockAction()
+		if lock == nil {
+			sb.WriteString("  Non-lock action ")
+		} else if nodeId := lock.Scope.GetNodeId(); nodeId != 0 {
+			sb.WriteString(fmt.Sprintf("  Lock on node %d ", nodeId))
 		} else {
-			sb.WriteString(fmt.Sprintf("  Lock on host %s ", as.Action.GetLockAction().Scope.GetHost()))
+			sb.WriteString(fmt.Sprintf("  Lock on host %s ", lock.Scope.GetHost()))
 		}
 
 		if as.Status == Ydb_Maintenance.ActionState_ACTION_STATUS_PERFORMED {
 			sb.WriteString(fmt.Sprintf("PERFORMED, until: %s", as.Deadline.AsTime().Format(time.DateTime)))
 		} else {
-			sb.WriteString(fmt.Sprintf("PENDING, %s", as.GetReason().String()))
+			sb.WriteString(fmt.Sprintf("%s, %s", as.Status.String(), as.GetReason().String()))
+			if details := as.GetDetails(); details != "" {
+				sb.WriteString(fmt.Sprintf(" (%s)", details))
+			}
 		}
 		sb.WriteString("\n")
 	}

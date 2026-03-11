@@ -2,6 +2,7 @@ package rolling
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -56,11 +57,12 @@ func (rh *restartHandler) run() {
 						return
 					}
 
-					var (
-						as   = gs.ActionStates[0]
-						lock = as.Action.GetLockAction()
-						node = rh.nodes[lock.Scope.GetNodeId()]
-					)
+					as := gs.ActionStates[0]
+					lock := as.Action.GetLockAction()
+					if lock == nil {
+						panic(fmt.Sprintf("unexpected non-lock action type in restartHandler: %v", as.Action))
+					}
+					node := rh.nodes[lock.Scope.GetNodeId()]
 
 					rh.logger.Debugf("Restart node with id: %d", node.GetNodeId())
 

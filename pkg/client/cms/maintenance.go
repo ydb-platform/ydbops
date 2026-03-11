@@ -56,7 +56,14 @@ func (d *defaultCMSClient) CompleteActions(taskID string, hosts []string) (*Ydb_
 	nodeIDToActionUID := make(map[uint32]*Ydb_Maintenance.ActionUid)
 	for _, gs := range task.GetActionGroupStates() {
 		as := gs.ActionStates[0]
-		scope := as.Action.GetLockAction().Scope
+		lock := as.Action.GetLockAction()
+		if lock == nil {
+			return nil, fmt.Errorf(
+				"failed to complete action: unexpected non-lock action type: %+v. Contact the developers",
+				as.Action,
+			)
+		}
+		scope := lock.Scope
 
 		hostFqdn := scope.GetHost()
 		nodeID := scope.GetNodeId()

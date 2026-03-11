@@ -137,6 +137,12 @@ linters:
         path: _test\.go
       - path: (.+)\.go$
         text: has been deprecated since Go 1.16
+      # grpc.Dial is deprecated but migrating to grpc.NewClient changes connection
+      # semantics (lazy vs eager). Inline //nolint:staticcheck conflicts with
+      # nolintlint: https://github.com/golangci/golangci-lint/issues/3228
+      - linters:
+          - staticcheck
+        text: "grpc.Dial is deprecated"
 issues:
   max-same-issues: 0
   new: false
