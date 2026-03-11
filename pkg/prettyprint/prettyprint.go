@@ -34,6 +34,9 @@ func TaskToString(task cms.MaintenanceTask) string {
 			sb.WriteString(fmt.Sprintf("PERFORMED, until: %s", as.Deadline.AsTime().Format(time.DateTime)))
 		} else {
 			sb.WriteString(fmt.Sprintf("%s, %s", as.Status.String(), as.GetReason().String()))
+			if details := as.GetDetails(); details != "" {
+				sb.WriteString(fmt.Sprintf(" (%s)", details))
+			}
 		}
 		sb.WriteString("\n")
 	}

@@ -318,9 +318,9 @@ func (r *Rolling) getPerformedActions(actions []*Ydb_Maintenance.ActionGroupStat
 				return true
 			}
 
-			details := st.GetReasonDetails()
+			details := st.GetDetails()
 			if details != "" {
-				actionStatesBuf.WriteString(st.GetReasonDetails())
+				actionStatesBuf.WriteString(st.GetDetails())
 				actionStatesBuf.WriteString("\n")
 			}
 			return false

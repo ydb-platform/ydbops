@@ -14,7 +14,7 @@ const (
 	greaterThanSign = ">"
 )
 
-var AvailabilityModes = []string{"strong", "weak", "force"}
+var AvailabilityModes = []string{"strong", "weak", "force", "smart"}
 
 type StartedTime struct {
 	Timestamp time.Time
