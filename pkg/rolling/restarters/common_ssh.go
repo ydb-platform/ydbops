@@ -19,13 +19,14 @@ const (
 	sshBin                    = "ssh"
 	psshBin                   = "pssh"
 	nsshBin                   = "nssh"
+	directBin                 = "bash"
 )
 
 func (r sshRestarter) stripCommandFromArgs(args []string) (string, []string) {
 	remainingSSHArgs := []string{}
 	command := sshBin
 	for _, arg := range args {
-		if arg == sshBin || arg == psshBin || arg == nsshBin {
+		if arg == sshBin || arg == psshBin || arg == nsshBin || arg == directBin {
 			command = arg
 		} else {
 			remainingSSHArgs = append(remainingSSHArgs, arg)
@@ -56,6 +57,8 @@ func (r sshRestarter) restartNodeBySystemdUnit(
 		fullSSHArgs = append(fullSSHArgs, node.Host, remoteRestartCommand)
 	case nsshBin, psshBin:
 		fullSSHArgs = append(fullSSHArgs, "run", remoteRestartCommand, node.Host)
+	case directBin:
+		fullSSHArgs = append(fullSSHArgs, "-c", remoteRestartCommand)
 	default:
 		return fmt.Errorf("supported ssh commands: ssh, pssh, nssh. Specified: %s", sshCommand)
 	}
