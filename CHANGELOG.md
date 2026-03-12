@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v0.0.25 - 2026-03-12
+### Added
+* Add smart availability mode
+* Add priority option
+### Changed
+* Large bump: updated go genproto from 2024\10\02 to 2026\03\11
+
 ## v0.0.24 - 2026-03-05
 ### Fixed
 * Fix retry for operation status - UNAVAILABLE
