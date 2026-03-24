@@ -1,0 +1,3 @@
+kind: Changed
+body: ydbops now softly prefers to restart storage nodes from a single failure domain (datacenter + rack)
+time: 2026-03-24T17:35:21.384166047+01:00

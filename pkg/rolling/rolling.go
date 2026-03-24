@@ -114,6 +114,8 @@ func (e *executer) Execute() error {
 		}()
 	}
 
+	r.cms.SetContext(ctx)
+
 	e.logger.Info("Start rolling restart")
 	err := r.DoRestart(ctx)
 
@@ -172,6 +174,8 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 			AllNodes:        collections.Values(r.state.nodes),
 		},
 	)
+
+	nodesToRestart = restarters.SortByRackLocation(nodesToRestart, r.logger)
 
 	excludedNodes := 0
 	for _, node := range nodesToRestart {

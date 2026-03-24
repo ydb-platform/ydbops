@@ -200,6 +200,47 @@ func ExcludeByTenantNames(
 	})
 }
 
+func SortByRackLocation(nodes []*Ydb_Maintenance.Node, logger *zap.SugaredLogger) []*Ydb_Maintenance.Node {
+	allDynamic := true
+	for _, node := range nodes {
+		if node.GetDynamic() == nil {
+			allDynamic = false
+			break
+		}
+	}
+	if allDynamic {
+		return nodes
+	}
+
+	for _, node := range nodes {
+		loc := node.GetLocation()
+		if loc == nil || loc.GetDataCenter() == "" || loc.GetRack() == "" {
+			logger.Warnf("Node %d (%s) has incomplete location info (dc=%q, rack=%q), "+
+				"rack-aware restart ordering may be suboptimal",
+				node.GetNodeId(), node.GetHost(),
+				loc.GetDataCenter(), loc.GetRack())
+		}
+	}
+
+	return collections.SortBy(nodes,
+		func(l *Ydb_Maintenance.Node, r *Ydb_Maintenance.Node) bool {
+			lLoc, rLoc := l.GetLocation(), r.GetLocation()
+			if lLoc == nil || rLoc == nil {
+				return l.NodeId < r.NodeId
+			}
+			lDC, rDC := lLoc.GetDataCenter(), rLoc.GetDataCenter()
+			if lDC != rDC {
+				return lDC < rDC
+			}
+			lRack, rRack := lLoc.GetRack(), rLoc.GetRack()
+			if lRack != rRack {
+				return lRack < rRack
+			}
+			return l.NodeId < r.NodeId
+		},
+	)
+}
+
 func MergeAndUnique(nodeSlices ...[]*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
 	presentNodes := make(map[uint32]bool)
 	result := []*Ydb_Maintenance.Node{}

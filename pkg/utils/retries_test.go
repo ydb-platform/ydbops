@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,7 +30,7 @@ var _ = Describe("WrapWithRetries", func() {
 			callCount := 0
 			op := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
 
-			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 3, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				return op, nil
 			})
@@ -45,7 +46,7 @@ var _ = Describe("WrapWithRetries", func() {
 			callCount := 0
 			expectedErr := status.Error(codes.Internal, "internal error")
 
-			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 3, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				return nil, expectedErr
 			})
@@ -61,7 +62,7 @@ var _ = Describe("WrapWithRetries", func() {
 			callCount := 0
 			successOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
 
-			result, err := WrapWithRetries(5, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 5, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				if callCount < 3 {
 					return nil, status.Error(codes.Unavailable, "unavailable")
@@ -78,7 +79,7 @@ var _ = Describe("WrapWithRetries", func() {
 			callCount := 0
 			expectedErr := status.Error(codes.Unavailable, "unavailable")
 
-			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 3, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				return nil, expectedErr
 			})
@@ -96,7 +97,7 @@ var _ = Describe("WrapWithRetries", func() {
 			unavailableOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_UNAVAILABLE}
 			successOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_SUCCESS}
 
-			result, err := WrapWithRetries(5, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 5, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				if callCount < 3 {
 					return unavailableOp, nil
@@ -113,7 +114,7 @@ var _ = Describe("WrapWithRetries", func() {
 			callCount := 0
 			unavailableOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_UNAVAILABLE}
 
-			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 3, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				return unavailableOp, nil
 			})
@@ -130,7 +131,7 @@ var _ = Describe("WrapWithRetries", func() {
 			callCount := 0
 			badRequestOp := &Ydb_Operations.Operation{Status: Ydb.StatusIds_BAD_REQUEST}
 
-			result, err := WrapWithRetries(3, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 3, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				return badRequestOp, nil
 			})
@@ -145,7 +146,7 @@ var _ = Describe("WrapWithRetries", func() {
 		It("should sleep between retries", func() {
 			callCount := 0
 			start := time.Now()
-			result, err := WrapWithRetries(2, func() (*Ydb_Operations.Operation, error) {
+			result, err := WrapWithRetries(context.Background(), 2, func() (*Ydb_Operations.Operation, error) {
 				callCount++
 				return nil, status.Error(codes.Unavailable, "unavailable")
 			})
