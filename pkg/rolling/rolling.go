@@ -120,7 +120,7 @@ func (e *executer) Execute() error {
 	if errors.Is(err, context.Canceled) && e.opts.CleanupOnExit {
 		e.logger.Info("Operation was cancelled, cleaning up maintenance tasks")
 
-		if cleanupErr := r.cleanupRollingRestart(); cleanupErr != nil {
+		if cleanupErr := r.cleanupRollingRestart(ctx); cleanupErr != nil {
 			e.logger.Errorf("Failed to cleanup maintenance tasks on signal: %v", cleanupErr)
 		} else {
 			e.logger.Info("Successfully cleaned up maintenance tasks")
@@ -142,7 +142,7 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 	}
 	r.state = state
 
-	if err = r.cleanupRollingRestart(); err != nil {
+	if err = r.cleanupRollingRestart(ctx); err != nil {
 		return err
 	}
 
@@ -544,16 +544,21 @@ func (r *Rolling) prepareState() (*state, error) {
 	}, nil
 }
 
-func (r *Rolling) cleanupRollingRestart() error {
+func (r *Rolling) cleanupRollingRestart(ctx context.Context) error {
 	r.logger.Debugf("Will cleanup all maintenance tasks...")
 
-	previousTasks, err := r.cms.MaintenanceTasks(r.state.userSID)
+	previousTasks, err := r.cms.MaintenanceTasks(ctx, r.state.userSID)
 	if err != nil {
 		return fmt.Errorf("failed to list maintenance tasks with user id %v: %w", r.state.userSID, err)
 	}
 
 	for _, previousTaskUID := range previousTasks {
-		_, err := r.cms.DropMaintenanceTask(previousTaskUID.GetTaskUid())
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		_, err := r.cms.DropMaintenanceTask(ctx, previousTaskUID.GetTaskUid())
 		if err != nil {
 			return fmt.Errorf("failed to drop maintenance task: %w", err)
 		}

@@ -25,11 +25,11 @@ type Maintenance interface {
 	CompleteAction([]*Ydb_Maintenance.ActionUid) (*Ydb_Maintenance.ManageActionResult, error)
 	CompleteActions(string, []string) (*Ydb_Maintenance.ManageActionResult, error)
 	CreateMaintenanceTask(MaintenanceTaskParams) (MaintenanceTask, error)
-	DropMaintenanceTask(string) (string, error)
+	DropMaintenanceTask(context.Context, string) (string, error)
 	DropTask(string) error
 	GetMaintenanceTask(string) (MaintenanceTask, error)
 	ListTasksForUser(string) ([]MaintenanceTask, error)
-	MaintenanceTasks(string) ([]MaintenanceTask, error)
+	MaintenanceTasks(context.Context, string) ([]MaintenanceTask, error)
 	RefreshMaintenanceTask(string) (MaintenanceTask, error)
 	RefreshTask(string) (MaintenanceTask, error)
 }
@@ -129,7 +129,7 @@ func (d *defaultCMSClient) queryEachTaskForActions(taskIds []string) ([]Maintena
 // DropTask implements Client.
 func (d *defaultCMSClient) DropTask(taskID string) error {
 	// TODO(shmel1k@): add status
-	_, err := d.DropMaintenanceTask(taskID)
+	_, err := d.DropMaintenanceTask(context.TODO(), taskID)
 	if err != nil {
 		return err
 	}
@@ -142,13 +142,13 @@ func (d *defaultCMSClient) DropTask(taskID string) error {
 
 // ListTasks implements Client.
 func (d *defaultCMSClient) ListTasksForUser(userSID string) ([]MaintenanceTask, error) {
-	return d.MaintenanceTasks(userSID)
+	return d.MaintenanceTasks(context.TODO(), userSID)
 }
 
 // RefreshTask implements Client.
 func (d *defaultCMSClient) RefreshTask(taskID string) (MaintenanceTask, error) {
 	var result Ydb_Maintenance.MaintenanceTaskResult
-	_, err := d.executeMaintenanceOperation(&result, func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
+	_, err := d.executeMaintenanceOperation(context.TODO(), &result, func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 		return cl.RefreshMaintenanceTask(ctx, &Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 			OperationParams: d.connectionsFactory.OperationParams(),
 			TaskUid:         taskID,

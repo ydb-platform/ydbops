@@ -58,7 +58,7 @@ func NewCMSClient(
 func (c *defaultCMSClient) Tenants() ([]string, error) {
 	result := Ydb_Cms.ListDatabasesResult{}
 	c.logger.Debug("Invoke ListDatabases method")
-	_, err := c.executeCMSOperation(&result, func(ctx context.Context, cl Ydb_Cms_V1.CmsServiceClient) (client.OperationResponse, error) {
+	_, err := c.executeCMSOperation(context.TODO(), &result, func(ctx context.Context, cl Ydb_Cms_V1.CmsServiceClient) (client.OperationResponse, error) {
 		return cl.ListDatabases(ctx, &Ydb_Cms.ListDatabasesRequest{OperationParams: c.connectionsFactory.OperationParams()})
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func (c *defaultCMSClient) Tenants() ([]string, error) {
 func (c *defaultCMSClient) Nodes() ([]*Ydb_Maintenance.Node, error) {
 	result := Ydb_Maintenance.ListClusterNodesResult{}
 	c.logger.Debug("Invoke ListClusterNodes method")
-	_, err := c.executeMaintenanceOperation(&result,
+	_, err := c.executeMaintenanceOperation(context.TODO(), &result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.ListClusterNodes(ctx, &Ydb_Maintenance.ListClusterNodesRequest{
 				OperationParams: c.connectionsFactory.OperationParams(),
@@ -96,10 +96,10 @@ func (c *defaultCMSClient) Nodes() ([]*Ydb_Maintenance.Node, error) {
 	return nodes, nil
 }
 
-func (c *defaultCMSClient) MaintenanceTasks(userSID string) ([]MaintenanceTask, error) {
+func (c *defaultCMSClient) MaintenanceTasks(ctx context.Context, userSID string) ([]MaintenanceTask, error) {
 	result := Ydb_Maintenance.ListMaintenanceTasksResult{}
 	c.logger.Debug("Invoke ListMaintenanceTasks method")
-	_, err := c.executeMaintenanceOperation(&result,
+	_, err := c.executeMaintenanceOperation(ctx, &result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.ListMaintenanceTasks(ctx,
 				&Ydb_Maintenance.ListMaintenanceTasksRequest{
@@ -119,7 +119,7 @@ func (c *defaultCMSClient) MaintenanceTasks(userSID string) ([]MaintenanceTask, 
 func (c *defaultCMSClient) GetMaintenanceTask(taskID string) (MaintenanceTask, error) {
 	result := Ydb_Maintenance.GetMaintenanceTaskResult{}
 	c.logger.Debug("Invoke GetMaintenanceTask method")
-	_, err := c.executeMaintenanceOperation(&result,
+	_, err := c.executeMaintenanceOperation(context.TODO(), &result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.GetMaintenanceTask(ctx, &Ydb_Maintenance.GetMaintenanceTaskRequest{
 				OperationParams: c.connectionsFactory.OperationParams(),
@@ -207,7 +207,7 @@ func (c *defaultCMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (
 
 	result := &Ydb_Maintenance.MaintenanceTaskResult{}
 	c.logger.Debug("Invoke CreateMaintenanceTask method")
-	_, err := c.executeMaintenanceOperation(result,
+	_, err := c.executeMaintenanceOperation(context.TODO(), result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.CreateMaintenanceTask(ctx, request)
 		},
@@ -221,7 +221,7 @@ func (c *defaultCMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (
 func (c *defaultCMSClient) RefreshMaintenanceTask(taskID string) (MaintenanceTask, error) {
 	result := Ydb_Maintenance.MaintenanceTaskResult{}
 	c.logger.Debug("Invoke RefreshMaintenanceTask method")
-	_, err := c.executeMaintenanceOperation(&result,
+	_, err := c.executeMaintenanceOperation(context.TODO(), &result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.RefreshMaintenanceTask(ctx, &Ydb_Maintenance.RefreshMaintenanceTaskRequest{
 				OperationParams: c.connectionsFactory.OperationParams(),
@@ -236,9 +236,9 @@ func (c *defaultCMSClient) RefreshMaintenanceTask(taskID string) (MaintenanceTas
 	return &result, nil
 }
 
-func (c *defaultCMSClient) DropMaintenanceTask(taskID string) (string, error) {
+func (c *defaultCMSClient) DropMaintenanceTask(ctx context.Context, taskID string) (string, error) {
 	c.logger.Debug("Invoke DropMaintenanceTask method")
-	op, err := c.executeMaintenanceOperation(nil,
+	op, err := c.executeMaintenanceOperation(ctx, nil,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.DropMaintenanceTask(ctx, &Ydb_Maintenance.DropMaintenanceTaskRequest{
 				OperationParams: c.connectionsFactory.OperationParams(),
@@ -256,7 +256,7 @@ func (c *defaultCMSClient) DropMaintenanceTask(taskID string) (string, error) {
 func (c *defaultCMSClient) CompleteAction(actionIds []*Ydb_Maintenance.ActionUid) (*Ydb_Maintenance.ManageActionResult, error) {
 	result := Ydb_Maintenance.ManageActionResult{}
 	c.logger.Debug("Invoke CompleteAction method")
-	_, err := c.executeMaintenanceOperation(&result,
+	_, err := c.executeMaintenanceOperation(context.TODO(), &result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
 			return cl.CompleteAction(ctx, &Ydb_Maintenance.CompleteActionRequest{
 				OperationParams: c.connectionsFactory.OperationParams(),
@@ -271,10 +271,11 @@ func (c *defaultCMSClient) CompleteAction(actionIds []*Ydb_Maintenance.ActionUid
 }
 
 func (c *defaultCMSClient) executeMaintenanceOperation(
+	ctx context.Context,
 	out proto.Message,
 	method func(context.Context, Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
+	ctx, cancel := c.credentialsProvider.ContextWithAuth(ctx)
 	defer cancel()
 
 	op, err := utils.WrapWithRetries(defaultRetryCount, func() (*Ydb_Operations.Operation, error) {
@@ -316,10 +317,11 @@ func (c *defaultCMSClient) executeMaintenanceOperation(
 }
 
 func (c *defaultCMSClient) executeCMSOperation(
+	ctx context.Context,
 	out proto.Message,
 	method func(context.Context, Ydb_Cms_V1.CmsServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
+	ctx, cancel := c.credentialsProvider.ContextWithAuth(ctx)
 	defer cancel()
 
 	op, err := utils.WrapWithRetries(defaultRetryCount, func() (*Ydb_Operations.Operation, error) {

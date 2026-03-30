@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ydb-platform/ydbops/pkg/cmdutil"
@@ -15,7 +16,7 @@ func (o *Options) Run(f cmdutil.Factory) error {
 		return err
 	}
 
-	tasks, err := f.GetCMSClient().MaintenanceTasks(userSID)
+	tasks, err := f.GetCMSClient().MaintenanceTasks(context.Background(), userSID)
 	if err != nil {
 		return err
 	}
