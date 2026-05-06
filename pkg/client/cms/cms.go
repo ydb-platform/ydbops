@@ -205,7 +205,6 @@ func (c *defaultCMSClient) CreateMaintenanceTask(params MaintenanceTaskParams) (
 		},
 	}
 
-	fmt.Println(params.Duration)
 	if params.ScopeType == NodeScope {
 		request.ActionGroups = actionGroupsFromNodes(params)
 	} else { // HostScope
@@ -293,8 +292,11 @@ func (c *defaultCMSClient) executeMaintenanceOperation(
 			_ = cc.Close()
 		}()
 
+		callCtx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
+		defer cancelTimeout()
+
 		cl := Ydb_Maintenance_V1.NewMaintenanceServiceClient(cc)
-		r, err := method(ctx, cl)
+		r, err := method(callCtx, cl)
 		if err != nil {
 			c.logger.Debugf("Invocation error: %+v", err)
 			return nil, err
@@ -334,9 +336,15 @@ func (c *defaultCMSClient) executeCMSOperation(
 		if err != nil {
 			return nil, err
 		}
+		defer func() {
+			_ = cc.Close()
+		}()
+
+		callCtx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
+		defer cancelTimeout()
 
 		cl := Ydb_Cms_V1.NewCmsServiceClient(cc)
-		r, err := method(ctx, cl)
+		r, err := method(callCtx, cl)
 		if err != nil {
 			c.logger.Debugf("Invocation error: %+v", err)
 			return nil, err

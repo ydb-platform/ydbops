@@ -58,7 +58,7 @@ func mainNoExit() error {
 	logLevelSetter, logger := createLogger("info")
 	baseOptions = &command.BaseOptions{}
 	root := cmd.NewRootCommand(logLevelSetter, logger.Sugar(), baseOptions)
-	cf := connectionsfactory.New(baseOptions)
+	cf := connectionsfactory.New(baseOptions, connectionsfactory.DefaultTransportTimeout)
 
 	options.Logger = logger.Sugar() // TODO(shmel1k@): tmp hack
 

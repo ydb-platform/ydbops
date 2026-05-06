@@ -84,6 +84,9 @@ func (c *Discovery) ExecuteDiscoveryMethod(
 	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
 	defer cancel()
 
+	ctx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
+	defer cancelTimeout()
+
 	cl := Ydb_Discovery_V1.NewDiscoveryServiceClient(cc)
 	r, err := method(ctx, cl)
 	if err != nil {

@@ -213,6 +213,11 @@ func SortByRackLocation(nodes []*Ydb_Maintenance.Node, logger *zap.SugaredLogger
 	}
 
 	for _, node := range nodes {
+		// for dynnodes, we do not have rack awareness during restarts.
+		// we therefore don't need warnings about dynnodes not having location info (they never have it anyway)
+		if node.GetDynamic() != nil {
+			continue
+		}
 		loc := node.GetLocation()
 		if loc == nil || loc.GetDataCenter() == "" || loc.GetRack() == "" {
 			logger.Warnf("Node %d (%s) has incomplete location info (dc=%q, rack=%q), "+

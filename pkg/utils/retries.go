@@ -36,8 +36,7 @@ func backoffTimeAfter(attempt int) time.Duration {
 }
 
 func shouldRetry(code codes.Code) bool {
-	// TODO what other error codes?
-	return code == codes.Unavailable
+	return code == codes.Unavailable || code == codes.DeadlineExceeded
 }
 
 func isRetryableStatus(status Ydb.StatusIds_StatusCode) bool {
