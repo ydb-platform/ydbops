@@ -159,4 +159,31 @@ var _ = Describe("WrapWithRetries", func() {
 			Expect(elapsed).To(BeNumerically(">=", time.Second))
 		})
 	})
+
+	Describe("Context cancellation during backoff", func() {
+		It("aborts retries and returns ctx.Err()", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			callCount := 0
+			// Cancel shortly after the first attempt returns, while we are
+			// sleeping in backoff (backoff[0] = 1s, so 100ms gives us margin).
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				cancel()
+			}()
+
+			start := time.Now()
+			result, err := WrapWithRetries(ctx, 5, func() (*Ydb_Operations.Operation, error) {
+				callCount++
+				return nil, status.Error(codes.Unavailable, "unavailable")
+			})
+			elapsed := time.Since(start)
+
+			Expect(err).To(MatchError(context.Canceled))
+			Expect(result).To(BeNil())
+			Expect(callCount).To(Equal(1))
+			Expect(elapsed).To(BeNumerically("<", time.Second))
+		})
+	})
 })

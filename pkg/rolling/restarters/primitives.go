@@ -209,7 +209,12 @@ func SortByRackLocation(nodes []*Ydb_Maintenance.Node, logger *zap.SugaredLogger
 		}
 	}
 	if allDynamic {
-		return nodes
+		// Get stable node order even without location info.
+		return collections.SortBy(nodes,
+			func(l *Ydb_Maintenance.Node, r *Ydb_Maintenance.Node) bool {
+				return l.NodeId < r.NodeId
+			},
+		)
 	}
 
 	for _, node := range nodes {
