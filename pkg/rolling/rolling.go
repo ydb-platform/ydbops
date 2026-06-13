@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -175,7 +176,7 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 		},
 	)
 
-	nodesToRestart = restarters.SortByRackLocation(nodesToRestart, r.logger)
+	nodesToRestart = r.orderNodesForRestart(nodesToRestart)
 
 	excludedNodes := 0
 	for _, node := range nodesToRestart {
@@ -211,6 +212,43 @@ func (r *Rolling) DoRestart(ctx context.Context) error {
 	r.state.totalFilteredNodes = len(nodesToRestart)
 
 	return r.cmsWaitingLoop(ctx, task)
+}
+
+func (r *Rolling) orderNodesForRestart(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
+	if r.opts.TenantsInflight > 0 && len(nodes) > 0 && nodes[0].GetDynamic() != nil {
+		r.logger.Debugf("ordering tenant nodes by tenant round-robin")
+		return orderTenantNodesRoundRobin(nodes)
+	}
+
+	return restarters.SortByRackLocation(nodes, r.logger)
+}
+
+func orderTenantNodesRoundRobin(nodes []*Ydb_Maintenance.Node) []*Ydb_Maintenance.Node {
+	sortedNodes := slices.Clone(nodes)
+	sort.Slice(sortedNodes, func(i, j int) bool {
+		return sortedNodes[i].GetNodeId() < sortedNodes[j].GetNodeId()
+	})
+
+	groups := make(map[string][]*Ydb_Maintenance.Node)
+	tenants := make([]string, 0)
+	for _, node := range sortedNodes {
+		tenant := node.GetDynamic().GetTenant()
+		if _, exists := groups[tenant]; !exists {
+			tenants = append(tenants, tenant)
+		}
+		groups[tenant] = append(groups[tenant], node)
+	}
+
+	ordered := make([]*Ydb_Maintenance.Node, 0, len(nodes))
+	for round := 0; len(ordered) < len(nodes); round++ {
+		for _, tenant := range tenants {
+			if round < len(groups[tenant]) {
+				ordered = append(ordered, groups[tenant][round])
+			}
+		}
+	}
+
+	return ordered
 }
 
 func (r *Rolling) cmsWaitingLoop(ctx context.Context, task cms.MaintenanceTask) error {
