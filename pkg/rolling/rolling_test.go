@@ -1,12 +1,18 @@
 package rolling
 
 import (
-	"reflect"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/ydb-platform/ydb-go-genproto/draft/protos/Ydb_Maintenance"
 	"go.uber.org/zap"
 )
+
+func TestRolling(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Rolling Suite")
+}
 
 func testTenantNode(nodeID uint32, tenant string) *Ydb_Maintenance.Node {
 	return &Ydb_Maintenance.Node{
@@ -27,44 +33,40 @@ func nodeIDs(nodes []*Ydb_Maintenance.Node) []uint32 {
 	return ids
 }
 
-func TestOrderTenantNodesRoundRobin(t *testing.T) {
-	nodes := []*Ydb_Maintenance.Node{
-		testTenantNode(1, "tenant-a"),
-		testTenantNode(2, "tenant-a"),
-		testTenantNode(3, "tenant-a"),
-		testTenantNode(10, "tenant-b"),
-		testTenantNode(11, "tenant-b"),
-		testTenantNode(20, "tenant-c"),
-	}
+var _ = Describe("Tenant restart node ordering", func() {
+	It("round-robins tenant nodes after sorting by node id", func() {
+		nodes := []*Ydb_Maintenance.Node{
+			testTenantNode(1, "tenant-a"),
+			testTenantNode(2, "tenant-a"),
+			testTenantNode(3, "tenant-a"),
+			testTenantNode(10, "tenant-b"),
+			testTenantNode(11, "tenant-b"),
+			testTenantNode(20, "tenant-c"),
+		}
 
-	ordered := orderTenantNodesRoundRobin(nodes)
-	expected := []uint32{1, 10, 20, 2, 11, 3}
+		ordered := orderTenantNodesRoundRobin(nodes)
 
-	if !reflect.DeepEqual(nodeIDs(ordered), expected) {
-		t.Fatalf("unexpected tenant round-robin order: got %v, want %v", nodeIDs(ordered), expected)
-	}
-}
+		Expect(nodeIDs(ordered)).To(Equal([]uint32{1, 10, 20, 2, 11, 3}))
+	})
 
-func TestOrderNodesForRestartUsesTenantRoundRobinWithTenantsInflight(t *testing.T) {
-	rolling := &Rolling{
-		logger: zap.NewNop().Sugar(),
-		opts: &RestartOptions{
-			TenantsInflight: 10,
-		},
-	}
-	nodes := []*Ydb_Maintenance.Node{
-		testTenantNode(1, "tenant-a"),
-		testTenantNode(2, "tenant-a"),
-		testTenantNode(3, "tenant-a"),
-		testTenantNode(10, "tenant-b"),
-		testTenantNode(11, "tenant-b"),
-		testTenantNode(20, "tenant-c"),
-	}
+	It("uses tenant round-robin for restart ordering when tenants-inflight is set", func() {
+		rolling := &Rolling{
+			logger: zap.NewNop().Sugar(),
+			opts: &RestartOptions{
+				TenantsInflight: 10,
+			},
+		}
+		nodes := []*Ydb_Maintenance.Node{
+			testTenantNode(1, "tenant-a"),
+			testTenantNode(2, "tenant-a"),
+			testTenantNode(3, "tenant-a"),
+			testTenantNode(10, "tenant-b"),
+			testTenantNode(11, "tenant-b"),
+			testTenantNode(20, "tenant-c"),
+		}
 
-	ordered := rolling.orderNodesForRestart(nodes)
-	expected := []uint32{1, 10, 20, 2, 11, 3}
+		ordered := rolling.orderNodesForRestart(nodes)
 
-	if !reflect.DeepEqual(nodeIDs(ordered), expected) {
-		t.Fatalf("unexpected restart node order: got %v, want %v", nodeIDs(ordered), expected)
-	}
-}
+		Expect(nodeIDs(ordered)).To(Equal([]uint32{1, 10, 20, 2, 11, 3}))
+	})
+})
