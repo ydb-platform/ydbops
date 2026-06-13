@@ -11,6 +11,7 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Cms"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -280,53 +281,25 @@ func (c *defaultCMSClient) executeMaintenanceOperation(
 	out proto.Message,
 	method func(context.Context, Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
-	defer cancel()
-
-	op, err := utils.WrapWithRetries(c.ctx, defaultRetryCount, func() (*Ydb_Operations.Operation, error) {
-		cc, err := c.connectionsFactory.Create()
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			_ = cc.Close()
-		}()
-
-		callCtx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
-		defer cancelTimeout()
-
+	return c.executeOperation(out, func(ctx context.Context, cc *grpc.ClientConn) (client.OperationResponse, error) {
 		cl := Ydb_Maintenance_V1.NewMaintenanceServiceClient(cc)
-		r, err := method(callCtx, cl)
-		if err != nil {
-			c.logger.Debugf("Invocation error: %+v", err)
-			return nil, err
-		}
-		op := r.GetOperation()
-		utils.LogOperation(c.logger, op)
-		return op, nil
+		return method(ctx, cl)
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	if out == nil {
-		return op, nil
-	}
-
-	if err := op.Result.UnmarshalTo(out); err != nil {
-		return op, err
-	}
-
-	if op.Status != Ydb.StatusIds_SUCCESS {
-		return op, fmt.Errorf("unsuccessful status code: %s", op.Status)
-	}
-
-	return op, nil
 }
 
 func (c *defaultCMSClient) executeCMSOperation(
 	out proto.Message,
 	method func(context.Context, Ydb_Cms_V1.CmsServiceClient) (client.OperationResponse, error),
+) (*Ydb_Operations.Operation, error) {
+	return c.executeOperation(out, func(ctx context.Context, cc *grpc.ClientConn) (client.OperationResponse, error) {
+		cl := Ydb_Cms_V1.NewCmsServiceClient(cc)
+		return method(ctx, cl)
+	})
+}
+
+func (c *defaultCMSClient) executeOperation(
+	out proto.Message,
+	method func(context.Context, *grpc.ClientConn) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
 	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
 	defer cancel()
@@ -343,8 +316,7 @@ func (c *defaultCMSClient) executeCMSOperation(
 		callCtx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
 		defer cancelTimeout()
 
-		cl := Ydb_Cms_V1.NewCmsServiceClient(cc)
-		r, err := method(callCtx, cl)
+		r, err := method(callCtx, cc)
 		if err != nil {
 			c.logger.Debugf("Invocation error: %+v", err)
 			return nil, err
