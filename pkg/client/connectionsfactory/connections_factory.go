@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/ydb-platform/ydbops/pkg/command"
@@ -18,32 +19,49 @@ import (
 
 const (
 	BufferSize = 32 << 20
+
+	// This gets added on top of OperationTimeout, so grpc call can terminate
+	// if any transport layer errors occur. Without this timeout, we wait forever
+	// inside retry loop, not completing a single request
+	DefaultTransportTimeout = 10 * time.Second
 )
 
 type Factory interface {
 	Create() (*grpc.ClientConn, error)
 	OperationParams() *Ydb_Operations.OperationParams
+	OperationTimeout() time.Duration
+	CallTimeout() time.Duration
 }
 
 func New(
 	options *command.BaseOptions,
+	transportTimeout time.Duration,
 ) Factory {
 	return &connectionsFactory{
-		options: options,
+		options:          options,
+		transportTimeout: transportTimeout,
 	}
 }
 
 type connectionsFactory struct {
-	options *command.BaseOptions
+	options          *command.BaseOptions
+	transportTimeout time.Duration
 }
 
-// OperationParams implements Factory.
 func (f *connectionsFactory) OperationParams() *Ydb_Operations.OperationParams {
 	return &Ydb_Operations.OperationParams{
 		OperationMode:    Ydb_Operations.OperationParams_SYNC,
-		OperationTimeout: durationpb.New(time.Duration(f.options.GRPC.TimeoutSeconds) * time.Second),
-		CancelAfter:      durationpb.New(time.Duration(f.options.GRPC.TimeoutSeconds) * time.Second),
+		OperationTimeout: durationpb.New(f.OperationTimeout()),
+		CancelAfter:      durationpb.New(f.OperationTimeout()),
 	}
+}
+
+func (f *connectionsFactory) OperationTimeout() time.Duration {
+	return time.Duration(f.options.GRPC.TimeoutSeconds) * time.Second
+}
+
+func (f *connectionsFactory) CallTimeout() time.Duration {
+	return f.OperationTimeout() + f.transportTimeout
 }
 
 func (f *connectionsFactory) Create() (*grpc.ClientConn, error) {
@@ -58,6 +76,11 @@ func (f *connectionsFactory) Create() (*grpc.ClientConn, error) {
 
 	return grpc.Dial(f.endpoint(),
 		grpc.WithTransportCredentials(cr),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                30 * time.Second,
+			Timeout:             10 * time.Second,
+			PermitWithoutStream: false,
+		}),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallSendMsgSize(BufferSize),
 			grpc.MaxCallRecvMsgSize(BufferSize)))

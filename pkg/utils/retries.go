@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -35,8 +36,7 @@ func backoffTimeAfter(attempt int) time.Duration {
 }
 
 func shouldRetry(code codes.Code) bool {
-	// TODO what other error codes?
-	return code == codes.Unavailable
+	return code == codes.Unavailable || code == codes.DeadlineExceeded
 }
 
 func isRetryableStatus(status Ydb.StatusIds_StatusCode) bool {
@@ -45,6 +45,7 @@ func isRetryableStatus(status Ydb.StatusIds_StatusCode) bool {
 }
 
 func WrapWithRetries(
+	ctx context.Context,
 	maxAttempts int,
 	f func() (*Ydb_Operations.Operation, error),
 ) (*Ydb_Operations.Operation, error) {
@@ -66,7 +67,11 @@ func WrapWithRetries(
 			delay := backoffTimeAfter(attempt)
 			if attempt < maxAttempts-1 {
 				zap.S().Debugf("Retrying after %v seconds...\n", delay.Seconds())
-				time.Sleep(delay)
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(delay):
+				}
 			}
 			lastError = err
 		} else {

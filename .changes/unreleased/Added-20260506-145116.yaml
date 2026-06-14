@@ -1,0 +1,3 @@
+kind: Added
+body: transport level timeout, avoiding stuck grpc connections
+time: 2026-05-06T14:51:16.26024187+02:00

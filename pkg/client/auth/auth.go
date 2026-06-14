@@ -43,8 +43,12 @@ func (c *defaultAuthClient) executeAuthMethod(
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		_ = cc.Close()
+	}()
 
-	ctx := context.TODO() // XXX(shmel1k@): improve context behavior.
+	ctx, cancel := context.WithTimeout(context.Background(), c.f.CallTimeout())
+	defer cancel()
 
 	cl := Ydb_Auth_V1.NewAuthServiceClient(cc)
 	r, err := method(ctx, cl)
