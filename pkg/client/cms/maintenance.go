@@ -28,6 +28,7 @@ type Maintenance interface {
 	DropMaintenanceTask(string) (string, error)
 	DropTask(string) error
 	GetMaintenanceTask(string) (MaintenanceTask, error)
+	ListMaintenanceTaskUIDs(*string) ([]string, error)
 	ListTasksForUser(string) ([]MaintenanceTask, error)
 	MaintenanceTasks(string) ([]MaintenanceTask, error)
 	RefreshMaintenanceTask(string) (MaintenanceTask, error)

@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/ydb-platform/ydbops/pkg/client"
-	"github.com/ydb-platform/ydbops/pkg/client/auth/credentials"
+	authprovider "github.com/ydb-platform/ydbops/pkg/client/auth/provider"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/utils"
 )
@@ -20,7 +20,7 @@ import (
 type Discovery struct {
 	logger              *zap.SugaredLogger
 	connectionsFactory  connectionsfactory.Factory
-	credentialsProvider credentials.Provider
+	credentialsProvider authprovider.Provider
 }
 
 type Client interface {
@@ -32,7 +32,7 @@ type Client interface {
 func NewDiscoveryClient(
 	f connectionsfactory.Factory,
 	logger *zap.SugaredLogger,
-	cp credentials.Provider,
+	cp authprovider.Provider,
 ) *Discovery {
 	return &Discovery{
 		logger:              logger,
