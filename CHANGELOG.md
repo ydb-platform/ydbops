@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v0.0.26 - 2026-06-14
+### Added
+* transport level timeout, avoiding stuck grpc connections
+* Round-robin pre-CMS sort for tenant nodes for effective parallel tenant restart
+### Changed
+* ydbops now softly prefers to restart storage nodes from a single failure domain (datacenter + rack)
+### Fixed
+* Interrupt now successfully interrupts retries
+
 ## v0.0.25 - 2026-03-12
 ### Added
 * Add smart availability mode
