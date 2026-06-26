@@ -13,11 +13,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	"github.com/ydb-platform/ydbops/pkg/client/auth/credentials"
+	authprovider "github.com/ydb-platform/ydbops/pkg/client/auth/provider"
 	"github.com/ydb-platform/ydbops/pkg/client/cms"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
-	"github.com/ydb-platform/ydbops/pkg/command"
-	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
 type hangingMaintenanceServer struct {
@@ -53,20 +51,14 @@ var _ = Describe("CMS client deadline", func() {
 		port, err := strconv.Atoi(portStr)
 		Expect(err).NotTo(HaveOccurred())
 
-		baseOpts := &command.BaseOptions{
-			GRPC: options.GRPC{
-				Endpoint:       host,
-				GRPCPort:       port,
-				GRPCSecure:     false,
-				TimeoutSeconds: 0, // this is a YDB OperationTimeout, does not make sense for this test as our mock does not use it
-			},
-			Auth: options.AuthOptions{
-				Type:  options.IamToken,
-				Creds: &options.AuthIAMToken{Token: "fake"},
-			},
-		}
-		factory := connectionsfactory.New(baseOpts, 200*time.Millisecond)
-		creds := credentials.New(baseOpts, factory, zap.NewNop().Sugar(), nil)
+		factory := connectionsfactory.NewFromConfig(connectionsfactory.Config{
+			Endpoint:         host,
+			GRPCPort:         port,
+			GRPCSecure:       false,
+			OperationTimeout: 0, // this is a YDB OperationTimeout, does not make sense for this test as our mock does not use it
+			TransportTimeout: 200 * time.Millisecond,
+		})
+		creds := authprovider.NewProviderFromToken("fake")
 		client := cms.NewCMSClient(factory, zap.NewNop().Sugar(), creds)
 		DeferCleanup(client.Close)
 

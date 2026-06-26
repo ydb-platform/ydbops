@@ -17,7 +17,7 @@ import (
 
 	"github.com/ydb-platform/ydbops/internal/collections"
 	"github.com/ydb-platform/ydbops/pkg/client"
-	"github.com/ydb-platform/ydbops/pkg/client/auth/credentials"
+	authprovider "github.com/ydb-platform/ydbops/pkg/client/auth/provider"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/utils"
 )
@@ -25,6 +25,18 @@ import (
 const (
 	defaultRetryCount = 5
 )
+
+type OperationError struct {
+	Operation *Ydb_Operations.Operation
+}
+
+func (e *OperationError) Error() string {
+	return fmt.Sprintf("CMS operation failed with status %s", e.Operation.GetStatus())
+}
+
+func operationErrorFromOperation(op *Ydb_Operations.Operation) error {
+	return &OperationError{Operation: op}
+}
 
 type CMS interface {
 	Tenants() ([]string, error)
@@ -43,13 +55,13 @@ type defaultCMSClient struct {
 	ctx                 context.Context
 	logger              *zap.SugaredLogger
 	connectionsFactory  connectionsfactory.Factory
-	credentialsProvider credentials.Provider
+	credentialsProvider authprovider.Provider
 }
 
 func NewCMSClient(
 	connectionsFactory connectionsfactory.Factory,
 	logger *zap.SugaredLogger,
-	cp credentials.Provider,
+	cp authprovider.Provider,
 ) Client {
 	return &defaultCMSClient{
 		ctx:                 context.Background(),
@@ -104,24 +116,34 @@ func (c *defaultCMSClient) Nodes() ([]*Ydb_Maintenance.Node, error) {
 	return nodes, nil
 }
 
-func (c *defaultCMSClient) MaintenanceTasks(userSID string) ([]MaintenanceTask, error) {
+func (c *defaultCMSClient) ListMaintenanceTaskUIDs(userSID *string) ([]string, error) {
 	result := Ydb_Maintenance.ListMaintenanceTasksResult{}
 	c.logger.Debug("Invoke ListMaintenanceTasks method")
+	request := &Ydb_Maintenance.ListMaintenanceTasksRequest{
+		OperationParams: c.connectionsFactory.OperationParams(),
+	}
+	if userSID != nil {
+		request.User = userSID
+	}
 	_, err := c.executeMaintenanceOperation(&result,
 		func(ctx context.Context, cl Ydb_Maintenance_V1.MaintenanceServiceClient) (client.OperationResponse, error) {
-			return cl.ListMaintenanceTasks(ctx,
-				&Ydb_Maintenance.ListMaintenanceTasksRequest{
-					OperationParams: c.connectionsFactory.OperationParams(),
-					User:            &userSID,
-				},
-			)
+			return cl.ListMaintenanceTasks(ctx, request)
 		},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.queryEachTaskForActions(result.TasksUids)
+	return result.TasksUids, nil
+}
+
+func (c *defaultCMSClient) MaintenanceTasks(userSID string) ([]MaintenanceTask, error) {
+	taskUIDs, err := c.ListMaintenanceTaskUIDs(&userSID)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.queryEachTaskForActions(taskUIDs)
 }
 
 func (c *defaultCMSClient) GetMaintenanceTask(taskID string) (MaintenanceTask, error) {
@@ -329,16 +351,16 @@ func (c *defaultCMSClient) executeOperation(
 		return nil, err
 	}
 
+	if op.Status != Ydb.StatusIds_SUCCESS {
+		return op, operationErrorFromOperation(op)
+	}
+
 	if out == nil {
 		return op, nil
 	}
 
 	if err := op.Result.UnmarshalTo(out); err != nil {
 		return op, err
-	}
-
-	if op.Status != Ydb.StatusIds_SUCCESS {
-		return op, fmt.Errorf("unsuccessful status code: %s", op.Status)
 	}
 
 	return op, nil

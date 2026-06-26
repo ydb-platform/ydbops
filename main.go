@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -58,7 +59,17 @@ func mainNoExit() error {
 	logLevelSetter, logger := createLogger("info")
 	baseOptions = &command.BaseOptions{}
 	root := cmd.NewRootCommand(logLevelSetter, logger.Sugar(), baseOptions)
-	cf := connectionsfactory.New(baseOptions, connectionsfactory.DefaultTransportTimeout)
+	cf := connectionsfactory.NewFromDelayedConfig(func() connectionsfactory.Config {
+		return connectionsfactory.Config{
+			Endpoint:         baseOptions.GRPC.Endpoint,
+			GRPCPort:         baseOptions.GRPC.GRPCPort,
+			GRPCSecure:       baseOptions.GRPC.GRPCSecure,
+			GRPCSkipVerify:   baseOptions.GRPC.GRPCSkipVerify,
+			CaFile:           baseOptions.GRPC.CaFile,
+			OperationTimeout: time.Duration(baseOptions.GRPC.TimeoutSeconds) * time.Second,
+			TransportTimeout: connectionsfactory.DefaultTransportTimeout,
+		}
+	})
 
 	options.Logger = logger.Sugar() // TODO(shmel1k@): tmp hack
 

@@ -7,19 +7,13 @@ import (
 
 	"go.uber.org/zap"
 
+	authprovider "github.com/ydb-platform/ydbops/pkg/client/auth/provider"
 	"github.com/ydb-platform/ydbops/pkg/client/connectionsfactory"
 	"github.com/ydb-platform/ydbops/pkg/command"
 	"github.com/ydb-platform/ydbops/pkg/options"
 )
 
-type Provider interface {
-	ContextWithAuth(context.Context) (context.Context, context.CancelFunc) // TODO(shmel1k@): think about compatibility
-	// with ydb-go-sdk
-	ContextWithoutAuth(context.Context) (context.Context, context.CancelFunc)
-
-	GetToken() (string, error)
-	Init() error
-}
+type Provider = authprovider.Provider
 
 type baseProvider struct {
 	impl               Provider
@@ -72,7 +66,7 @@ func (b *baseProvider) Init() error {
 			staticCreds := b.opts.Auth.Creds.(*options.AuthStatic)
 			b.impl = NewStatic(staticCreds.User, staticCreds.Password, b.connectionsFactory, b.logger)
 		case options.IamToken:
-			b.impl = NewIamToken(b.opts.Auth.Creds.(*options.AuthIAMToken).Token)
+			b.impl = authprovider.NewProviderFromToken(b.opts.Auth.Creds.(*options.AuthIAMToken).Token)
 		case options.IamCreds:
 			creds := b.opts.Auth.Creds.(*options.AuthIAMCreds)
 			b.impl = NewIamCreds(creds.KeyFilename, creds.Endpoint)
