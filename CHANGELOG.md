@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.27 - 2026-06-26
+### Fixed
+* CMSClient can be conveniently imported by other go apps
+
 ## v0.0.26 - 2026-06-14
 ### Added
 * transport level timeout, avoiding stuck grpc connections
