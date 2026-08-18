@@ -1,3 +1,0 @@
-kind: Fixed
-body: Send the selected database in gRPC metadata so database-scoped YDB endpoints accept maintenance requests
-time: 2026-08-18T14:00:20+03:00
