@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.0.28 - 2026-08-18
+### Fixed
+* Send the selected database in gRPC metadata so database-scoped YDB endpoints accept maintenance requests
+
 ## v0.0.27 - 2026-06-26
 ### Fixed
 * CMSClient can be conveniently imported by other go apps
