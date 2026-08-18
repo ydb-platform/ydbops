@@ -39,6 +39,7 @@ type StepData struct {
 type TestCase struct {
 	nodeConfiguration [][]uint32
 	nodeInfoMap       map[uint32]mock.TestNodeInfo
+	requiredDatabase  string
 
 	steps                   []StepData
 	additionalTestBehaviour *mock.AdditionalTestBehaviour
@@ -85,6 +86,7 @@ func RunAfterEach() {
 
 func RunTestCase(tc TestCase) {
 	ydb.SetNodeConfiguration(tc.nodeConfiguration, tc.nodeInfoMap)
+	ydb.SetRequiredDatabase(tc.requiredDatabase)
 
 	if tc.additionalTestBehaviour == nil {
 		tc.additionalTestBehaviour = &mock.AdditionalTestBehaviour{}

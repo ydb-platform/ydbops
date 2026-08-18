@@ -25,6 +25,7 @@ var _ = Describe("Test Rolling", func() {
 
 	DescribeTable("restart", RunTestCase,
 		Entry("restart 2 out of 8 nodes, nodes should be determined by --started filter", TestCase{
+			requiredDatabase: "/Root",
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3, 4, 5, 6, 7, 8},
 			},
@@ -40,6 +41,7 @@ var _ = Describe("Test Rolling", func() {
 				{
 					ydbopsInvocation: Command{
 						"--endpoint", "grpcs://localhost:2135",
+						"--database", "/Root",
 						"--verbose",
 						"--availability-mode", "strong",
 						"--user", mock.TestUser,
