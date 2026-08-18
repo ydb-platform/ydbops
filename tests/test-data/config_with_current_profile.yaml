@@ -2,5 +2,6 @@ current-profile: my-profile
 profiles:
   my-profile:
     endpoint: grpcs://localhost:2135
+    database: /Root
     user: test-user
     ca-file: ./test-data/ssl-data/ca.crt

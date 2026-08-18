@@ -62,6 +62,7 @@ func mainNoExit() error {
 	cf := connectionsfactory.NewFromDelayedConfig(func() connectionsfactory.Config {
 		return connectionsfactory.Config{
 			Endpoint:         baseOptions.GRPC.Endpoint,
+			Database:         baseOptions.GRPC.Database,
 			GRPCPort:         baseOptions.GRPC.GRPCPort,
 			GRPCSecure:       baseOptions.GRPC.GRPCSecure,
 			GRPCSkipVerify:   baseOptions.GRPC.GRPCSkipVerify,

@@ -19,6 +19,7 @@ var _ = Describe("Test Profile", func() {
 
 	DescribeTable("profile", RunTestCase,
 		Entry("some basic options, no --profile option, current-profile in config", TestCase{
+			requiredDatabase: "/Root",
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3, 4, 5, 6, 7, 8},
 			},
@@ -96,6 +97,7 @@ var _ = Describe("Test Profile", func() {
 		},
 		),
 		Entry("some basic options, --profile option specified, no current-profile in config", TestCase{
+			requiredDatabase: "/Root",
 			nodeConfiguration: [][]uint32{
 				{1, 2, 3, 4, 5, 6, 7, 8},
 			},

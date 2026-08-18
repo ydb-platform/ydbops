@@ -13,6 +13,7 @@ Please browse the `ydbops --help` first. Then read along for examples (substitut
 ```
 ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
+  --database /Root \
   --ssh-args=pssh,-A,-J,<bastion-fqdn>,--ycp-profile,prod,--no-yubikey \
   --verbose --hosts=<node1-fqdn>,<node2-fqdn>,<node3-fqdn>
 ```
@@ -22,6 +23,7 @@ ydbops restart --storage \
 ```
 ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
+  --database /Root \
   --ssh-args=pssh,-A,-J,<bastion-fqdn>,--ycp-profile,prod,--no-yubikey \
   --verbose
 ```
@@ -31,6 +33,7 @@ ydbops restart --storage \
 ```
 ydbops run \
   --endpoint grpc://<cluster-fqdn> \
+  --database /Root \
   --availability-mode strong --verbose --hosts=7,8 \
   --payload ./tests/payloads/payload-echo-helloworld.sh
 ```
@@ -40,6 +43,7 @@ ydbops run \
 ```
 ydbops run \
   --endpoint grpc://<cluster-fqdn> \
+  --database /Root \
   --availability-mode strong --verbose --hosts=5,6 \
   --payload ./tests/payloads/payload-restart-ydbd.sh
 ```
@@ -52,6 +56,7 @@ An example of authenticating with static credentials:
 export YDB_PASSWORD=password_123
 ydbops restart --storage \
   --endpoint grpc://<cluster-fqdn> \
+  --database /Root \
   --availability-mode strong --verbose --hosts=7,8 \
   --user jorres --kubeconfig ~/.kube/config
 ```
@@ -66,6 +71,7 @@ And this will make sure to not restart nodes from more than 2 tenants at the sam
 export YDB_PASSWORD=password_123
 ydbops restart --tenant \
   --endpoint grpc://<cluster-fqdn> \
+  --database /Root \
   --availability-mode strong --verbose --hosts=7,8 \
   --user jorres --kubeconfig ~/.kube/config \
   --nodes-inflight 3 \

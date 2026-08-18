@@ -1,6 +1,7 @@
 package connectionsfactory
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -12,11 +13,13 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
-	BufferSize = 32 << 20
+	BufferSize     = 32 << 20
+	databaseHeader = "x-ydb-database"
 
 	// This gets added on top of OperationTimeout, so grpc call can terminate
 	// if any transport layer errors occur. Without this timeout, we wait forever
@@ -33,6 +36,7 @@ type Factory interface {
 
 type Config struct {
 	Endpoint         string
+	Database         string
 	GRPCPort         int
 	GRPCSecure       bool
 	GRPCSkipVerify   bool
@@ -86,6 +90,7 @@ func (f *connectionsFactory) Create() (*grpc.ClientConn, error) {
 
 	return grpc.Dial(endpoint(config),
 		grpc.WithTransportCredentials(cr),
+		grpc.WithUnaryInterceptor(databaseUnaryInterceptor(config.Database)),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                30 * time.Second,
 			Timeout:             10 * time.Second,
@@ -94,6 +99,26 @@ func (f *connectionsFactory) Create() (*grpc.ClientConn, error) {
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallSendMsgSize(BufferSize),
 			grpc.MaxCallRecvMsgSize(BufferSize)))
+}
+
+func databaseUnaryInterceptor(database string) grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req any,
+		reply any,
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		if database != "" {
+			md, _ := metadata.FromOutgoingContext(ctx)
+			md = md.Copy()
+			md.Set(databaseHeader, database)
+			ctx = metadata.NewOutgoingContext(ctx, md)
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func endpoint(config Config) string {

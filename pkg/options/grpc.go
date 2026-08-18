@@ -22,6 +22,7 @@ const (
 
 type GRPC struct {
 	Endpoint       string
+	Database       string
 	CaFile         string
 	GRPCSecure     bool
 	GRPCPort       int
@@ -35,6 +36,11 @@ func (o *GRPC) DefineFlags(fs *pflag.FlagSet) {
 		"",
 		fmt.Sprintf(`PROTOCOL://HOST[:PORT]
   A GRPC URL to connect to the YDB cluster. Default port is %v`, GRPCDefaultPort))
+
+	profile.PopulateFromProfileLaterP(
+		fs.StringVarP, &o.Database, "database", "d",
+		"",
+		"Database path used for YDB requests")
 
 	fs.IntVar(&o.TimeoutSeconds, "grpc-timeout-seconds", GRPCDefaultTimeoutSeconds,
 		"Wait this much before timing out any GRPC requests")

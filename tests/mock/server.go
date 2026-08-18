@@ -20,7 +20,10 @@ import (
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Discovery"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb_Operations"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -58,6 +61,7 @@ type YdbMock struct {
 	caFile                  string
 	keyFile                 string
 	additionalTestBehaviour AdditionalTestBehaviour
+	requiredDatabase        string
 
 	// This field contains the list of Nodes that is suitable to return
 	// to ListClusterNodes request from rolling restart.
@@ -302,16 +306,15 @@ func (s *YdbMock) StartOn(port int) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
+	serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(s.requireDatabase)}
 	if s.caFile != "" && s.keyFile != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.caFile, s.keyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
-	} else {
-		s.grpcServer = grpc.NewServer()
+		serverOptions = append(serverOptions, grpc.Creds(creds))
 	}
+	s.grpcServer = grpc.NewServer(serverOptions...)
 
 	Ydb_Maintenance_V1.RegisterMaintenanceServiceServer(s.grpcServer, s)
 	Ydb_Auth_V1.RegisterAuthServiceServer(s.grpcServer, s)
@@ -323,10 +326,29 @@ func (s *YdbMock) StartOn(port int) {
 	}()
 }
 
+func (s *YdbMock) requireDatabase(
+	ctx context.Context,
+	req any,
+	_ *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (any, error) {
+	if s.requiredDatabase != "" {
+		values := metadata.ValueFromIncomingContext(ctx, "x-ydb-database")
+		if len(values) != 1 || values[0] != s.requiredDatabase {
+			return nil, status.Errorf(codes.InvalidArgument, "database metadata = %v, want [%s]", values, s.requiredDatabase)
+		}
+	}
+	return handler(ctx, req)
+}
+
 func (s *YdbMock) Teardown() {
 	s.grpcServer.GracefulStop()
 }
 
 func (s *YdbMock) SetMockBehaviour(additionalMockBehaviour AdditionalTestBehaviour) {
 	s.additionalTestBehaviour = additionalMockBehaviour
+}
+
+func (s *YdbMock) SetRequiredDatabase(database string) {
+	s.requiredDatabase = database
 }
