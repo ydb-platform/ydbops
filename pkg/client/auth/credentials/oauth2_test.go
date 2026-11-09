@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/onsi/ginkgo/v2" // Register the Ginkgo flags passed to every test package by CI.
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
