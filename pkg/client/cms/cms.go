@@ -323,10 +323,15 @@ func (c *defaultCMSClient) executeOperation(
 	out proto.Message,
 	method func(context.Context, *grpc.ClientConn) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
-	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
-	defer cancel()
-
 	op, err := utils.WrapWithRetries(c.ctx, defaultRetryCount, func() (*Ydb_Operations.Operation, error) {
+		callCtx, cancelTimeout := context.WithTimeout(c.ctx, c.connectionsFactory.CallTimeout())
+		defer cancelTimeout()
+		callCtx, cancel, err := c.credentialsProvider.ContextWithAuth(callCtx)
+		if err != nil {
+			return nil, fmt.Errorf("acquire YDB credentials: %w", err)
+		}
+		defer cancel()
+
 		cc, err := c.connectionsFactory.Create()
 		if err != nil {
 			return nil, err
@@ -334,9 +339,6 @@ func (c *defaultCMSClient) executeOperation(
 		defer func() {
 			_ = cc.Close()
 		}()
-
-		callCtx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
-		defer cancelTimeout()
 
 		r, err := method(callCtx, cc)
 		if err != nil {
