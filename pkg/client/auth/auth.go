@@ -17,7 +17,7 @@ import (
 )
 
 type Client interface {
-	Auth(string, string) (string, error) // TODO(shmel1k@): add context to params
+	Auth(context.Context, string, string) (string, error)
 }
 
 type defaultAuthClient struct {
@@ -36,6 +36,7 @@ func NewClient(
 }
 
 func (c *defaultAuthClient) executeAuthMethod(
+	ctx context.Context,
 	out proto.Message,
 	method func(context.Context, Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
@@ -47,7 +48,7 @@ func (c *defaultAuthClient) executeAuthMethod(
 		_ = cc.Close()
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.f.CallTimeout())
+	ctx, cancel := context.WithTimeout(ctx, c.f.CallTimeout())
 	defer cancel()
 
 	cl := Ydb_Auth_V1.NewAuthServiceClient(cc)
@@ -74,11 +75,11 @@ func (c *defaultAuthClient) executeAuthMethod(
 	return op, nil
 }
 
-func (c *defaultAuthClient) Auth(user, password string) (string, error) {
+func (c *defaultAuthClient) Auth(ctx context.Context, user, password string) (string, error) {
 	result := Ydb_Auth.LoginResult{}
 
 	c.logger.Debug("Invoke Auth method")
-	_, err := c.executeAuthMethod(&result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
+	_, err := c.executeAuthMethod(ctx, &result, func(ctx context.Context, cl Ydb_Auth_V1.AuthServiceClient) (client.OperationResponse, error) {
 		return cl.Login(ctx, &Ydb_Auth.LoginRequest{
 			OperationParams: c.f.OperationParams(),
 			User:            user,

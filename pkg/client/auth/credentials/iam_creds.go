@@ -20,12 +20,14 @@ type iamCredsProvider struct {
 }
 
 // ContextWithAuth implements Provider.
-func (i *iamCredsProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc) {
-	// TODO(shmel1k@): add error handling
-	tok, _ := i.GetToken()
+func (i *iamCredsProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc, error) {
+	tok, err := i.GetToken(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	ctx, cf := context.WithCancel(ctx)
 	return metadata.AppendToOutgoingContext(ctx,
-		"x-ydb-auth-ticket", tok), cf
+		"x-ydb-auth-ticket", tok), cf, nil
 }
 
 // ContextWithoutAuth implements Provider.
@@ -35,8 +37,8 @@ func (i *iamCredsProvider) ContextWithoutAuth(ctx context.Context) (context.Cont
 }
 
 // GetToken implements Provider.
-func (i *iamCredsProvider) GetToken() (string, error) {
-	return i.creds.Token(context.TODO())
+func (i *iamCredsProvider) GetToken(ctx context.Context) (string, error) {
+	return i.creds.Token(ctx)
 }
 
 // Init implements Provider.

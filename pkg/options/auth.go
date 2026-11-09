@@ -28,22 +28,23 @@ const (
 type AuthType string
 
 const (
-	Unset          AuthType = "unset"
-	None           AuthType = "none"
-	Static         AuthType = "static"
-	IamToken       AuthType = "iam-token"
-	IamCreds       AuthType = "iam-creds"
-	IamMetadata    AuthType = "iam-metadata"
-	MultipleAtOnce AuthType = "multiple-at-once"
+	Unset               AuthType = "unset"
+	None                AuthType = "none"
+	Static              AuthType = "static"
+	IamToken            AuthType = "iam-token"
+	IamCreds            AuthType = "iam-creds"
+	IamMetadata         AuthType = "iam-metadata"
+	OAuth2TokenExchange AuthType = "oauth2-token-exchange"
+	MultipleAtOnce      AuthType = "multiple-at-once"
 )
 
 var Auths = map[AuthType]Options{
-	None:        &AuthNone{},
-	Static:      &AuthStatic{},
-	IamToken:    &AuthIAMToken{},
-	IamCreds:    &AuthIAMCreds{},
-	IamMetadata: &AuthIAMMetadataCredentials{},
-	// TODO support OAuth
+	None:                &AuthNone{},
+	Static:              &AuthStatic{},
+	IamToken:            &AuthIAMToken{},
+	IamCreds:            &AuthIAMCreds{},
+	IamMetadata:         &AuthIAMMetadataCredentials{},
+	OAuth2TokenExchange: &AuthOAuth2TokenExchange{},
 }
 
 type (
@@ -209,6 +210,9 @@ func (a *AuthIAMMetadataCredentials) Validate() error {
 
 func determineExplicitAuthType() AuthType {
 	authType := map[AuthType]bool{}
+	if exchange, ok := Auths[OAuth2TokenExchange]; ok && *exchange.(*AuthOAuth2TokenExchange) != (AuthOAuth2TokenExchange{}) {
+		authType[OAuth2TokenExchange] = true
+	}
 
 	if static, ok := Auths[Static]; ok && static.(*AuthStatic).User != "" {
 		_, passwordVarPresent := os.LookupEnv(DefaultStaticPasswordEnvVar)
