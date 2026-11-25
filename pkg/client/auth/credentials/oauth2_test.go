@@ -172,6 +172,43 @@ func TestOAuth2Rotation(t *testing.T) {
 	}
 }
 
+func TestOAuth2WaitingCallerCancellation(t *testing.T) {
+	g := NewWithT(t)
+	started, release := make(chan struct{}), make(chan struct{})
+	defer close(release)
+	server := tokenServer(t, func(http.ResponseWriter, *http.Request) {
+		close(started)
+		<-release
+	})
+	p, err := NewOAuth2TokenExchange(options.AuthOAuth2TokenExchange{
+		TokenEndpoint: server.URL, SubjectToken: "identity", SubjectTokenType: "urn:example:identity",
+	})
+	g.Expect(err).NotTo(HaveOccurred())
+	firstCtx, cancelFirst := context.WithCancel(context.Background())
+	defer cancelFirst()
+	firstDone := make(chan error, 1)
+	go func() {
+		_, acquisitionErr := p.GetToken(firstCtx)
+		firstDone <- acquisitionErr
+	}()
+	g.Eventually(started, time.Second).Should(BeClosed())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		_, acquisitionErr := p.GetToken(ctx)
+		done <- acquisitionErr
+	}()
+	var acquisitionErr error
+	g.Eventually(done, time.Second).Should(Receive(&acquisitionErr))
+	g.Expect(errors.Is(acquisitionErr, context.DeadlineExceeded)).To(BeTrue(), "%v", acquisitionErr)
+
+	cancelFirst()
+	g.Eventually(firstDone, time.Second).Should(Receive(&acquisitionErr))
+	g.Expect(errors.Is(acquisitionErr, context.Canceled)).To(BeTrue(), "%v", acquisitionErr)
+}
+
 func TestOAuth2AcquisitionErrors(t *testing.T) {
 	t.Run("exchange honors cancellation", func(t *testing.T) {
 		g := NewWithT(t)

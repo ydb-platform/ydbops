@@ -31,7 +31,8 @@ func (s fileTokenSource) Token() (sdkcredentials.Token, error) {
 }
 
 type oauth2Provider struct {
-	creds sdkcredentials.Credentials
+	creds     sdkcredentials.Credentials
+	tokenGate chan struct{}
 }
 
 func NewOAuth2TokenExchange(config options.AuthOAuth2TokenExchange) (Provider, error) {
@@ -53,12 +54,19 @@ func NewOAuth2TokenExchange(config options.AuthOAuth2TokenExchange) (Provider, e
 	if err != nil {
 		return nil, err
 	}
-	return &oauth2Provider{creds: creds}, nil
+	return &oauth2Provider{creds: creds, tokenGate: make(chan struct{}, 1)}, nil
 }
 
 func (p *oauth2Provider) Init() error { return nil }
 
 func (p *oauth2Provider) GetToken(ctx context.Context) (string, error) {
+	// The SDK holds a non-cancellable lock during exchanges; serialize entry here.
+	select {
+	case p.tokenGate <- struct{}{}:
+		defer func() { <-p.tokenGate }()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}

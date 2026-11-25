@@ -18,8 +18,8 @@ type staticCredentialsProvider struct {
 
 	initOnce sync.Once
 
-	tokenOnce sync.Once
-	tokenErr  error
+	tokenGate  chan struct{}
+	tokenReady bool
 
 	params *staticCredentialsProviderParams
 	token  string
@@ -41,10 +41,24 @@ func (s *staticCredentialsProvider) Init() error {
 // GetToken implements Provider.
 func (s *staticCredentialsProvider) GetToken(ctx context.Context) (string, error) {
 	// TODO(shmel1k@): probably, token can change time to time.
-	s.tokenOnce.Do(func() {
-		s.token, s.tokenErr = s.authClient.Auth(ctx, s.params.user, s.params.password)
-	})
-	return s.token, s.tokenErr
+	select {
+	case s.tokenGate <- struct{}{}:
+		defer func() { <-s.tokenGate }()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if s.tokenReady {
+		return s.token, nil
+	}
+	token, err := s.authClient.Auth(ctx, s.params.user, s.params.password)
+	if err != nil {
+		return "", err
+	}
+	s.token, s.tokenReady = token, true
+	return token, nil
 }
 
 // ContextWithAuth implements Provider.
@@ -69,6 +83,7 @@ func NewStatic(
 	logger *zap.SugaredLogger,
 ) Provider {
 	return &staticCredentialsProvider{
+		tokenGate:          make(chan struct{}, 1),
 		connectionsFactory: connectionsFactory,
 		logger:             logger,
 		params: &staticCredentialsProviderParams{

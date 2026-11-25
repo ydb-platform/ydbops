@@ -350,6 +350,10 @@ func (c *defaultCMSClient) executeOperation(
 		return op, nil
 	})
 	if err != nil {
+		// Normalize gRPC cancellation for callers using errors.Is.
+		if ctxErr := c.ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
 		return nil, err
 	}
 
