@@ -15,10 +15,13 @@ type metadataProvider struct {
 }
 
 // ContextWithAuth implements Provider.
-func (m *metadataProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc) {
-	token, _ := m.GetToken() // TODO(shmel1k@): add error handling
+func (m *metadataProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc, error) {
+	token, err := m.GetToken(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	ctx1, cf := context.WithCancel(ctx)
-	return metadata.AppendToOutgoingContext(ctx1, "x-ydb-auth-ticket", token), cf
+	return metadata.AppendToOutgoingContext(ctx1, "x-ydb-auth-ticket", token), cf, nil
 }
 
 // ContextWithoutAuth implements Provider.
@@ -27,9 +30,8 @@ func (m *metadataProvider) ContextWithoutAuth(ctx context.Context) (context.Cont
 }
 
 // GetToken implements Provider.
-func (m *metadataProvider) GetToken() (string, error) {
-	// TODO(shmel1k@): add contexts.
-	return m.creds.Token(context.TODO())
+func (m *metadataProvider) GetToken(ctx context.Context) (string, error) {
+	return m.creds.Token(ctx)
 }
 
 // Init implements Provider.

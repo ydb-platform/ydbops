@@ -73,6 +73,14 @@ func (c *Discovery) ExecuteDiscoveryMethod(
 	out proto.Message,
 	method func(context.Context, Ydb_Discovery_V1.DiscoveryServiceClient) (client.OperationResponse, error),
 ) (*Ydb_Operations.Operation, error) {
+	ctx, cancelTimeout := context.WithTimeout(context.Background(), c.connectionsFactory.CallTimeout())
+	defer cancelTimeout()
+	ctx, cancel, err := c.credentialsProvider.ContextWithAuth(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("acquire YDB credentials: %w", err)
+	}
+	defer cancel()
+
 	cc, err := c.connectionsFactory.Create()
 	if err != nil {
 		return nil, err
@@ -80,12 +88,6 @@ func (c *Discovery) ExecuteDiscoveryMethod(
 	defer func() {
 		_ = cc.Close()
 	}()
-
-	ctx, cancel := c.credentialsProvider.ContextWithAuth(context.TODO())
-	defer cancel()
-
-	ctx, cancelTimeout := context.WithTimeout(ctx, c.connectionsFactory.CallTimeout())
-	defer cancelTimeout()
 
 	cl := Ydb_Discovery_V1.NewDiscoveryServiceClient(cc)
 	r, err := method(ctx, cl)

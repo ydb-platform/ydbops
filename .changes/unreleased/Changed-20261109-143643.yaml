@@ -1,0 +1,3 @@
+kind: Changed
+body: Credential provider token retrieval and static login now accept a context; authenticated context creation returns errors instead of discarding credential acquisition failures.
+time: 2026-11-09T14:36:43.136855+01:00

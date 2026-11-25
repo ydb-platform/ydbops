@@ -1,0 +1,3 @@
+kind: Added
+body: Support generic OAuth2 token exchange from rotating subject and actor token files, with shared SDK token caching and refresh.
+time: 2026-11-09T14:36:42.990871+01:00

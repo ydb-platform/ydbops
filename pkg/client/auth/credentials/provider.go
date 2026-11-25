@@ -26,7 +26,7 @@ type baseProvider struct {
 }
 
 // ContextWithAuth implements Provider.
-func (b *baseProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc) {
+func (b *baseProvider) ContextWithAuth(ctx context.Context) (context.Context, context.CancelFunc, error) {
 	err := b.Init()
 	if err != nil {
 		b.logger.Fatal(err)
@@ -44,12 +44,12 @@ func (b *baseProvider) ContextWithoutAuth(ctx context.Context) (context.Context,
 }
 
 // GetToken implements Provider.
-func (b *baseProvider) GetToken() (string, error) {
+func (b *baseProvider) GetToken(ctx context.Context) (string, error) {
 	err := b.Init()
 	if err != nil {
 		b.logger.Fatal(err)
 	}
-	return b.impl.GetToken()
+	return b.impl.GetToken(ctx)
 }
 
 // Init implements Provider.
@@ -72,6 +72,8 @@ func (b *baseProvider) Init() error {
 			b.impl = NewIamCreds(creds.KeyFilename, creds.Endpoint)
 		case options.IamMetadata:
 			b.impl = NewMetadata(b.logger)
+		case options.OAuth2TokenExchange:
+			b.impl, b.initErr = NewOAuth2TokenExchange(*b.opts.Auth.Creds.(*options.AuthOAuth2TokenExchange))
 		case options.None:
 			b.initErr = fmt.Errorf("determined credentials to be anonymous. Anonymous credentials are currently unsupported")
 		case options.Unset, options.MultipleAtOnce:

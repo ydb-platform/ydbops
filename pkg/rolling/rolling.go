@@ -121,7 +121,13 @@ func (e *executer) Execute() error {
 	err := r.DoRestart(ctx)
 
 	if errors.Is(err, context.Canceled) && e.opts.CleanupOnExit {
+		// Startup cancellation can leave state unset, so cleanup cannot use it.
+		if r.state == nil {
+			return err
+		}
 		e.logger.Info("Operation was cancelled, cleaning up maintenance tasks")
+		// Cleanup must outlive cancellation; CMS still applies its per-request timeout.
+		r.cms.SetContext(context.WithoutCancel(ctx))
 
 		if cleanupErr := r.cleanupRollingRestart(); cleanupErr != nil {
 			e.logger.Errorf("Failed to cleanup maintenance tasks on signal: %v", cleanupErr)
@@ -434,6 +440,9 @@ func (r *Rolling) processActionGroupStates(ctx context.Context, actions []*Ydb_M
 
 	<-done
 
+	// Report completed work even if the restart was interrupted.
+	r.cms.SetContext(context.WithoutCancel(ctx))
+	defer r.cms.SetContext(ctx)
 	result, err := r.cms.CompleteAction(r.completedActions)
 	if err != nil {
 		r.logger.Warnf("Failed to complete action: %+v", err)

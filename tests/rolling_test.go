@@ -1142,7 +1142,8 @@ var _ = Describe("Test Rolling", func() {
 				3: {IsDynnode: false},
 			},
 			additionalTestBehaviour: &mock.AdditionalTestBehaviour{
-				SignalDelayMs: 500, // this is carefully crafted to fire just when `ydbops` waits for second node
+				// TODO (@milad): Wait for action completion instead of a fixed delay to avoid flakes.
+				SignalDelayMs: 500,
 			},
 			steps: []StepData{
 				{

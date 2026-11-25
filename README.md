@@ -80,6 +80,19 @@ ydbops restart --tenant \
 
 ---
 
+##### Authenticate with federated credentials
+
+Exchange a workload JWT for a YDB ticket using a target identity. Tickets are cached and refreshed automatically.
+
+```
+ydbops --endpoint grpcs://<cluster-fqdn>:2135 \
+  --oauth2-token-endpoint https://<sts-host>/token \
+  --oauth2-subject-token <target-identity> \
+  --oauth2-subject-token-type <subject-token-type> \
+  --oauth2-actor-token-file /path/to/token \
+  maintenance list
+```
+
 ## For developers:
 
 ### Prerequisites
