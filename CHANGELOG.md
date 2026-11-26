@@ -1,6 +1,12 @@
 # Changelog
 
 
+## v0.0.29 - 2026-11-25
+### Added
+* Support generic OAuth2 token exchange from rotating subject and actor token files, with shared SDK token caching and refresh.
+### Changed
+* Credential provider token retrieval and static login now accept a context; authenticated context creation returns errors instead of discarding credential acquisition failures.
+
 ## v0.0.28 - 2026-08-18
 ### Fixed
 * Send the selected database in gRPC metadata so database-scoped YDB endpoints accept maintenance requests
